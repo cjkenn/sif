@@ -38,7 +38,7 @@ orexpr     ::= andexpr { [ "||" ] andexpr } ;
 andexpr    ::= eqexpr { [ "&&" ] eqexpr } ;
 eqexpr     ::= cmpexpr { [ "!=" ] [ "==" ] cmpexpr } ;
 cmpexpr    ::= binopexpr { [ ">" ] [ ">=" ] [ "<" ] [ "<=" ] binopexpr } ;
-binopexpr  ::= unaryexpr { [ "+" ] [ "-" ] ["*"] ["/"] unaryexpr } ;
+binopexpr  ::= unaryexpr { [ "+" ] [ "-" ] [ "*" ] [ "/" ] [ "%" ] unaryexpr } ;
 unaryexpr  ::= [ "-" ]  [ "!" ] unaryexpr | funccall | tableexpr ;
 tableexpr  ::= { itemlist } ;
 primary    ::= NUMBER |
