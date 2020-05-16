@@ -1,0 +1,51 @@
+
+prog       ::= { decl } ;
+decl       ::= vardecl    |
+               funcdecl   |
+	       recorddecl |
+	       tabledecl  |
+	       arraydecl  |
+	       { stmt }   ;
+stmt       ::= ifstmt   |
+               forstmt  |
+	       exprstmt |
+	       retstmt  |
+	       block    ;
+block      ::= "{" { decl } "}" ;
+
+identlist  ::= IDENT { ",", IDENT } ;
+exprlist   ::= { expr "," } expr ;
+itemlist   ::= IDENT "=>" expr "," ;
+
+vardecl    ::= "let" IDENT expr ;
+funcdecl   ::= "fn" IDENT "(" [ identlist ] ")" block ;
+recorddecl ::= "record" IDENT block ;
+tabledecl  ::= "table" IDENT block ;
+arraydecl  ::= "array" IDENT "[" expr "]" ";" ;
+
+ifstmt     ::= "if" expr block { "elif" expr block } [ "else" block ] ;
+forstmt    ::= "for" identlist "in" exprlist block ;
+exprstmt   ::= expr ";" ;
+retstmt    ::= "return" [ expr ] ";" ;
+
+funccall   ::= primary "(" [ identlist ] ")" ;
+tablecall  ::= primary "." IDENT ;
+arraycall  ::= primary "[" expr "]" ;
+
+expr       ::= assignexpr ;
+assignexpr ::= { [ funccall "." ] [ tablecall ] } IDENT "=" assignexpr | orexpr ;
+orexpr     ::= andexpr { [ "||" ] andexpr } ;
+andexpr    ::= eqexpr { [ "&&" ] eqexpr } ;
+eqexpr     ::= cmpexpr { [ "!=" ] [ "==" ] cmpexpr } ;
+cmpexpr    ::= binopexpr { [ ">" ] [ ">=" ] [ "<" ] [ "<=" ] binopexpr } ;
+binopexpr  ::= unaryexpr { [ "+" ] [ "-" ] ["*"] ["/"] unaryexpr } ;
+unaryexpr  ::= [ "-" ]  [ "!" ] unaryexpr | funccall | tableexpr ;
+tableexpr  ::= { itemlist } ;
+primary    ::= NUMBER |
+               STRING |
+	       TRUE   |
+	       FALSE  |
+	       NULL   |
+	       IDENT  |
+	       groupexpr ;
+groupexpr  ::= "(" expr ")" ;
