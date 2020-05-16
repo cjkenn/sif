@@ -1,0 +1,7 @@
+[workspace]
+members = [
+  "sifc",
+  "sif_parse",
+  "sif_vm",
+  "sif_util",
+]
