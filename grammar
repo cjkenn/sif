@@ -16,7 +16,7 @@ block      ::= "{" { decl } "}" ;
 identlist  ::= IDENT { ",", IDENT } ;
 exprlist   ::= { expr "," } expr ;
 itemlist   ::= IDENT "=>" expr "," ;
-paramlist  ::= [ { expr [ "," ] } ] ;
+paramlist  ::= [ { IDENT [ "," ] } ] ;
 
 vardecl    ::= "let" IDENT expr ";" ;
 funcdecl   ::= "fn" IDENT "(" [ paramlist ] ")" block ;

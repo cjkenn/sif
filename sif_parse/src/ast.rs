@@ -56,17 +56,17 @@ pub enum AstNode {
 
     RecordDecl {
         ident_tkn: Token,
-        record_body: Box<AstNode>,
+        rec_body: Box<AstNode>,
     },
 
     TableDecl {
         ident_tkn: Token,
-        table_body: Box<AstNode>,
+        tab_body: Box<AstNode>,
     },
 
     ArrayDecl {
         ident_tkn: Token,
-        array_body: Box<AstNode>,
+        arr_body: Box<AstNode>,
     },
 
     FnCallExpr {

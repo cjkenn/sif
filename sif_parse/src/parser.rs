@@ -139,12 +139,11 @@ impl<'l, 's> Parser<'l, 's> {
 
     fn var_decl(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::Let)?;
-        let maybe_ident_tkn = self.match_ident();
 
+        let maybe_ident_tkn = self.match_ident();
         if maybe_ident_tkn.is_none() {
             return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
         }
-
         let ident_tkn = maybe_ident_tkn.unwrap();
 
         match self.curr_tkn.ty {
@@ -181,12 +180,11 @@ impl<'l, 's> Parser<'l, 's> {
 
     fn fn_decl(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::Fn)?;
-        let maybe_ident_tkn = self.match_ident();
 
+        let maybe_ident_tkn = self.match_ident();
         if maybe_ident_tkn.is_none() {
             return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
         }
-
         let ident_tkn = maybe_ident_tkn.unwrap();
 
         self.expect(TokenTy::LeftParen)?;
@@ -194,12 +192,16 @@ impl<'l, 's> Parser<'l, 's> {
         self.expect(TokenTy::RightParen)?;
         let body = self.block()?;
 
-        Ok(AstNode::FnDecl {
+        let node = AstNode::FnDecl {
             ident_tkn: ident_tkn.clone(),
             fn_params: Box::new(params),
             fn_body: Box::new(body),
             scope: self.sym_tab.level(),
-        })
+        };
+
+        self.sym_tab.store(&ident_tkn.get_name(), node.clone());
+
+        Ok(node)
     }
 
     fn param_list(&mut self) -> Result<AstNode, ParseErr> {
@@ -227,9 +229,10 @@ impl<'l, 's> Parser<'l, 's> {
                             "expected identifier",
                         ))));
                     }
-
                     let ident_tkn = maybe_ident_tkn.unwrap();
+
                     param_list.push(AstNode::PrimaryExpr { tkn: ident_tkn });
+
                     if self.curr_tkn.ty != TokenTy::RightParen {
                         self.expect(TokenTy::Comma)?;
                     }
@@ -241,15 +244,66 @@ impl<'l, 's> Parser<'l, 's> {
     }
 
     fn record_decl(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        self.expect(TokenTy::Record)?;
+
+        let maybe_ident_tkn = self.match_ident();
+        if maybe_ident_tkn.is_none() {
+            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+        }
+        let ident_tkn = maybe_ident_tkn.unwrap();
+
+        let body = self.block()?;
+        let node = AstNode::RecordDecl {
+            ident_tkn: ident_tkn.clone(),
+            rec_body: Box::new(body),
+        };
+        self.sym_tab.store(&ident_tkn.get_name(), node.clone());
+
+        Ok(node)
     }
 
     fn table_decl(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        self.expect(TokenTy::Table)?;
+
+        let maybe_ident_tkn = self.match_ident();
+        if maybe_ident_tkn.is_none() {
+            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+        }
+        let ident_tkn = maybe_ident_tkn.unwrap();
+
+        let body = self.block()?;
+        let node = AstNode::TableDecl {
+            ident_tkn: ident_tkn.clone(),
+            tab_body: Box::new(body),
+        };
+        self.sym_tab.store(&ident_tkn.get_name(), node.clone());
+
+        Ok(node)
     }
 
     fn array_decl(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        self.expect(TokenTy::Array)?;
+
+        let maybe_ident_tkn = self.match_ident();
+        if maybe_ident_tkn.is_none() {
+            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+        }
+        let ident_tkn = maybe_ident_tkn.unwrap();
+
+        self.expect(TokenTy::LeftBracket)?;
+
+        let body = self.expr()?;
+
+        self.expect(TokenTy::RightBracket)?;
+        self.expect(TokenTy::Semicolon)?;
+
+        let node = AstNode::ArrayDecl {
+            ident_tkn: ident_tkn.clone(),
+            arr_body: Box::new(body),
+        };
+        self.sym_tab.store(&ident_tkn.get_name(), node.clone());
+
+        Ok(node)
     }
 
     fn if_stmt(&mut self) -> Result<AstNode, ParseErr> {
