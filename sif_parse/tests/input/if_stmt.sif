@@ -1,0 +1,9 @@
+# expect::pass
+
+if 3 < 10 {
+  let y;
+} elif 5 < 10 {
+  let k;
+} else {
+  let z;
+}

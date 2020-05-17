@@ -1,45 +1,44 @@
 use sif_parse::{lex::Lexer, parser::Parser, symbol_table::SymTab};
 
-use std::{
-    collections::HashMap,
-    fs,
-    fs::File,
-    io::{BufRead, BufReader},
-    path::PathBuf,
-};
+use std::fs::File;
 
-struct ParseExpect {
-    pub is_pass: bool,
-    pub line: usize,
-    pub pos: usize,
-}
+mod util;
 
-/// Returns a listing of test names to their file locations.
-fn get_test_path(test_name: &str) -> &str {
-    let paths: HashMap<&str, &str> = [
-        ("if_stmt", "./input/if_stmt.sif"),
-        ("for_stmt", "./input/for_stmt.sif"),
-        ("var_decl", "./input/var_decl.sif"),
-    ]
-    .iter()
-    .cloned()
-    .collect();
+#[test]
+fn parse_if_stmt() {
+    let pctx = util::setup("if_stmt");
 
-    let path = paths.get(test_name);
-    match path {
-        Some(p) => return p,
-        None => panic!("invalid parser test name provided!"),
-    };
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("if_stmt", pctx, result);
 }
 
 #[test]
-fn test_parse_if_stmt() {
-    let path = get_test_path("if_stmt");
-    let file = File::open(path).unwrap();
+fn parse_for_stmt() {
+    let pctx = util::setup("for_stmt");
 
+    let infile = File::open(&pctx.path).unwrap();
     let mut symtab = SymTab::new();
-    let mut lex = Lexer::new(file);
+    let mut lex = Lexer::new(infile);
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
-    let parse_result = parser.parse();
+    let result = parser.parse();
+    util::check("for_stmt", pctx, result);
+}
+
+#[test]
+fn parse_var_decl() {
+    let pctx = util::setup("var_decl");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("var_decl", pctx, result);
 }
