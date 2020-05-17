@@ -40,13 +40,18 @@ pub enum AstNode {
     VarDecl {
         ident_tkn: Token,
         is_global: bool,
+        lhs: Option<Box<AstNode>>,
     },
 
     FnDecl {
         ident_tkn: Token,
-        fn_params: Vec<AstNode>,
+        fn_params: Box<AstNode>,
         fn_body: Box<AstNode>,
         scope: usize,
+    },
+
+    FnParams {
+        params: Vec<AstNode>,
     },
 
     RecordDecl {
@@ -92,7 +97,9 @@ pub enum AstNode {
         rhs: Box<AstNode>,
     },
 
-    PrimaryExpr {},
+    PrimaryExpr {
+        tkn: Token,
+    },
 }
 
 impl AstNode {

@@ -16,9 +16,10 @@ block      ::= "{" { decl } "}" ;
 identlist  ::= IDENT { ",", IDENT } ;
 exprlist   ::= { expr "," } expr ;
 itemlist   ::= IDENT "=>" expr "," ;
+paramlist  ::= [ { expr [ "," ] } ] ;
 
-vardecl    ::= "let" IDENT expr ;
-funcdecl   ::= "fn" IDENT "(" [ exprlist ] ")" block ;
+vardecl    ::= "let" IDENT expr ";" ;
+funcdecl   ::= "fn" IDENT "(" [ paramlist ] ")" block ;
 recorddecl ::= "record" IDENT block ;
 tabledecl  ::= "table" IDENT block ;
 arraydecl  ::= "array" IDENT "[" expr "]" ";" ;
@@ -33,7 +34,7 @@ tablecall  ::= primary "." IDENT ;
 arraycall  ::= primary "[" expr "]" ;
 
 expr       ::= assignexpr ;
-assignexpr ::= { [ funccall "." ] [ tablecall ] } IDENT "=" assignexpr | orexpr ;
+assignexpr ::= [ { [ funccall "." ] [ tablecall ] } ] "=" assignexpr | orexpr ;
 orexpr     ::= andexpr { [ "||" ] andexpr } ;
 andexpr    ::= eqexpr { [ "&&" ] eqexpr } ;
 eqexpr     ::= cmpexpr { [ "!=" ] [ "==" ] cmpexpr } ;

@@ -103,6 +103,16 @@ impl<'l, 's> Parser<'l, 's> {
         }
     }
 
+    fn stmt(&mut self) -> Result<AstNode, ParseErr> {
+        match self.curr_tkn.ty {
+            TokenTy::If => self.if_stmt(),
+            TokenTy::For => self.for_stmt(),
+            TokenTy::Return => self.ret_stmt(),
+            TokenTy::LeftBrace => self.block(),
+            _ => self.expr_stmt(),
+        }
+    }
+
     fn block(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::LeftBrace)?;
 
@@ -128,11 +138,106 @@ impl<'l, 's> Parser<'l, 's> {
     }
 
     fn var_decl(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        self.expect(TokenTy::Let)?;
+        let maybe_ident_tkn = self.match_ident();
+
+        if maybe_ident_tkn.is_none() {
+            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+        }
+
+        let ident_tkn = maybe_ident_tkn.unwrap();
+
+        match self.curr_tkn.ty {
+            TokenTy::Eq => {
+                let lhs = self.expr()?;
+                self.expect(TokenTy::Semicolon)?;
+
+                let node = AstNode::VarDecl {
+                    ident_tkn: ident_tkn.clone(),
+                    is_global: self.sym_tab.is_global(),
+                    lhs: Some(Box::new(lhs)),
+                };
+
+                self.sym_tab.store(&ident_tkn.get_name(), node.clone());
+                Ok(node)
+            }
+            TokenTy::Semicolon => {
+                self.expect(TokenTy::Semicolon)?;
+
+                let node = AstNode::VarDecl {
+                    ident_tkn: ident_tkn.clone(),
+                    is_global: self.sym_tab.is_global(),
+                    lhs: None,
+                };
+
+                self.sym_tab.store(&ident_tkn.get_name(), node.clone());
+                Ok(node)
+            }
+            _ => Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
+                "expected either '=' or ';",
+            )))),
+        }
     }
 
     fn fn_decl(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        self.expect(TokenTy::Fn)?;
+        let maybe_ident_tkn = self.match_ident();
+
+        if maybe_ident_tkn.is_none() {
+            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+        }
+
+        let ident_tkn = maybe_ident_tkn.unwrap();
+
+        self.expect(TokenTy::LeftParen)?;
+        let params = self.param_list()?;
+        self.expect(TokenTy::RightParen)?;
+        let body = self.block()?;
+
+        Ok(AstNode::FnDecl {
+            ident_tkn: ident_tkn.clone(),
+            fn_params: Box::new(params),
+            fn_body: Box::new(body),
+            scope: self.sym_tab.level(),
+        })
+    }
+
+    fn param_list(&mut self) -> Result<AstNode, ParseErr> {
+        match self.curr_tkn.ty {
+            TokenTy::RightParen => {
+                // this indicates an empty param list
+                Ok(AstNode::FnParams { params: Vec::new() })
+            }
+            _ => {
+                // we expect the param list to be all identifiers: fn f(x, y, z). We could
+                // call expr() for each param, but we can short circuit the recursive calls
+                // by just creating PrimaryExpr nodes here and adding them to the param list.
+                let mut param_list = Vec::new();
+
+                while self.curr_tkn.ty != TokenTy::RightParen {
+                    if self.curr_tkn.ty == TokenTy::Eof {
+                        return Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
+                            "unexpected end of file",
+                        ))));
+                    }
+
+                    let maybe_ident_tkn = self.match_ident();
+                    if maybe_ident_tkn.is_none() {
+                        return Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
+                            "expected identifier",
+                        ))));
+                    }
+
+                    let ident_tkn = maybe_ident_tkn.unwrap();
+                    param_list.push(AstNode::PrimaryExpr { tkn: ident_tkn });
+                    if self.curr_tkn.ty != TokenTy::RightParen {
+                        self.expect(TokenTy::Comma)?;
+                    }
+                }
+
+                Ok(AstNode::FnParams { params: param_list })
+            }
+        }
     }
 
     fn record_decl(&mut self) -> Result<AstNode, ParseErr> {
@@ -145,16 +250,6 @@ impl<'l, 's> Parser<'l, 's> {
 
     fn array_decl(&mut self) -> Result<AstNode, ParseErr> {
         unimplemented!()
-    }
-
-    fn stmt(&mut self) -> Result<AstNode, ParseErr> {
-        match self.curr_tkn.ty {
-            TokenTy::If => self.if_stmt(),
-            TokenTy::For => self.for_stmt(),
-            TokenTy::Return => self.ret_stmt(),
-            TokenTy::LeftBrace => self.block(),
-            _ => self.expr_stmt(),
-        }
     }
 
     fn if_stmt(&mut self) -> Result<AstNode, ParseErr> {
@@ -229,8 +324,33 @@ impl<'l, 's> Parser<'l, 's> {
         }
     }
 
+    /// Expects an identifier token to be passed in. If it is, returns a token that matches
+    /// the identifier that we've parsed. If it's not, we return None and add an error
+    /// to the error vec.
+    fn match_ident(&mut self) -> Option<Token> {
+        match self.curr_tkn.ty {
+            TokenTy::Ident(_) => {
+                let tkn = Some(self.curr_tkn.clone());
+                self.consume();
+                tkn
+            }
+            _ => {
+                let ty_str = self.curr_tkn.ty.to_string();
+                self.add_error(ParseErrTy::InvalidIdent(ty_str));
+                None
+            }
+        }
+    }
+
     /// Advance to the next token, discarded the previously read token.
     fn consume(&mut self) {
         self.curr_tkn = self.lexer.lex();
+    }
+
+    /// Push a parsing error onto the error vector.
+    fn add_error(&mut self, ty: ParseErrTy) -> ParseErr {
+        let err = ParseErr::new(self.curr_tkn.line, self.curr_tkn.pos, ty);
+        self.errors.push(err.clone());
+        err
     }
 }
