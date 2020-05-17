@@ -1,7 +1,7 @@
 mod ast;
 mod error;
-mod lex;
-mod parser;
+pub mod lex;
+pub mod parser;
 mod reserved;
-mod symbol_table;
+pub mod symbol_table;
 mod token;
