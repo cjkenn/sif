@@ -18,7 +18,7 @@ exprlist   ::= { expr "," } expr ;
 itemlist   ::= IDENT "=>" expr "," ;
 
 vardecl    ::= "let" IDENT expr ;
-funcdecl   ::= "fn" IDENT "(" [ identlist ] ")" block ;
+funcdecl   ::= "fn" IDENT "(" [ exprlist ] ")" block ;
 recorddecl ::= "record" IDENT block ;
 tabledecl  ::= "table" IDENT block ;
 arraydecl  ::= "array" IDENT "[" expr "]" ";" ;

@@ -1,6 +1,7 @@
 use crate::{
+    error::{LexErr, LexErrTy},
     reserved::{get_reserved_words, is_reserved_word},
-    token::{Token, TokenType},
+    token::{Token, TokenTy},
 };
 
 use std::{
@@ -27,7 +28,7 @@ pub struct Lexer {
     buffer: Vec<char>,
 
     /// Reserved words mapping
-    reserved: HashMap<String, TokenType>,
+    reserved: HashMap<String, TokenTy>,
 
     /// Number of cumulative bytes read by the reader in this lexer
     bytes_read: usize,
@@ -81,19 +82,19 @@ impl Lexer {
 
         let ch = self.curr.unwrap();
         match ch {
-            '(' => self.consume(TokenType::LeftParen),
-            ')' => self.consume(TokenType::RightParen),
-            '{' => self.consume(TokenType::LeftBrace),
-            '}' => self.consume(TokenType::RightBrace),
-            '[' => self.consume(TokenType::LeftBracket),
-            ']' => self.consume(TokenType::RightBracket),
-            ';' => self.consume(TokenType::Semicolon),
-            '.' => self.consume(TokenType::Period),
-            ',' => self.consume(TokenType::Comma),
-            '+' => self.consume(TokenType::Plus),
-            '-' => self.consume(TokenType::Minus),
-            '*' => self.consume(TokenType::Star),
-            '%' => self.consume(TokenType::Percent),
+            '(' => self.consume(TokenTy::LeftParen),
+            ')' => self.consume(TokenTy::RightParen),
+            '{' => self.consume(TokenTy::LeftBrace),
+            '}' => self.consume(TokenTy::RightBrace),
+            '[' => self.consume(TokenTy::LeftBracket),
+            ']' => self.consume(TokenTy::RightBracket),
+            ';' => self.consume(TokenTy::Semicolon),
+            '.' => self.consume(TokenTy::Period),
+            ',' => self.consume(TokenTy::Comma),
+            '+' => self.consume(TokenTy::Plus),
+            '-' => self.consume(TokenTy::Minus),
+            '*' => self.consume(TokenTy::Star),
+            '%' => self.consume(TokenTy::Percent),
             '"' => self.lex_str(),
             '/' => {
                 let nextch = self.peek();
@@ -104,84 +105,84 @@ impl Lexer {
                         }
                         return self.lex();
                     }
-                    _ => self.consume(TokenType::Slash),
+                    _ => self.consume(TokenTy::Slash),
                 }
             }
             '=' => {
                 let nextch = self.peek();
                 match nextch {
                     Some(ch) if ch == '=' => {
-                        let tkn = self.consume(TokenType::EqEq);
+                        let tkn = self.consume(TokenTy::EqEq);
                         self.advance();
                         tkn
                     }
                     Some(ch) if ch == '>' => {
-                        let tkn = self.consume(TokenType::EqArrow);
+                        let tkn = self.consume(TokenTy::EqArrow);
                         self.advance();
                         tkn
                     }
-                    _ => self.consume(TokenType::Eq),
+                    _ => self.consume(TokenTy::Eq),
                 }
             }
             '<' => {
                 let nextch = self.peek();
                 match nextch {
                     Some(ch) if ch == '=' => {
-                        let tkn = self.consume(TokenType::LtEq);
+                        let tkn = self.consume(TokenTy::LtEq);
                         self.advance();
                         tkn
                     }
-                    _ => self.consume(TokenType::Lt),
+                    _ => self.consume(TokenTy::Lt),
                 }
             }
             '>' => {
                 let nextch = self.peek();
                 match nextch {
                     Some(ch) if ch == '=' => {
-                        let tkn = self.consume(TokenType::GtEq);
+                        let tkn = self.consume(TokenTy::GtEq);
                         self.advance();
                         tkn
                     }
-                    _ => self.consume(TokenType::Gt),
+                    _ => self.consume(TokenTy::Gt),
                 }
             }
             '!' => {
                 let nextch = self.peek();
                 match nextch {
                     Some(ch) if ch == '=' => {
-                        let tkn = self.consume(TokenType::BangEq);
+                        let tkn = self.consume(TokenTy::BangEq);
                         self.advance();
                         tkn
                     }
-                    _ => self.consume(TokenType::Bang),
+                    _ => self.consume(TokenTy::Bang),
                 }
             }
             '&' => {
                 let nextch = self.peek();
                 match nextch {
                     Some(ch) if ch == '&' => {
-                        let tkn = self.consume(TokenType::AmpAmp);
+                        let tkn = self.consume(TokenTy::AmpAmp);
                         self.advance();
                         tkn
                     }
-                    _ => self.consume(TokenType::Amp),
+                    _ => self.consume(TokenTy::Amp),
                 }
             }
             '|' => {
                 let nextch = self.peek();
                 match nextch {
                     Some(ch) if ch == '|' => {
-                        let tkn = self.consume(TokenType::PipePipe);
+                        let tkn = self.consume(TokenTy::PipePipe);
                         self.advance();
                         tkn
                     }
-                    _ => self.consume(TokenType::Pipe),
+                    _ => self.consume(TokenTy::Pipe),
                 }
             }
             _ if ch.is_digit(10) => self.lex_num(),
             _ if ch.is_alphabetic() => self.lex_ident(),
             _ => {
-                LexError::new(self.line_num, self.line_pos, LexErrorType::UnknownChar(ch)).emit();
+                LexErr::new(self.line_num, self.line_pos, LexErrTy::UnknownChar(ch)).emit();
                 self.eof_tkn()
             }
         }
@@ -232,17 +233,17 @@ impl Lexer {
             match self.curr {
                 Some(ch) => {
                     if ch == '"' {
-                        return self.consume_w_pos(TokenType::Str(lit), startline, startpos);
+                        return self.consume_w_pos(TokenTy::Str(lit), startline, startpos);
                     } else {
                         lit.push(ch);
                         self.advance();
                     }
                 }
                 None => {
-                    LexError::new(
+                    LexErr::new(
                         self.line_num,
                         self.line_pos,
-                        LexErrorType::UnterminatedString(lit),
+                        LexErrTy::UnterminatedString(lit),
                     )
                     .emit();
                     return self.eof_tkn();
@@ -252,10 +253,10 @@ impl Lexer {
 
         // If we finished lexing here without returning, the file
         // is fully lexed without a string termination occurring.
-        LexError::new(
+        LexErr::new(
             self.line_num,
             self.line_pos,
-            LexErrorType::UnterminatedString(lit),
+            LexErrTy::UnterminatedString(lit),
         )
         .emit();
         self.eof_tkn()
@@ -295,7 +296,7 @@ impl Lexer {
         }
 
         let numval = lit.parse::<f64>().unwrap();
-        Token::new(TokenType::Val(numval), startline, startpos)
+        Token::new(TokenTy::Val(numval), startline, startpos)
     }
 
     /// Lex an identifier. This is not a string literal and does not
@@ -317,7 +318,7 @@ impl Lexer {
             }
         }
 
-        let mut ty = TokenType::Ident(lit.clone());
+        let mut ty = TokenTy::Ident(lit.clone());
 
         if is_reserved_word(&lit) {
             ty = self.reserved.get(&lit).unwrap().clone();
@@ -327,7 +328,7 @@ impl Lexer {
     }
 
     /// Consume current char and return a token from it.
-    fn consume(&mut self, ty: TokenType) -> Token {
+    fn consume(&mut self, ty: TokenTy) -> Token {
         let tkn = Token::new(ty, self.line_num, self.line_pos);
         self.advance();
         tkn
@@ -336,7 +337,7 @@ impl Lexer {
     /// Consume current char and return a token from it, given a line
     /// and char position. Used so that the correct line/pos combo can be reported
     /// for identifiers, literals, and numbers.
-    fn consume_w_pos(&mut self, ty: TokenType, line: usize, line_pos: usize) -> Token {
+    fn consume_w_pos(&mut self, ty: TokenTy, line: usize, line_pos: usize) -> Token {
         let tkn = Token::new(ty, line, line_pos);
         self.advance();
         tkn
@@ -410,45 +411,6 @@ impl Lexer {
     }
 
     fn eof_tkn(&self) -> Token {
-        Token::new(TokenType::Eof, self.line_num, self.line_pos)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum LexErrorType {
-    UnknownChar(char),
-    UnterminatedString(String),
-}
-
-pub struct LexError {
-    pub line: usize,
-    pub pos: usize,
-    pub ty: LexErrorType,
-}
-
-impl LexError {
-    pub fn new(line: usize, pos: usize, ty: LexErrorType) -> LexError {
-        LexError {
-            line: line,
-            pos: pos,
-            ty: ty,
-        }
-    }
-
-    fn emit(&self) {
-        println!("sif: Parse error - {}", self.to_msg());
-    }
-
-    fn to_msg(&self) -> String {
-        let str_pos = format!("[Line {}:{}]", self.line, self.pos);
-
-        match self.ty {
-            LexErrorType::UnknownChar(ref ch) => {
-                format!("{} Unrecognized character '{}'", str_pos, ch)
-            }
-            LexErrorType::UnterminatedString(ref found) => {
-                format!("{} Unterminated string literal '{}'", str_pos, found)
-            }
-        }
+        Token::new(TokenTy::Eof, self.line_num, self.line_pos)
     }
 }
