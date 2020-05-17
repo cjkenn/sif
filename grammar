@@ -13,7 +13,7 @@ stmt       ::= ifstmt   |
 	       block    ;
 block      ::= "{" { decl } "}" ;
 
-identlist  ::= IDENT { ",", IDENT } ;
+identpair  ::= IDENT "," IDENT ;
 exprlist   ::= { expr "," } expr ;
 itemlist   ::= IDENT "=>" expr "," ;
 paramlist  ::= [ { IDENT [ "," ] } ] ;
@@ -25,7 +25,7 @@ tabledecl  ::= "table" IDENT block ;
 arraydecl  ::= "array" IDENT "[" expr "]" ";" ;
 
 ifstmt     ::= "if" expr block { "elif" expr block } [ "else" block ] ;
-forstmt    ::= "for" identlist "in" exprlist block ;
+forstmt    ::= "for" identpair "in" expr block ;
 exprstmt   ::= expr ";" ;
 retstmt    ::= "return" [ expr ] ";" ;
 

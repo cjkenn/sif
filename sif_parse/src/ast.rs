@@ -54,6 +54,10 @@ pub enum AstNode {
         params: Vec<AstNode>,
     },
 
+    IdentPair {
+        idents: Vec<AstNode>,
+    },
+
     RecordDecl {
         ident_tkn: Token,
         rec_body: Box<AstNode>,

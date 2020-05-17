@@ -307,19 +307,115 @@ impl<'l, 's> Parser<'l, 's> {
     }
 
     fn if_stmt(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        self.expect(TokenTy::If)?;
+
+        let if_cond = self.expr()?;
+        let if_blck = self.block()?;
+
+        let mut else_blck = Vec::new();
+        let mut else_ifs = Vec::new();
+        let mut else_cnt = 0;
+
+        loop {
+            match self.curr_tkn.ty {
+                TokenTy::Elif => {
+                    self.expect(TokenTy::Elif)?;
+
+                    let elif_ast = self.expr()?;
+                    let elif_blck = self.block()?;
+                    let stmt_ast = AstNode::ElifStmt {
+                        cond_expr: Box::new(elif_ast),
+                        stmts: Box::new(elif_blck),
+                    };
+                    else_ifs.push(stmt_ast);
+                }
+                TokenTy::Else => {
+                    else_cnt = else_cnt + 1;
+                    self.expect(TokenTy::Else)?;
+                    let blck = self.block()?;
+                    else_blck.push(blck);
+                }
+                _ => break,
+            };
+        }
+
+        if else_cnt > 1 {
+            self.add_error(ParseErrTy::InvalidIfStmt);
+        }
+
+        Ok(AstNode::IfStmt {
+            cond_expr: Box::new(if_cond),
+            if_stmts: Box::new(if_blck),
+            elif_exprs: else_ifs,
+            else_stmts: else_blck,
+        })
     }
 
     fn for_stmt(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        self.expect(TokenTy::For)?;
+
+        let var_list = self.ident_pair()?;
+
+        self.expect(TokenTy::In)?;
+
+        let in_expr_list = self.expr()?;
+        let stmts = self.block()?;
+
+        Ok(AstNode::ForStmt {
+            var_list: Box::new(var_list),
+            in_expr_list: Box::new(in_expr_list),
+            stmts: Box::new(stmts),
+        })
+    }
+
+    fn ident_pair(&mut self) -> Result<AstNode, ParseErr> {
+        let mut idents = Vec::new();
+
+        let maybe_first_ident = self.match_ident();
+        if maybe_first_ident.is_none() {
+            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+        }
+        let first_ident = maybe_first_ident.unwrap();
+        idents.push(first_ident);
+
+        self.expect(TokenTy::Comma)?;
+
+        let maybe_sec_ident = self.match_ident();
+        if maybe_sec_ident.is_none() {
+            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+        }
+        let second_ident = maybe_sec_ident.unwrap();
+        idents.push(second_ident);
+
+        Ok(AstNode::IdentPair { idents: idents })
     }
 
     fn ret_stmt(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        self.expect(TokenTy::Return)?;
+
+        match self.curr_tkn.ty {
+            TokenTy::Semicolon => {
+                self.expect(TokenTy::Semicolon)?;
+
+                Ok(AstNode::ReturnStmt { ret_expr: None })
+            }
+            _ => {
+                let ret_expr = self.expr()?;
+                self.expect(TokenTy::Semicolon)?;
+
+                Ok(AstNode::ReturnStmt {
+                    ret_expr: Some(Box::new(ret_expr)),
+                })
+            }
+        }
     }
 
     fn expr_stmt(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        let node = self.expr()?;
+        self.expect(TokenTy::Semicolon)?;
+        Ok(AstNode::ExprStmt {
+            expr: Box::new(node),
+        })
     }
 
     fn expr(&mut self) -> Result<AstNode, ParseErr> {
