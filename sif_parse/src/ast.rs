@@ -80,8 +80,8 @@ pub enum AstNode {
 
     VarAssignExpr {
         ident_tkn: Token,
-        val: Box<AstNode>,
         is_global: bool,
+        rhs: Box<AstNode>,
     },
 
     LogicalExpr {

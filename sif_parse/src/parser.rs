@@ -376,7 +376,7 @@ impl<'l, 's> Parser<'l, 's> {
             return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
         }
         let first_ident = maybe_first_ident.unwrap();
-        idents.push(first_ident);
+        idents.push(AstNode::PrimaryExpr { tkn: first_ident });
 
         self.expect(TokenTy::Comma)?;
 
@@ -385,7 +385,7 @@ impl<'l, 's> Parser<'l, 's> {
             return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
         }
         let second_ident = maybe_sec_ident.unwrap();
-        idents.push(second_ident);
+        idents.push(AstNode::PrimaryExpr { tkn: second_ident });
 
         Ok(AstNode::IdentPair { idents: idents })
     }
@@ -423,7 +423,61 @@ impl<'l, 's> Parser<'l, 's> {
     }
 
     fn assign_expr(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        let ast = self.or_expr()?;
+
+        match self.curr_tkn.ty {
+            TokenTy::Eq => {
+                let op = self.curr_tkn.clone();
+                self.expect(TokenTy::Eq)?;
+                let rhs = self.assign_expr()?;
+
+                match ast.clone() {
+                    AstNode::PrimaryExpr { tkn } => {
+                        match tkn.ty {
+                            TokenTy::Ident(name) => {
+                                let maybe_sym = self.sym_tab.retrieve(&name);
+                                if maybe_sym.is_none() {
+                                    return Err(self.add_error(ParseErrTy::UndeclSym(name)));
+                                }
+
+                                let var_node = maybe_sym.unwrap();
+                                match var_node {
+                                    AstNode::VarDecl {
+                                        ident_tkn,
+                                        is_global,
+                                        ..
+                                    } => {
+                                        return Ok(AstNode::VarAssignExpr {
+                                            ident_tkn: ident_tkn.clone(),
+                                            is_global: is_global,
+                                            rhs: Box::new(rhs),
+                                        });
+                                    }
+                                    _ => {
+                                        return Err(self.add_error(ParseErrTy::UndeclSym(name)));
+                                    }
+                                }
+                            }
+                            _ => {
+                                return Err(self.add_error(ParseErrTy::InvalidAssign(
+                                    tkn.ty.clone().to_string(),
+                                )));
+                            }
+                        };
+                    }
+                    _ => {
+                        return Err(self.add_error_w_pos(
+                            op.line,
+                            op.pos,
+                            ParseErrTy::InvalidAssign(op.ty.to_string()),
+                        ));
+                    }
+                }
+            }
+            _ => (),
+        };
+
+        Ok(ast)
     }
 
     fn or_expr(&mut self) -> Result<AstNode, ParseErr> {
@@ -500,6 +554,13 @@ impl<'l, 's> Parser<'l, 's> {
     /// Push a parsing error onto the error vector.
     fn add_error(&mut self, ty: ParseErrTy) -> ParseErr {
         let err = ParseErr::new(self.curr_tkn.line, self.curr_tkn.pos, ty);
+        self.errors.push(err.clone());
+        err
+    }
+
+    /// Report a parsing error at a given location with a provided error type.
+    fn add_error_w_pos(&mut self, line: usize, pos: usize, ty: ParseErrTy) -> ParseErr {
+        let err = ParseErr::new(line, pos, ty);
         self.errors.push(err.clone());
         err
     }
