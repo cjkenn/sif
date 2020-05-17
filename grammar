@@ -29,24 +29,25 @@ forstmt    ::= "for" identpair "in" expr block ;
 exprstmt   ::= expr ";" ;
 retstmt    ::= "return" [ expr ] ";" ;
 
-funccall   ::= primary "(" [ identlist ] ")" ;
+funccall   ::= primary "(" [ paramlist ] ")" ;
 tablecall  ::= primary "." IDENT ;
 arraycall  ::= primary "[" expr "]" ;
 
-expr       ::= assignexpr ;
-assignexpr ::= [ { [ funccall "." ] [ tablecall ] } ] "=" assignexpr | orexpr ;
-orexpr     ::= andexpr { [ "||" ] andexpr } ;
-andexpr    ::= eqexpr { [ "&&" ] eqexpr } ;
-eqexpr     ::= cmpexpr { [ "!=" ] [ "==" ] cmpexpr } ;
-cmpexpr    ::= binopexpr { [ ">" ] [ ">=" ] [ "<" ] [ "<=" ] binopexpr } ;
-binopexpr  ::= unaryexpr { [ "+" ] [ "-" ] [ "*" ] [ "/" ] [ "%" ] unaryexpr } ;
-unaryexpr  ::= [ "-" ]  [ "!" ] unaryexpr | funccall | tableexpr ;
-tableexpr  ::= { itemlist } ;
-primary    ::= NUMBER |
-               STRING |
-	       TRUE   |
-	       FALSE  |
-	       NULL   |
-	       IDENT  |
-	       groupexpr ;
-groupexpr  ::= "(" expr ")" ;
+expr         ::= assignexpr ;
+assignexpr   ::= [ { [ funccall "." ] [ tablecall ] } ] "=" assignexpr | orexpr ;
+orexpr       ::= andexpr { [ "||" ] andexpr } ;
+andexpr      ::= eqexpr { [ "&&" ] eqexpr } ;
+eqexpr       ::= cmpexpr { [ "!=" ] [ "==" ] cmpexpr } ;
+cmpexpr      ::= addorsubexpr { [ ">" ] [ ">=" ] [ "<" ] [ "<=" ] addorsubexpr } ;
+addorsubexpr ::= mulordivexpr { [ "+" ] [ "-" ] mulordivexpr } ;
+mulordivexpr ::= modexpr { [ "*" ] [ "/" ] modexpr } ;
+modexpr      ::= unaryexpr { [ "%" ] unaryexpr } ;
+unaryexpr    ::= [ "-" ]  [ "!" ] unaryexpr | funccall | tableexpr ;
+tableexpr    ::= { itemlist } ;
+primary      ::= NUMBER |
+                 STRING |
+	         TRUE   |
+	         FALSE  |
+	         IDENT  |
+	         groupexpr ;
+groupexpr    ::= "(" expr ")" ;

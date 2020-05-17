@@ -481,31 +481,269 @@ impl<'l, 's> Parser<'l, 's> {
     }
 
     fn or_expr(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        let mut ast = self.and_expr()?;
+
+        loop {
+            match self.curr_tkn.ty {
+                TokenTy::PipePipe => {
+                    let op = self.curr_tkn.clone();
+
+                    self.consume();
+
+                    let rhs = self.and_expr()?;
+
+                    ast = AstNode::LogicalExpr {
+                        op_tkn: op,
+                        lhs: Box::new(ast),
+                        rhs: Box::new(rhs),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        Ok(ast)
     }
 
     fn and_expr(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        let mut ast = self.equality_expr()?;
+
+        loop {
+            match self.curr_tkn.ty {
+                TokenTy::AmpAmp => {
+                    let op = self.curr_tkn.clone();
+
+                    self.consume();
+
+                    let rhs = self.equality_expr()?;
+
+                    ast = AstNode::LogicalExpr {
+                        op_tkn: op,
+                        lhs: Box::new(ast),
+                        rhs: Box::new(rhs),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        Ok(ast)
     }
 
     fn equality_expr(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        let mut ast = self.compr_expr()?;
+
+        loop {
+            match self.curr_tkn.ty {
+                TokenTy::BangEq => {
+                    let op = self.curr_tkn.clone();
+
+                    self.consume();
+
+                    let rhs = self.compr_expr()?;
+
+                    ast = AstNode::BinaryExpr {
+                        op_tkn: op,
+                        lhs: Box::new(ast),
+                        rhs: Box::new(rhs),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        Ok(ast)
     }
 
     fn compr_expr(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        let mut ast = self.add_or_sub_expr()?;
+
+        loop {
+            match self.curr_tkn.ty {
+                TokenTy::Lt | TokenTy::LtEq | TokenTy::Gt | TokenTy::GtEq => {
+                    let op = self.curr_tkn.clone();
+
+                    self.consume();
+
+                    let rhs = self.add_or_sub_expr()?;
+
+                    ast = AstNode::BinaryExpr {
+                        op_tkn: op,
+                        lhs: Box::new(ast),
+                        rhs: Box::new(rhs),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        Ok(ast)
     }
 
-    fn binop_expr(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+    fn add_or_sub_expr(&mut self) -> Result<AstNode, ParseErr> {
+        let mut ast = self.mul_or_div_expr()?;
+
+        loop {
+            match self.curr_tkn.ty {
+                TokenTy::Plus | TokenTy::Minus => {
+                    let op = self.curr_tkn.clone();
+
+                    self.consume();
+
+                    let rhs = self.mul_or_div_expr()?;
+
+                    ast = AstNode::BinaryExpr {
+                        op_tkn: op,
+                        lhs: Box::new(ast),
+                        rhs: Box::new(rhs),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        Ok(ast)
+    }
+
+    fn mul_or_div_expr(&mut self) -> Result<AstNode, ParseErr> {
+        let mut ast = self.mod_expr()?;
+
+        loop {
+            match self.curr_tkn.ty {
+                TokenTy::Star | TokenTy::Slash => {
+                    let op = self.curr_tkn.clone();
+
+                    self.consume();
+
+                    let rhs = self.mod_expr()?;
+
+                    ast = AstNode::BinaryExpr {
+                        op_tkn: op,
+                        lhs: Box::new(ast),
+                        rhs: Box::new(rhs),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        Ok(ast)
+    }
+
+    fn mod_expr(&mut self) -> Result<AstNode, ParseErr> {
+        let mut ast = self.unary_expr()?;
+
+        loop {
+            match self.curr_tkn.ty {
+                TokenTy::Percent => {
+                    let op = self.curr_tkn.clone();
+
+                    self.consume();
+
+                    let rhs = self.unary_expr()?;
+
+                    ast = AstNode::BinaryExpr {
+                        op_tkn: op,
+                        lhs: Box::new(ast),
+                        rhs: Box::new(rhs),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        Ok(ast)
     }
 
     fn unary_expr(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        match self.curr_tkn.ty {
+            TokenTy::Bang | TokenTy::Minus => {
+                let op = self.curr_tkn.clone();
+
+                self.consume();
+
+                let rhs = self.unary_expr()?;
+
+                return Ok(AstNode::UnaryExpr {
+                    op_tkn: op,
+                    rhs: Box::new(rhs),
+                });
+            }
+            // TODO: array, table, record access
+            _ => self.fn_call_expr(),
+        }
+    }
+
+    fn fn_call_expr(&mut self) -> Result<AstNode, ParseErr> {
+        let ast = self.primary_expr()?;
+        let mut params = Vec::new();
+        let ident_tkn = match ast {
+            AstNode::PrimaryExpr { ref tkn } => Some(tkn.clone()),
+            _ => None,
+        };
+
+        // If this is a class ident, we expect a period and then either a property name
+        // or a function call. If this is a regular function ident, we expect an
+        // opening paren next.
+        match self.curr_tkn.ty {
+            TokenTy::LeftParen => {
+                self.expect(TokenTy::LeftParen)?;
+                let params_list = self.param_list()?;
+                self.expect(TokenTy::RightParen)?;
+                match params_list {
+                    AstNode::FnParams {
+                        params: inner_params,
+                    } => {
+                        params = inner_params;
+                    }
+                    _ => (),
+                };
+
+                return Ok(AstNode::FnCallExpr {
+                    fn_ident_tkn: ident_tkn.unwrap(),
+                    fn_params: params,
+                });
+            }
+            _ => (),
+        };
+
+        Ok(ast)
     }
 
     fn primary_expr(&mut self) -> Result<AstNode, ParseErr> {
-        unimplemented!()
+        match self.curr_tkn.ty.clone() {
+            TokenTy::Str(_) | TokenTy::Val(_) | TokenTy::True | TokenTy::False => {
+                let ast = Ok(AstNode::PrimaryExpr {
+                    tkn: self.curr_tkn.clone(),
+                });
+                self.consume();
+                ast
+            }
+            TokenTy::Ident(ref ident_name) => {
+                let ident_tkn = self.curr_tkn.clone();
+
+                let maybe_ast = self.sym_tab.retrieve(ident_name);
+                if maybe_ast.is_none() {
+                    let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
+                    self.consume();
+                    return Err(err);
+                }
+
+                let ast = Ok(AstNode::PrimaryExpr { tkn: ident_tkn });
+
+                self.consume();
+                ast
+            }
+            TokenTy::LeftParen => {
+                return self.group_expr();
+            }
+            _ => {
+                let ty_str = self.curr_tkn.ty.to_string();
+                let err = self.add_error(ParseErrTy::InvalidTkn(ty_str));
+                self.consume();
+                Err(err)
+            }
+        }
     }
 
     fn group_expr(&mut self) -> Result<AstNode, ParseErr> {
