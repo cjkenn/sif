@@ -1,0 +1,4 @@
+# expect::fail::4::1
+
+let y;
+g = 1;

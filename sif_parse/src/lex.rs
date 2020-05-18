@@ -377,6 +377,9 @@ impl Lexer {
     fn advance_to_next_line(&mut self) {
         while self.curr.unwrap() != '\n' {
             self.advance();
+            if self.curr.is_none() {
+                return;
+            }
         }
 
         // We are on a \n character here, so move ahead to next line.

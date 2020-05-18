@@ -6,8 +6,6 @@ use crate::{
     token::{Token, TokenTy},
 };
 
-use std::{collections::HashMap, rc::Rc};
-
 const FN_PARAM_MAX_LEN: usize = 64;
 
 /// ParserResult handles the result from parsing a file. This contains an optional
@@ -130,10 +128,12 @@ impl<'l, 's> Parser<'l, 's> {
         }
 
         self.expect(TokenTy::RightBrace)?;
+        let lvl = self.sym_tab.level();
+        self.sym_tab.close_scope();
 
         Ok(AstNode::Block {
             decls: decls,
-            scope: self.sym_tab.level(),
+            scope: lvl,
         })
     }
 
@@ -148,6 +148,7 @@ impl<'l, 's> Parser<'l, 's> {
 
         match self.curr_tkn.ty {
             TokenTy::Eq => {
+                self.expect(TokenTy::Eq)?;
                 let lhs = self.expr()?;
                 self.expect(TokenTy::Semicolon)?;
 
@@ -535,7 +536,7 @@ impl<'l, 's> Parser<'l, 's> {
 
         loop {
             match self.curr_tkn.ty {
-                TokenTy::BangEq => {
+                TokenTy::BangEq | TokenTy::EqEq => {
                     let op = self.curr_tkn.clone();
 
                     self.consume();

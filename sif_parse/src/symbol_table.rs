@@ -19,7 +19,7 @@ impl SymTab {
     pub fn new() -> SymTab {
         SymTab {
             curr_lvl: 0,
-            tab: Vec::new(),
+            tab: vec![HashMap::new()],
         }
     }
 
@@ -29,6 +29,12 @@ impl SymTab {
     pub fn init_scope(&mut self) {
         self.curr_lvl = self.curr_lvl + 1;
         self.tab.push(HashMap::new());
+    }
+
+    /// Close the current scope block, moving back up into a higher
+    /// (previous) scope.
+    pub fn close_scope(&mut self) {
+        self.curr_lvl = self.curr_lvl - 1;
     }
 
     /// True if the current scope is the global scope, false otherwise.

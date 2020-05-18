@@ -18,7 +18,7 @@ exprlist   ::= { expr "," } expr ;
 itemlist   ::= IDENT "=>" expr "," ;
 paramlist  ::= [ { IDENT [ "," ] } ] ;
 
-vardecl    ::= "let" IDENT expr ";" ;
+vardecl    ::= "let" IDENT [ "=" expr ] ";" ;
 funcdecl   ::= "fn" IDENT "(" [ paramlist ] ")" block ;
 recorddecl ::= "record" IDENT block ;
 tabledecl  ::= "table" IDENT block ;
@@ -34,7 +34,7 @@ tablecall  ::= primary "." IDENT ;
 arraycall  ::= primary "[" expr "]" ;
 
 expr         ::= assignexpr ;
-assignexpr   ::= [ { [ funccall "." ] [ tablecall ] } ] "=" assignexpr | orexpr ;
+assignexpr   ::= [ { [ funccall "." ] [ tablecall ] } ] assignexpr | orexpr ;
 orexpr       ::= andexpr { [ "||" ] andexpr } ;
 andexpr      ::= eqexpr { [ "&&" ] eqexpr } ;
 eqexpr       ::= cmpexpr { [ "!=" ] [ "==" ] cmpexpr } ;
