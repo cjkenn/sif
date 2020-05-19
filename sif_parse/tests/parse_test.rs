@@ -55,3 +55,42 @@ fn var_decl_invalid() {
     let result = parser.parse();
     util::check("var_decl_invalid", pctx, result);
 }
+
+#[test]
+fn fn_decl_valid() {
+    let pctx = util::setup("fn_decl_valid");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("fn_decl_valid", pctx, result);
+}
+
+#[test]
+fn fn_decl_invalid() {
+    let pctx = util::setup("fn_decl_invalid");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("fn_decl_invalid", pctx, result);
+}
+
+#[test]
+fn fn_w_ret_stmt() {
+    let pctx = util::setup("fn_w_ret_stmt");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("fn_w_ret_stmt", pctx, result);
+}

@@ -218,6 +218,10 @@ impl<'l, 's> Parser<'l, 's> {
                 let mut param_list = Vec::new();
 
                 while self.curr_tkn.ty != TokenTy::RightParen {
+                    if param_list.len() > FN_PARAM_MAX_LEN {
+                        return Err(self.add_error(ParseErrTy::FnParmCntExceeded(FN_PARAM_MAX_LEN)));
+                    }
+
                     if self.curr_tkn.ty == TokenTy::Eof {
                         return Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
                             "unexpected end of file",
@@ -230,9 +234,13 @@ impl<'l, 's> Parser<'l, 's> {
                             "expected identifier",
                         ))));
                     }
-                    let ident_tkn = maybe_ident_tkn.unwrap();
 
-                    param_list.push(AstNode::PrimaryExpr { tkn: ident_tkn });
+                    let ident_tkn = maybe_ident_tkn.unwrap();
+                    let name = ident_tkn.get_name();
+                    let param_node = AstNode::PrimaryExpr { tkn: ident_tkn };
+                    self.sym_tab.store(&name, param_node.clone());
+
+                    param_list.push(param_node);
 
                     if self.curr_tkn.ty != TokenTy::RightParen {
                         self.expect(TokenTy::Comma)?;

@@ -52,6 +52,9 @@ fn get_test_path(test_name: &str) -> &str {
         ("for_stmt", "./tests/input/for_stmt.sif"),
         ("var_decl", "./tests/input/var_decl.sif"),
         ("var_decl_invalid", "./tests/input/var_decl_invalid.sif"),
+        ("fn_decl_valid", "./tests/input/fn_decl_valid.sif"),
+        ("fn_decl_invalid", "./tests/input/fn_decl_invalid.sif"),
+        ("fn_w_ret_stmt", "./tests/input/fn_w_ret_stmt.sif"),
     ]
     .iter()
     .cloned()
