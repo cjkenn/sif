@@ -94,3 +94,29 @@ fn fn_w_ret_stmt() {
     let result = parser.parse();
     util::check("fn_w_ret_stmt", pctx, result);
 }
+
+#[test]
+fn fn_call() {
+    let pctx = util::setup("fn_call");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("fn_call", pctx, result);
+}
+
+#[test]
+fn exprs() {
+    let pctx = util::setup("exprs");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("exprs", pctx, result);
+}
