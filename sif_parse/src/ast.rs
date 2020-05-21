@@ -88,7 +88,11 @@ pub enum AstNode {
 
     ArrayDecl {
         ident_tkn: Token,
-        arr_body: Box<AstNode>,
+        arr_body: Option<Box<AstNode>>,
+    },
+
+    ArrayItems {
+        items: Vec<AstNode>,
     },
 
     FnCallExpr {

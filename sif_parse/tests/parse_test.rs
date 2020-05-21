@@ -146,3 +146,16 @@ fn record_decl() {
     let result = parser.parse();
     util::check("record_decl", pctx, result);
 }
+
+#[test]
+fn array_decl() {
+    let pctx = util::setup("array_decl");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("array_decl", pctx, result);
+}

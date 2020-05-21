@@ -412,14 +412,30 @@ impl<'l, 's> Parser<'l, 's> {
 
         self.expect(TokenTy::LeftBracket)?;
 
-        let body = self.expr()?;
+        let mut arr_items = Vec::new();
+        while self.curr_tkn.ty != TokenTy::RightBracket {
+            if self.curr_tkn.ty == TokenTy::Eof {
+                return Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
+                    "unexpected end of file",
+                ))));
+            }
+
+            let curr_item = self.expr()?;
+            arr_items.push(curr_item);
+            self.expect(TokenTy::Comma)?;
+        }
 
         self.expect(TokenTy::RightBracket)?;
         self.expect(TokenTy::Semicolon)?;
 
+        let box_body = match arr_items.len() {
+            0 => None,
+            _ => Some(Box::new(AstNode::ArrayItems { items: arr_items })),
+        };
+
         let node = AstNode::ArrayDecl {
             ident_tkn: ident_tkn.clone(),
-            arr_body: Box::new(body),
+            arr_body: box_body,
         };
         self.sym_tab.store(&ident_tkn.get_name(), node.clone());
 

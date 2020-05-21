@@ -1,0 +1,5 @@
+# expect::pass
+
+array x [6,
+"7",
+];

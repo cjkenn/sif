@@ -59,6 +59,7 @@ fn get_test_path(test_name: &str) -> &str {
         ("exprs", "./tests/input/exprs.sif"),
         ("table_decl", "./tests/input/table_decl.sif"),
         ("record_decl", "./tests/input/record_decl.sif"),
+        ("array_decl", "./tests/input/array_decl.sif"),
     ]
     .iter()
     .cloned()
