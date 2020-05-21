@@ -5,3 +5,5 @@ table x {
   z => "z",
   q => 10,
 }
+
+let t = x->y;

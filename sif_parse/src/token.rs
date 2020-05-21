@@ -27,6 +27,7 @@ pub enum TokenTy {
     EqEq,
     LtEq,
     GtEq,
+    Arrow,
     EqArrow,
     BangEq,
     AmpAmp,
@@ -145,6 +146,7 @@ impl fmt::Display for TokenTy {
             TokenTy::BangEq => "!=".to_string(),
             TokenTy::AmpAmp => "&&".to_string(),
             TokenTy::PipePipe => "||".to_string(),
+            TokenTy::Arrow => "->".to_string(),
             TokenTy::EqArrow => "=>".to_string(),
 
             TokenTy::Ident(name) => format!("{}", name),

@@ -14,7 +14,7 @@ stmt       ::= ifstmt   |
 block      ::= "{" { decl } "}" ;
 
 identpair  ::= IDENT "," IDENT ;
-varlist   ::= { IDENT [ "=" expr ] "," } ;
+varlist    ::= { IDENT [ "=" expr ] "," } ;
 itemlist   ::= { IDENT "=>" expr "," } ;
 paramlist  ::= [ { IDENT [ "," ] } ] ;
 
@@ -29,11 +29,6 @@ forstmt    ::= "for" identpair "in" expr block ;
 exprstmt   ::= expr ";" ;
 retstmt    ::= "return" [ expr ] ";" ;
 
-funccall   ::= primary "(" [ paramlist ] ")" ;
-tablecall  ::= primary "." primary ;
-arraycall  ::= primary "[" expr "]" ;
-recordcall ::= primary "->" primary ";" ;
-
 expr         ::= assignexpr ;
 assignexpr   ::= [ { [ funccall "." ] [ tablecall ] } ] assignexpr | orexpr ;
 orexpr       ::= andexpr { [ "||" ] andexpr } ;
@@ -43,7 +38,7 @@ cmpexpr      ::= addorsubexpr { [ ">" ] [ ">=" ] [ "<" ] [ "<=" ] addorsubexpr }
 addorsubexpr ::= mulordivexpr { [ "+" ] [ "-" ] mulordivexpr } ;
 mulordivexpr ::= modexpr { [ "*" ] [ "/" ] modexpr } ;
 modexpr      ::= unaryexpr { [ "%" ] unaryexpr } ;
-unaryexpr    ::= [ "-" ]  [ "!" ] unaryexpr | funccall | tablecall | recordcall | arraycall ;
+unaryexpr    ::= [ "-" ]  [ "!" ] unaryexpr | funccall ;
 primary      ::= NUMBER |
                  STRING |
 	         TRUE   |
@@ -51,3 +46,8 @@ primary      ::= NUMBER |
 	         IDENT  |
 	         groupexpr ;
 groupexpr    ::= "(" expr ")" ;
+
+funccall   ::= primary "(" [ paramlist ] ")" | tableaccess | recordaccess | arrayaccess ;
+tableaccess  ::= primary "." primary ;
+arrayaccess  ::= primary "[" expr "]" ;
+recordaccess ::= primary "->" primary ";" ;

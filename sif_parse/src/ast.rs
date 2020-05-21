@@ -81,9 +81,19 @@ pub enum AstNode {
         val: Option<Box<AstNode>>,
     },
 
+    RecordAccess {
+        record_tkn: Token,
+        index: Box<AstNode>,
+    },
+
     TableDecl {
         ident_tkn: Token,
         items: Box<AstNode>,
+    },
+
+    TableAccess {
+        table_tkn: Token,
+        index: Box<AstNode>,
     },
 
     ArrayDecl {
@@ -93,6 +103,11 @@ pub enum AstNode {
 
     ArrayItems {
         items: Vec<AstNode>,
+    },
+
+    ArrayAccess {
+        array_tkn: Token,
+        index: Box<AstNode>,
     },
 
     FnCallExpr {

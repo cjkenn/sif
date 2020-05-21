@@ -811,7 +811,6 @@ impl<'l, 's> Parser<'l, 's> {
                     rhs: Box::new(rhs),
                 });
             }
-            // TODO: array, table, record access
             _ => self.fn_call_expr(),
         }
     }
@@ -824,9 +823,6 @@ impl<'l, 's> Parser<'l, 's> {
             _ => None,
         };
 
-        // If this is a class ident, we expect a period and then either a property name
-        // or a function call. If this is a regular function ident, we expect an
-        // opening paren next.
         match self.curr_tkn.ty {
             TokenTy::LeftParen => {
                 self.expect(TokenTy::LeftParen)?;
@@ -844,6 +840,31 @@ impl<'l, 's> Parser<'l, 's> {
                 return Ok(AstNode::FnCallExpr {
                     fn_ident_tkn: ident_tkn.unwrap(),
                     fn_params: params,
+                });
+            }
+            TokenTy::Period => {
+                self.expect(TokenTy::Period)?;
+                let val = self.expr()?;
+                return Ok(AstNode::TableAccess {
+                    table_tkn: ident_tkn.unwrap(),
+                    index: Box::new(val),
+                });
+            }
+            TokenTy::LeftBracket => {
+                self.expect(TokenTy::LeftBracket)?;
+                let idx = self.expr()?;
+                self.expect(TokenTy::RightBracket)?;
+                return Ok(AstNode::ArrayAccess {
+                    array_tkn: ident_tkn.unwrap(),
+                    index: Box::new(idx),
+                });
+            }
+            TokenTy::Arrow => {
+                self.expect(TokenTy::Arrow)?;
+                let rec_access = self.expr()?;
+                return Ok(AstNode::RecordAccess {
+                    record_tkn: ident_tkn.unwrap(),
+                    index: Box::new(rec_access),
                 });
             }
             _ => (),
