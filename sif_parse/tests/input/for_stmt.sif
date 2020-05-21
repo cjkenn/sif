@@ -4,4 +4,5 @@ let q;
 
 for idx, var in q {
   let y;
+  let x = idx + 1;
 }

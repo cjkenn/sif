@@ -106,16 +106,33 @@ impl<'l, 's> Parser<'l, 's> {
             TokenTy::If => self.if_stmt(),
             TokenTy::For => self.for_stmt(),
             TokenTy::Return => self.ret_stmt(),
-            TokenTy::LeftBrace => self.block(),
+            TokenTy::LeftBrace => self.block(None),
             _ => self.expr_stmt(),
         }
     }
 
-    fn block(&mut self) -> Result<AstNode, ParseErr> {
+    /// Parses a block statement. Takes in an optional list of bindings that should
+    /// be inserted into the symbol table while parsing the block. This makes it
+    /// easier to bind variables to the scope defined in for loops and function declarations.
+    fn block(&mut self, bindings: Option<Vec<AstNode>>) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::LeftBrace)?;
 
         let mut decls = Vec::new();
         self.sym_tab.init_scope();
+        match bindings {
+            Some(nodes) => {
+                for node in nodes {
+                    match &node {
+                        AstNode::PrimaryExpr { ref tkn } => {
+                            let name = tkn.get_name();
+                            self.sym_tab.store(&name, node.clone());
+                        }
+                        _ => (),
+                    };
+                }
+            }
+            None => (),
+        };
 
         loop {
             match self.curr_tkn.ty {
@@ -191,7 +208,19 @@ impl<'l, 's> Parser<'l, 's> {
         self.expect(TokenTy::LeftParen)?;
         let params = self.param_list()?;
         self.expect(TokenTy::RightParen)?;
-        let body = self.block()?;
+
+        let bindings = match &params {
+            AstNode::FnParams { ref params } => {
+                if params.len() > 0 {
+                    Some(params.clone())
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        let body = self.block(bindings)?;
 
         let node = AstNode::FnDecl {
             ident_tkn: ident_tkn.clone(),
@@ -236,11 +265,7 @@ impl<'l, 's> Parser<'l, 's> {
                     }
 
                     let ident_tkn = maybe_ident_tkn.unwrap();
-                    let name = ident_tkn.get_name();
-                    let param_node = AstNode::PrimaryExpr { tkn: ident_tkn };
-                    self.sym_tab.store(&name, param_node.clone());
-
-                    param_list.push(param_node);
+                    param_list.push(AstNode::PrimaryExpr { tkn: ident_tkn });
 
                     if self.curr_tkn.ty != TokenTy::RightParen {
                         self.expect(TokenTy::Comma)?;
@@ -261,7 +286,7 @@ impl<'l, 's> Parser<'l, 's> {
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
-        let body = self.block()?;
+        let body = self.block(None)?;
         let node = AstNode::RecordDecl {
             ident_tkn: ident_tkn.clone(),
             rec_body: Box::new(body),
@@ -280,7 +305,7 @@ impl<'l, 's> Parser<'l, 's> {
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
-        let body = self.block()?;
+        let body = self.block(None)?;
         let node = AstNode::TableDecl {
             ident_tkn: ident_tkn.clone(),
             tab_body: Box::new(body),
@@ -319,7 +344,7 @@ impl<'l, 's> Parser<'l, 's> {
         self.expect(TokenTy::If)?;
 
         let if_cond = self.expr()?;
-        let if_blck = self.block()?;
+        let if_blck = self.block(None)?;
 
         let mut else_blck = Vec::new();
         let mut else_ifs = Vec::new();
@@ -331,7 +356,7 @@ impl<'l, 's> Parser<'l, 's> {
                     self.expect(TokenTy::Elif)?;
 
                     let elif_ast = self.expr()?;
-                    let elif_blck = self.block()?;
+                    let elif_blck = self.block(None)?;
                     let stmt_ast = AstNode::ElifStmt {
                         cond_expr: Box::new(elif_ast),
                         stmts: Box::new(elif_blck),
@@ -341,7 +366,7 @@ impl<'l, 's> Parser<'l, 's> {
                 TokenTy::Else => {
                     else_cnt = else_cnt + 1;
                     self.expect(TokenTy::Else)?;
-                    let blck = self.block()?;
+                    let blck = self.block(None)?;
                     else_blck.push(blck);
                 }
                 _ => break,
@@ -368,7 +393,13 @@ impl<'l, 's> Parser<'l, 's> {
         self.expect(TokenTy::In)?;
 
         let in_expr_list = self.expr()?;
-        let stmts = self.block()?;
+
+        let bindings = match &var_list {
+            AstNode::IdentPair { ref idents } => Some(idents.clone()),
+            _ => None,
+        };
+
+        let stmts = self.block(bindings)?;
 
         Ok(AstNode::ForStmt {
             var_list: Box::new(var_list),

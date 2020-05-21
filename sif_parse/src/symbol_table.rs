@@ -1,5 +1,5 @@
 use crate::ast::AstNode;
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 /// Scope is a map of ident names to their AST definitions.
 type Scope = HashMap<String, AstNode>;
