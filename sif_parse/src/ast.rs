@@ -69,7 +69,16 @@ pub enum AstNode {
 
     RecordDecl {
         ident_tkn: Token,
-        rec_body: Box<AstNode>,
+        items: Box<AstNode>,
+    },
+
+    ExprList {
+        exprs: Vec<AstNode>,
+    },
+
+    RecordExpr {
+        ident_tkn: Token,
+        val: Option<Box<AstNode>>,
     },
 
     TableDecl {

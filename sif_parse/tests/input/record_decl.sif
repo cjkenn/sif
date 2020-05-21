@@ -1,0 +1,6 @@
+# expect::pass
+
+record x {
+  y = 10,
+  q,
+}

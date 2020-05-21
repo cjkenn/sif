@@ -14,13 +14,13 @@ stmt       ::= ifstmt   |
 block      ::= "{" { decl } "}" ;
 
 identpair  ::= IDENT "," IDENT ;
-exprlist   ::= { expr "," } expr ;
+varlist   ::= { IDENT [ "=" expr ] "," } ;
 itemlist   ::= { IDENT "=>" expr "," } ;
 paramlist  ::= [ { IDENT [ "," ] } ] ;
 
 vardecl    ::= "let" IDENT [ "=" expr ] ";" ;
 funcdecl   ::= "fn" IDENT "(" [ paramlist ] ")" block ;
-recorddecl ::= "record" IDENT block ;
+recorddecl ::= "record" IDENT "{" [ varlist ] "}" ;
 tabledecl  ::= "table" IDENT "{" [ itemlist ] "}" ;
 arraydecl  ::= "array" IDENT "[" expr "]" ";" ;
 
@@ -30,8 +30,9 @@ exprstmt   ::= expr ";" ;
 retstmt    ::= "return" [ expr ] ";" ;
 
 funccall   ::= primary "(" [ paramlist ] ")" ;
-tablecall  ::= primary "." IDENT ;
+tablecall  ::= primary "." primary ;
 arraycall  ::= primary "[" expr "]" ;
+recordcall ::= primary "->" primary ";" ;
 
 expr         ::= assignexpr ;
 assignexpr   ::= [ { [ funccall "." ] [ tablecall ] } ] assignexpr | orexpr ;
@@ -42,8 +43,7 @@ cmpexpr      ::= addorsubexpr { [ ">" ] [ ">=" ] [ "<" ] [ "<=" ] addorsubexpr }
 addorsubexpr ::= mulordivexpr { [ "+" ] [ "-" ] mulordivexpr } ;
 mulordivexpr ::= modexpr { [ "*" ] [ "/" ] modexpr } ;
 modexpr      ::= unaryexpr { [ "%" ] unaryexpr } ;
-unaryexpr    ::= [ "-" ]  [ "!" ] unaryexpr | funccall | tableexpr ;
-tableexpr    ::= { itemlist } ;
+unaryexpr    ::= [ "-" ]  [ "!" ] unaryexpr | funccall | tablecall | recordcall | arraycall ;
 primary      ::= NUMBER |
                  STRING |
 	         TRUE   |

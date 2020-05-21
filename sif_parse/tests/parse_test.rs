@@ -133,3 +133,16 @@ fn table_decl() {
     let result = parser.parse();
     util::check("table_decl", pctx, result);
 }
+
+#[test]
+fn record_decl() {
+    let pctx = util::setup("record_decl");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("record_decl", pctx, result);
+}
