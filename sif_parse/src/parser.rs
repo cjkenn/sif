@@ -305,14 +305,52 @@ impl<'l, 's> Parser<'l, 's> {
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
-        let body = self.block(None)?;
+        self.expect(TokenTy::LeftBrace)?;
+        let items = self.item_list()?;
+        self.expect(TokenTy::RightBrace)?;
+
         let node = AstNode::TableDecl {
             ident_tkn: ident_tkn.clone(),
-            tab_body: Box::new(body),
+            items: Box::new(items),
         };
         self.sym_tab.store(&ident_tkn.get_name(), node.clone());
 
         Ok(node)
+    }
+
+    fn item_list(&mut self) -> Result<AstNode, ParseErr> {
+        let mut items = Vec::new();
+
+        while self.curr_tkn.ty != TokenTy::RightBrace {
+            if self.curr_tkn.ty == TokenTy::Eof {
+                return Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
+                    "unexpected end of file",
+                ))));
+            }
+
+            let maybe_ident_tkn = self.match_ident();
+            if maybe_ident_tkn.is_none() {
+                return Err(
+                    self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier")))
+                );
+            }
+            let ident_tkn = maybe_ident_tkn.unwrap();
+
+            let key = AstNode::PrimaryExpr {
+                tkn: ident_tkn.clone(),
+            };
+            self.expect(TokenTy::EqArrow)?;
+            let val = self.expr()?;
+            self.expect(TokenTy::Comma)?;
+
+            let curr_item = AstNode::TableItem {
+                key: Box::new(key),
+                val: Box::new(val),
+            };
+            items.push(curr_item);
+        }
+
+        Ok(AstNode::ItemList { items: items })
     }
 
     fn array_decl(&mut self) -> Result<AstNode, ParseErr> {

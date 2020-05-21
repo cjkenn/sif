@@ -58,6 +58,15 @@ pub enum AstNode {
         idents: Vec<AstNode>,
     },
 
+    ItemList {
+        items: Vec<AstNode>,
+    },
+
+    TableItem {
+        key: Box<AstNode>,
+        val: Box<AstNode>,
+    },
+
     RecordDecl {
         ident_tkn: Token,
         rec_body: Box<AstNode>,
@@ -65,7 +74,7 @@ pub enum AstNode {
 
     TableDecl {
         ident_tkn: Token,
-        tab_body: Box<AstNode>,
+        items: Box<AstNode>,
     },
 
     ArrayDecl {

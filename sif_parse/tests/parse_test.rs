@@ -120,3 +120,16 @@ fn exprs() {
     let result = parser.parse();
     util::check("exprs", pctx, result);
 }
+
+#[test]
+fn table_decl() {
+    let pctx = util::setup("table_decl");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check("table_decl", pctx, result);
+}

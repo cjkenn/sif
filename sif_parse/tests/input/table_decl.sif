@@ -1,0 +1,7 @@
+# expect::pass
+
+table x {
+  y => "y",
+  z => "z",
+  q => 10,
+}

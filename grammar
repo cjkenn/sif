@@ -15,13 +15,13 @@ block      ::= "{" { decl } "}" ;
 
 identpair  ::= IDENT "," IDENT ;
 exprlist   ::= { expr "," } expr ;
-itemlist   ::= IDENT "=>" expr "," ;
+itemlist   ::= { IDENT "=>" expr "," } ;
 paramlist  ::= [ { IDENT [ "," ] } ] ;
 
 vardecl    ::= "let" IDENT [ "=" expr ] ";" ;
 funcdecl   ::= "fn" IDENT "(" [ paramlist ] ")" block ;
 recorddecl ::= "record" IDENT block ;
-tabledecl  ::= "table" IDENT block ;
+tabledecl  ::= "table" IDENT "{" [ itemlist ] "}" ;
 arraydecl  ::= "array" IDENT "[" expr "]" ";" ;
 
 ifstmt     ::= "if" expr block { "elif" expr block } [ "else" block ] ;
