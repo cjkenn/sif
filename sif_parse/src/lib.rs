@@ -1,9 +1,10 @@
-mod ast;
-mod block;
-mod error;
+pub mod block;
 pub mod lex;
-mod op;
 pub mod parser;
-mod reserved;
 pub mod symbol_table;
+
+mod ast;
+mod error;
+mod op;
+mod reserved;
 mod token;

@@ -5,3 +5,4 @@ authors = ["cjkenn"]
 edition = "2018"
 
 [dependencies]
+sif_parse = { path = "../sif_parse" }

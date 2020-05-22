@@ -1,6 +1,6 @@
 use crate::op::OpCode;
 
-struct SifBlock {
+pub struct SifBlock {
     instrs: Vec<OpCode>,
 }
 
