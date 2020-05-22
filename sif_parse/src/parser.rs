@@ -391,7 +391,7 @@ impl<'l, 's> Parser<'l, 's> {
             items.insert(String::from(ident_tkn.get_name()), val);
         }
 
-        Ok(AstNode::ItemCollection { items: items })
+        Ok(AstNode::ItemList { items: items })
     }
 
     fn array_decl(&mut self) -> Result<AstNode, ParseErr> {

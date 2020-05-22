@@ -47,7 +47,7 @@ primary      ::= NUMBER |
 	         groupexpr ;
 groupexpr    ::= "(" expr ")" ;
 
-funccall   ::= primary "(" [ paramlist ] ")" | tableaccess | recordaccess | arrayaccess ;
+funccall     ::= primary "(" [ paramlist ] ")" | tableaccess | recordaccess | arrayaccess ;
 tableaccess  ::= primary "." primary ;
 arrayaccess  ::= primary "[" expr "]" ;
 recordaccess ::= primary "->" primary ";" ;

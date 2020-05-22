@@ -59,7 +59,7 @@ pub enum AstNode {
         idents: Vec<AstNode>,
     },
 
-    ItemCollection {
+    ItemList {
         items: HashMap<String, AstNode>,
     },
 
