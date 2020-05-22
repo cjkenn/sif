@@ -1,4 +1,5 @@
 use crate::token::Token;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum AstNode {
@@ -58,8 +59,8 @@ pub enum AstNode {
         idents: Vec<AstNode>,
     },
 
-    ItemList {
-        items: Vec<AstNode>,
+    ItemCollection {
+        items: HashMap<String, AstNode>,
     },
 
     TableItem {

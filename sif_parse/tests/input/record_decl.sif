@@ -5,4 +5,4 @@ record x {
   q,
 }
 
-#let t = x->y;
+let t = x->y;

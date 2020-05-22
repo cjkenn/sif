@@ -6,4 +6,4 @@ table x {
   q => 10,
 }
 
-let t = x->y;
+let t = x.y;

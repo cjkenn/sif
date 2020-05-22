@@ -14,7 +14,7 @@ fn if_stmt() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("if_stmt", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -27,7 +27,7 @@ fn for_stmt() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("for_stmt", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn var_decl_valid() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("var_decl", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn var_decl_invalid() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("var_decl_invalid", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -66,7 +66,7 @@ fn fn_decl_valid() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("fn_decl_valid", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -79,7 +79,7 @@ fn fn_decl_invalid() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("fn_decl_invalid", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -92,7 +92,7 @@ fn fn_w_ret_stmt() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("fn_w_ret_stmt", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -105,7 +105,7 @@ fn fn_call() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("fn_call", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -118,7 +118,7 @@ fn exprs() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("exprs", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn table_decl() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("table_decl", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -144,7 +144,7 @@ fn record_decl() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("record_decl", pctx, result);
+    util::check(pctx, result);
 }
 
 #[test]
@@ -157,5 +157,5 @@ fn array_decl() {
     let mut parser = Parser::new(&mut lex, &mut symtab);
 
     let result = parser.parse();
-    util::check("array_decl", pctx, result);
+    util::check(pctx, result);
 }

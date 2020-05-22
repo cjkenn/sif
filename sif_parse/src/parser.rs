@@ -6,6 +6,8 @@ use crate::{
     token::{Token, TokenTy},
 };
 
+use std::collections::HashMap;
+
 const FN_PARAM_MAX_LEN: usize = 64;
 
 /// ParserResult handles the result from parsing a file. This contains an optional
@@ -35,14 +37,14 @@ pub struct Parser<'l, 's> {
     /// The current token from the lexer.
     curr_tkn: Token,
 
-    /// AST node size.
-    node_count: usize,
-
-    /// Number of symbols encountered.
-    sym_count: usize,
-
     /// Vec of errors parsed so far
     errors: Vec<ParseErr>,
+
+    /// Flag indicating whether or not potential identifiers should be looked up
+    /// the symbol table before attempting to access or assign them. This is true
+    /// almost all the time, but parsing table/record access is simplified for now
+    /// by disabling checking the table definition.
+    should_check_sym_tab: bool,
 }
 
 impl<'l, 's> Parser<'l, 's> {
@@ -53,9 +55,8 @@ impl<'l, 's> Parser<'l, 's> {
             lexer: lex,
             sym_tab: symt,
             curr_tkn: firsttkn,
-            node_count: 1, // start at 1 because the entry node always has id 0
-            sym_count: 0,
             errors: Vec::new(),
+            should_check_sym_tab: true,
         }
     }
 
@@ -367,7 +368,7 @@ impl<'l, 's> Parser<'l, 's> {
     }
 
     fn item_list(&mut self) -> Result<AstNode, ParseErr> {
-        let mut items = Vec::new();
+        let mut items = HashMap::new();
 
         while self.curr_tkn.ty != TokenTy::RightBrace {
             if self.curr_tkn.ty == TokenTy::Eof {
@@ -383,22 +384,14 @@ impl<'l, 's> Parser<'l, 's> {
                 );
             }
             let ident_tkn = maybe_ident_tkn.unwrap();
-
-            let key = AstNode::PrimaryExpr {
-                tkn: ident_tkn.clone(),
-            };
             self.expect(TokenTy::EqArrow)?;
             let val = self.expr()?;
             self.expect(TokenTy::Comma)?;
 
-            let curr_item = AstNode::TableItem {
-                key: Box::new(key),
-                val: Box::new(val),
-            };
-            items.push(curr_item);
+            items.insert(String::from(ident_tkn.get_name()), val);
         }
 
-        Ok(AstNode::ItemList { items: items })
+        Ok(AstNode::ItemCollection { items: items })
     }
 
     fn array_decl(&mut self) -> Result<AstNode, ParseErr> {
@@ -844,7 +837,9 @@ impl<'l, 's> Parser<'l, 's> {
             }
             TokenTy::Period => {
                 self.expect(TokenTy::Period)?;
+                self.should_check_sym_tab = false;
                 let val = self.expr()?;
+                self.should_check_sym_tab = true;
                 return Ok(AstNode::TableAccess {
                     table_tkn: ident_tkn.unwrap(),
                     index: Box::new(val),
@@ -861,7 +856,9 @@ impl<'l, 's> Parser<'l, 's> {
             }
             TokenTy::Arrow => {
                 self.expect(TokenTy::Arrow)?;
+                self.should_check_sym_tab = false;
                 let rec_access = self.expr()?;
+                self.should_check_sym_tab = true;
                 return Ok(AstNode::RecordAccess {
                     record_tkn: ident_tkn.unwrap(),
                     index: Box::new(rec_access),
@@ -885,11 +882,13 @@ impl<'l, 's> Parser<'l, 's> {
             TokenTy::Ident(ref ident_name) => {
                 let ident_tkn = self.curr_tkn.clone();
 
-                let maybe_ast = self.sym_tab.retrieve(ident_name);
-                if maybe_ast.is_none() {
-                    let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
-                    self.consume();
-                    return Err(err);
+                if self.should_check_sym_tab {
+                    let maybe_ast = self.sym_tab.retrieve(ident_name);
+                    if maybe_ast.is_none() {
+                        let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
+                        self.consume();
+                        return Err(err);
+                    }
                 }
 
                 let ast = Ok(AstNode::PrimaryExpr { tkn: ident_tkn });

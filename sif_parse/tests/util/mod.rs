@@ -26,7 +26,7 @@ pub fn setup(test_name: &str) -> ParseTestCtx {
     pe
 }
 
-pub fn check(test_name: &str, pctx: ParseTestCtx, result: ParserResult) {
+pub fn check(pctx: ParseTestCtx, result: ParserResult) {
     match pctx.is_pass {
         true => {
             if result.has_err {
