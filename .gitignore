@@ -1,7 +1,7 @@
 scratch/
 *.org
+Makefile
 
 #Added by cargo
-
 /target
 Cargo.lock
