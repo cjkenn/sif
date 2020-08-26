@@ -1,7 +1,0 @@
-[package]
-name = "sif_parse"
-version = "0.1.0"
-authors = ["cjkenn"]
-edition = "2018"
-
-[dependencies]

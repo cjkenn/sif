@@ -1,4 +1,4 @@
-use sif_parse::{lex::Lexer, parser::Parser, symbol_table::SymTab};
+use sif::{lex::Lexer, parser::Parser, symbol_table::SymTab};
 
 use std::fs::File;
 

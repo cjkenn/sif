@@ -1,6 +1,5 @@
 use crate::error::VMErr;
-
-use sif_parse::block::SifBlock;
+use crate::block::SifBlock;
 
 pub struct VM {
     blocks: Vec<SifBlock>,

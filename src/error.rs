@@ -1,3 +1,8 @@
+pub enum VMErr {
+    CompileTime,
+    RunTime,
+}
+
 #[derive(Debug, Clone)]
 pub enum LexErrTy {
     UnknownChar(char),

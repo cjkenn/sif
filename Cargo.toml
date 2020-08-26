@@ -1,7 +1,5 @@
-[workspace]
-members = [
-  "sif",
-  "sif_parse",
-  "sif_vm",
-  "sif_util",
-]
+[package]
+name = "sif"
+version = "0.1.0"
+
+[dependencies]
