@@ -1,7 +1,8 @@
 use crate::op::OpCode;
 
+#[derive(Clone)]
 pub struct SifBlock {
-    instrs: Vec<OpCode>,
+    pub instrs: Vec<OpCode>,
 }
 
 impl SifBlock {
