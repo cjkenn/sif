@@ -2,7 +2,7 @@ use val::SifVal;
 
 use std::fmt;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Clone,PartialEq,Debug)]
 pub enum OpCode {
     Add {
         line: usize,
@@ -34,7 +34,7 @@ pub enum OpCode {
         rhs: Option<Box<OpCode>>,
     },
     Const {
-        val: Box<SifVal>,
+        val: String,
     },
 }
 
@@ -47,7 +47,7 @@ impl fmt::Display for OpCode {
             OpCode::Div { .. } => "div".to_string(),
             OpCode::Mod { .. } => "mod".to_string(),
             OpCode::Ret { .. } => "return".to_string(),
-            OpCode::Const { val } => format!("const: {}", &name),
+            OpCode::Const { val } => "val".to_string(),
             _ => "unknown op".to_string(),
         };
 
