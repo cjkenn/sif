@@ -1,0 +1,12 @@
+# expect::pass
+
+let x;
+let y = 10;
+x = 11;
+
+let q = "hello";
+q = "goodbye";
+
+let h = false;
+h = true;
+h = 20;

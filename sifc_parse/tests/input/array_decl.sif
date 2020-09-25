@@ -1,0 +1,7 @@
+# expect::pass
+
+array x [6,
+"7",
+];
+
+let y = x[0];

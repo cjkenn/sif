@@ -1,0 +1,33 @@
+# expect::pass
+
+if true && false {
+  let x = 1;
+} else {
+  let x = 2;
+}
+
+if 1 < 2 {
+  let x = 1;
+} elif 2 < 3 {
+  let x = 2;
+} else {
+  let x = 3;
+}
+
+let y = 3;
+
+if y > 10 {
+  let q = 1;
+} else {
+  let z = 1;
+}
+
+let z = 2;
+
+if z >= y {
+  let g = 1;
+} elif z < y {
+  let g = 2;
+} elif z == y {
+  let g = 3;
+}
