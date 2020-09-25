@@ -2,7 +2,7 @@ use crate::{
     ast::AstNode,
     error::{ParseErr, ParseErrTy},
     lex::Lexer,
-    symbol_table::SymTab,
+    symtab::SymTab,
     token::{Token, TokenTy},
 };
 

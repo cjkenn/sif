@@ -1,0 +1,12 @@
+[package]
+name = "sifc_driver"
+version = "0.1.0"
+edition = "2018"
+
+[[bin]]
+name = "sif"
+path = "./src/sif.rs"
+
+[dependencies]
+clap = "3.0.0-beta.1"
+sifc_parse = { path = "../sifc_parse" }

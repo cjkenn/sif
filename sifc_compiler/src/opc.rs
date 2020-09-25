@@ -1,8 +1,8 @@
-use val::SifVal;
+use crate::sifv::SifVal;
 
 use std::fmt;
 
-#[derive(Clone,PartialEq,Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum OpCode {
     Add {
         line: usize,

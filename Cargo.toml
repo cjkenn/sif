@@ -1,5 +1,7 @@
-[package]
-name = "sif"
-version = "0.1.0"
-
-[dependencies]
+[workspace]
+members = [
+  "sifc_parse",
+  "sifc_compiler",
+  "sifc_vm",
+  "sifc_driver"
+]

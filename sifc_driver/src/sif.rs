@@ -1,13 +1,13 @@
 extern crate clap;
 
-extern crate sif_parse;
+extern crate sifc_parse;
 
 use clap::Clap;
 
-use sif_parse::{
+use sifc_parse::{
     lex::Lexer,
     parser::{Parser, ParserResult},
-    symbol_table::SymTab,
+    symtab::SymTab,
 };
 
 use std::{fs::File, io};
