@@ -1,9 +1,11 @@
 use crate::{
-    error::{LexErr, LexErrTy},
     reserved::{get_reserved_words, is_reserved_word},
     token::{Token, TokenTy},
 };
-
+use sifc_err::{
+    err::SifErr,
+    lex_err::{LexErr, LexErrTy},
+};
 use std::{
     collections::HashMap,
     fs::File,

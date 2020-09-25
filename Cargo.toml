@@ -3,5 +3,6 @@ members = [
   "sifc_parse",
   "sifc_compiler",
   "sifc_vm",
-  "sifc_driver"
+  "sifc_driver",
+  "sifc_err"
 ]
