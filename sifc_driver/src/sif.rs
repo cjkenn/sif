@@ -1,15 +1,19 @@
 extern crate clap;
-
+extern crate sifc_compiler;
 extern crate sifc_parse;
 
 use clap::Clap;
-
+use sifc_compiler::{
+    compiler::{CompileResult, Compiler},
+    dreg::DReg,
+};
+use sifc_err::err::SifErr;
 use sifc_parse::{
+    ast::AstNode,
     lex::Lexer,
     parser::{Parser, ParserResult},
     symtab::SymTab,
 };
-
 use std::{fs::File, io};
 
 #[derive(Clap)]
@@ -19,6 +23,8 @@ pub struct SifOpts {
     filename: Option<String>,
     #[clap(long)]
     dump_ast: bool,
+    #[clap(long)]
+    dump_ir: bool,
 }
 
 fn main() {
@@ -42,27 +48,27 @@ fn from_file(opts: SifOpts) {
         return;
     }
 
+    let ast = parse_result.ast.unwrap();
+
     if opts.dump_ast {
-        let ast = parse_result.ast.unwrap();
         println!("{:#?}", ast);
     }
 
-    // 2. Convert AST to chunks
-
-    // 3. Start vm and interpret chunks
-}
-
-fn repl() {
-    let mut _symtab = SymTab::new();
-    let mut input = String::new();
-
-    // TODO: how do we lex from a stdin input string here?
-    println!("Welcome to sif!");
-    print!(">");
-    match io::stdin().read_line(&mut input) {
-        Ok(_) => println!("{:#?}", input),
-        Err(e) => panic!(e),
+    // 2. Convert AST to instructions
+    let comp_result = run_compiler(&ast);
+    match comp_result {
+        Err(e) => {
+            e.emit();
+            return;
+        }
+        _ => (),
     };
+
+    if opts.dump_ir {
+        println!("{:#?}", comp_result.unwrap());
+    }
+
+    // 3. Start vm and interpret instruction blocks
 }
 
 /// Opens the file from the filename provided, creates a lexer for that file
@@ -80,4 +86,31 @@ fn run_parser(filename: &str, symtab: &mut SymTab) -> ParserResult {
     let mut lexer = Lexer::new(infile);
     let mut parser = Parser::new(&mut lexer, symtab);
     parser.parse()
+}
+
+fn run_compiler(ast: &AstNode) -> CompileResult {
+    let ds = init_dregs();
+    let mut comp = Compiler::new(ast, ds);
+    comp.compile()
+}
+
+fn init_dregs() -> Vec<DReg> {
+    let mut regs = Vec::with_capacity(1024);
+    for i in 0..1023 {
+        regs.push(DReg::new(format!("r{}", i)));
+    }
+    regs
+}
+
+fn repl() {
+    let mut _symtab = SymTab::new();
+    let mut input = String::new();
+
+    // TODO: how do we lex from a stdin input string here?
+    println!("Welcome to sif!");
+    print!(">");
+    match io::stdin().read_line(&mut input) {
+        Ok(_) => println!("{:#?}", input),
+        Err(e) => panic!(e),
+    };
 }

@@ -1,7 +1,9 @@
 use crate::err::SifErr;
 
 #[derive(Debug, Clone)]
-pub enum CompileErrTy {}
+pub enum CompileErrTy {
+    InvalidAst,
+}
 
 #[derive(Debug, Clone)]
 pub struct CompileErr {
@@ -20,6 +22,10 @@ impl SifErr for CompileErr {
     }
 
     fn to_msg(&self) -> String {
-        String::from("compiler error")
+        match self.ty {
+            CompileErrTy::InvalidAst => {
+                String::from("fatal: invalid or unknown ast format provided")
+            }
+        }
     }
 }

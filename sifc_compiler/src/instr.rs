@@ -1,13 +1,13 @@
 use crate::opc::Opc;
 
 #[derive(Debug, Clone)]
-pub struct Instr<'i> {
+pub struct Instr {
     pub lbl: String,
-    pub op: Opc<'i>,
+    pub op: Opc,
 }
 
-impl<'i> Instr<'i> {
-    pub fn new(l: String, o: Opc<'i>) -> Instr<'i> {
+impl Instr {
+    pub fn new(l: String, o: Opc) -> Instr {
         Instr { lbl: l, op: o }
     }
 }
