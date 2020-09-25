@@ -1,56 +1,92 @@
-use crate::sifv::SifVal;
+use crate::dreg::DReg;
 
-use std::fmt;
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum OpCode {
+/// Opc is the representation of opcodes in the sif vm.
+#[derive(Clone, Debug)]
+pub enum Opc<'o> {
+    // Binary ops
     Add {
-        line: usize,
-        lhs: Box<OpCode>,
-        rhs: Box<OpCode>,
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
     },
     Sub {
-        line: usize,
-        lhs: Box<OpCode>,
-        rhs: Box<OpCode>,
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
     },
     Mul {
-        line: usize,
-        lhs: Box<OpCode>,
-        rhs: Box<OpCode>,
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
     },
     Div {
-        line: usize,
-        lhs: Box<OpCode>,
-        rhs: Box<OpCode>,
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
     },
     Mod {
-        line: usize,
-        lhs: Box<OpCode>,
-        rhs: Box<OpCode>,
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
     },
-    Ret {
-        line: usize,
-        rhs: Option<Box<OpCode>>,
+    Lteq {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
     },
-    Const {
-        val: String,
+    Lt {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
     },
-}
+    Gteq {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
+    },
+    Gt {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
+    },
+    Eq {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
+    },
+    Neq {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
+    },
+    Lnot {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
+    },
+    Land {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
+    },
+    Lor {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
+    },
+    Lxor {
+        src1: &'o DReg,
+        src2: &'o DReg,
+        dest: &'o DReg,
+    },
 
-impl fmt::Display for OpCode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let pretty = match self {
-            OpCode::Add { .. } => "add".to_string(),
-            OpCode::Sub { .. } => "sub".to_string(),
-            OpCode::Mul { .. } => "mul".to_string(),
-            OpCode::Div { .. } => "div".to_string(),
-            OpCode::Mod { .. } => "mod".to_string(),
-            OpCode::Ret { .. } => "return".to_string(),
-            OpCode::Const { val } => "val".to_string(),
-            _ => "unknown op".to_string(),
-        };
-
-        write!(f, "{}", pretty)
-    }
+    // Unary ops
+    Lneg {
+        src1: &'o DReg,
+        dest: &'o DReg,
+    },
+    Nneg {
+        src1: &'o DReg,
+        dest: &'o DReg,
+    },
 }
