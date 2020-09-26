@@ -1,6 +1,7 @@
 use crate::{dreg::DReg, instr::Instr, opc::Opc, sifv::SifVal};
 use sifc_err::compile_err::{CompileErr, CompileErrTy};
 use sifc_parse::{ast::AstNode, token::TokenTy};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 pub type CompileResult = Result<Vec<Instr>, CompileErr>;
@@ -15,8 +16,11 @@ pub struct Compiler<'c> {
     ops: Vec<Instr>,
 
     /// Vector of data registers. We expect the list to contain already initialized
-    /// data registers with correct names and no values contained within.
-    dregs: Vec<Rc<DReg>>,
+    /// data registers with correct names and no values contained within. This is a vec of
+    /// pointers to mutable cells, although it's rare they will be mutated: occasionally
+    /// constant values needed to be changed inside a register (particularly in load
+    /// and store operations).
+    dregs: Vec<Rc<RefCell<DReg>>>,
 
     /// Current number of labels in the block being translated.
     lbl_cnt: usize,
@@ -26,7 +30,7 @@ pub struct Compiler<'c> {
 }
 
 impl<'c> Compiler<'c> {
-    pub fn new(a: &'c AstNode, ds: Vec<Rc<DReg>>) -> Compiler<'c> {
+    pub fn new(a: &'c AstNode, ds: Vec<Rc<RefCell<DReg>>>) -> Compiler<'c> {
         Compiler {
             ast: a,
             ops: Vec::new(),
@@ -100,7 +104,8 @@ impl<'c> Compiler<'c> {
                 let v = tkn.get_val();
                 let sifv = SifVal::Num(v);
 
-                let d = self.nextreg_w_val(Some(sifv.clone()));
+                let d = self.nextreg();
+                d.borrow_mut().cont = Some(sifv.clone());
                 let op = Opc::Ldc { dest: d, val: sifv };
 
                 self.push_op(op);
@@ -127,24 +132,13 @@ impl<'c> Compiler<'c> {
         self.lbl_cnt = self.lbl_cnt + 1;
     }
 
-    fn nextreg(&mut self) -> Rc<DReg> {
+    fn nextreg(&mut self) -> Rc<RefCell<DReg>> {
         let reg = Rc::clone(&self.dregs[self.ri]);
         self.ri = self.ri + 1;
         reg
     }
 
-    fn nextreg_w_val(&mut self, v: Option<SifVal>) -> Rc<DReg> {
-        let currname = &self.dregs[self.ri].name;
-        let replace = Rc::new(DReg::from_cont(currname.to_string(), v));
-
-        self.dregs[self.ri] = replace;
-        let reg = Rc::clone(&self.dregs[self.ri]);
-        self.ri = self.ri + 1;
-
-        reg
-    }
-
-    fn prevreg(&mut self) -> Rc<DReg> {
+    fn prevreg(&mut self) -> Rc<RefCell<DReg>> {
         if self.ri == 0 {
             return Rc::clone(&self.dregs[self.ri]);
         }
