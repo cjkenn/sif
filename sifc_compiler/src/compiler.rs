@@ -1,4 +1,9 @@
-use crate::{dreg::DReg, instr::Instr, opc::Opc, sifv::SifVal};
+use crate::{
+    dreg::DReg,
+    instr::Instr,
+    opc::{Op, OpTy},
+    sifv::SifVal,
+};
 use sifc_err::compile_err::{CompileErr, CompileErrTy};
 use sifc_parse::{ast::AstNode, token::TokenTy};
 use std::cell::RefCell;
@@ -74,44 +79,106 @@ impl<'c> Compiler<'c> {
     fn expr(&mut self, expr: &AstNode) {
         match expr {
             AstNode::BinaryExpr { op_tkn, lhs, rhs } => match op_tkn.ty {
-                TokenTy::Plus => {
-                    self.add(lhs, rhs);
-                }
+                TokenTy::Plus => self.binop(OpTy::Add, lhs, rhs),
+                TokenTy::Minus => self.binop(OpTy::Sub, lhs, rhs),
+                TokenTy::Star => self.binop(OpTy::Mul, lhs, rhs),
+                TokenTy::Slash => self.binop(OpTy::Div, lhs, rhs),
+                TokenTy::Percent => self.binop(OpTy::Modu, lhs, rhs),
+                _ => (),
+            },
+            AstNode::LogicalExpr { op_tkn, lhs, rhs } => match op_tkn.ty {
+                TokenTy::EqEq => self.binop(OpTy::Eq, lhs, rhs),
+                TokenTy::LtEq => self.binop(OpTy::LtEq, lhs, rhs),
+                TokenTy::Lt => self.binop(OpTy::Lt, lhs, rhs),
+                TokenTy::GtEq => self.binop(OpTy::GtEq, lhs, rhs),
+                TokenTy::Gt => self.binop(OpTy::Gt, lhs, rhs),
+                TokenTy::AmpAmp => self.binop(OpTy::Land, lhs, rhs),
+                TokenTy::PipePipe => self.binop(OpTy::Lor, lhs, rhs),
+                TokenTy::BangEq => self.binop(OpTy::Lnot, lhs, rhs),
+                _ => (),
+            },
+            AstNode::UnaryExpr { op_tkn, rhs } => match op_tkn.ty {
+                TokenTy::Bang => self.unop(OpTy::Lneg, rhs),
+                TokenTy::Minus => self.unop(OpTy::Nneg, rhs),
                 _ => (),
             },
             _ => (),
         }
     }
 
-    fn add(&mut self, lhs: &AstNode, rhs: &AstNode) {
+    fn binop(&mut self, ty: OpTy, lhs: &AstNode, rhs: &AstNode) {
         let r0 = self.binarg(lhs);
         let r1 = self.binarg(rhs);
 
-        let op = Opc::Add {
+        let op = Op::Binary {
+            ty: ty,
             src1: Rc::clone(&self.dregs[r0]),
             src2: Rc::clone(&self.dregs[r1]),
             dest: Rc::clone(&self.nextreg()),
         };
+        self.push_op(op);
+    }
 
+    fn unop(&mut self, ty: OpTy, rhs: &AstNode) {
+        let r0 = self.binarg(rhs);
+        let op = Op::Unary {
+            ty: ty,
+            src1: Rc::clone(&self.dregs[r0]),
+            dest: Rc::clone(&self.nextreg()),
+        };
         self.push_op(op);
     }
 
     // Returns the index of the register in which the last stored value is
     fn binarg(&mut self, arg: &AstNode) -> usize {
         match arg {
-            AstNode::PrimaryExpr { tkn } => {
-                // TODO: type mismatches could occur here (ie. when we read "1" + "2")
-                let v = tkn.get_val();
-                let sifv = SifVal::Num(v);
+            AstNode::PrimaryExpr { tkn } => match tkn.ty {
+                TokenTy::Val(v) => {
+                    let sifv = SifVal::Num(v);
+                    let d = self.nextreg();
+                    d.borrow_mut().cont = Some(sifv.clone());
 
-                let d = self.nextreg();
-                d.borrow_mut().cont = Some(sifv.clone());
-                let op = Opc::Ldc { dest: d, val: sifv };
+                    let op = Op::Load {
+                        ty: OpTy::Ldc,
+                        dest: d,
+                        val: sifv,
+                    };
+                    self.push_op(op);
 
-                self.push_op(op);
+                    return self.ri - 1;
+                }
+                TokenTy::True => {
+                    let d = self.nextreg();
+                    let sifv = SifVal::Bl(true);
+                    d.borrow_mut().cont = Some(sifv.clone());
 
-                return self.ri - 1;
-            }
+                    let op = Op::Load {
+                        ty: OpTy::Ldc,
+                        dest: d,
+                        val: sifv,
+                    };
+                    self.push_op(op);
+
+                    return self.ri - 1;
+                }
+                TokenTy::False => {
+                    let d = self.nextreg();
+                    let sifv = SifVal::Bl(false);
+                    d.borrow_mut().cont = Some(sifv.clone());
+
+                    let op = Op::Load {
+                        ty: OpTy::Ldc,
+                        dest: d,
+                        val: sifv,
+                    };
+                    self.push_op(op);
+
+                    return self.ri - 1;
+                }
+                _ => {
+                    return self.ri - 1;
+                }
+            },
             _ => {
                 self.expr(arg);
                 return self.ri - 1;
@@ -119,8 +186,8 @@ impl<'c> Compiler<'c> {
         }
     }
 
-    fn push_op(&mut self, opc: Opc) {
-        let i = Instr::new(self.currlbl(), opc);
+    fn push_op(&mut self, op: Op) {
+        let i = Instr::new(self.currlbl(), op);
         self.ops.push(i);
     }
 
