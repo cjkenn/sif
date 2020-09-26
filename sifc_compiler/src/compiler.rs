@@ -1,6 +1,7 @@
 use crate::{dreg::DReg, instr::Instr, opc::Opc, sifv::SifVal};
 use sifc_err::compile_err::{CompileErr, CompileErrTy};
 use sifc_parse::{ast::AstNode, token::TokenTy};
+use std::rc::Rc;
 
 pub type CompileResult = Result<Vec<Instr>, CompileErr>;
 
@@ -15,7 +16,7 @@ pub struct Compiler<'c> {
 
     /// Vector of data registers. We expect the list to contain already initialized
     /// data registers with correct names and no values contained within.
-    dregs: Vec<DReg>,
+    dregs: Vec<Rc<DReg>>,
 
     /// Current number of labels in the block being translated.
     lbl_cnt: usize,
@@ -25,7 +26,7 @@ pub struct Compiler<'c> {
 }
 
 impl<'c> Compiler<'c> {
-    pub fn new(a: &'c AstNode, ds: Vec<DReg>) -> Compiler<'c> {
+    pub fn new(a: &'c AstNode, ds: Vec<Rc<DReg>>) -> Compiler<'c> {
         Compiler {
             ast: a,
             ops: Vec::new(),
@@ -81,11 +82,13 @@ impl<'c> Compiler<'c> {
     fn add(&mut self, lhs: &AstNode, rhs: &AstNode) {
         let r0 = self.binarg(lhs);
         let r1 = self.binarg(rhs);
+
         let op = Opc::Add {
-            src1: self.dregs[r0].clone(),
-            src2: self.dregs[r1].clone(),
-            dest: self.nextreg().clone(),
+            src1: Rc::clone(&self.dregs[r0]),
+            src2: Rc::clone(&self.dregs[r1]),
+            dest: Rc::clone(&self.nextreg()),
         };
+
         self.push_op(op);
     }
 
@@ -96,10 +99,12 @@ impl<'c> Compiler<'c> {
                 // TODO: type mismatches could occur here (ie. when we read "1" + "2")
                 let v = tkn.get_val();
                 let sifv = SifVal::Num(v);
-                let mut d = self.nextreg().clone();
-                d.cont = Some(sifv.clone());
+
+                let d = self.nextreg_w_val(Some(sifv.clone()));
                 let op = Opc::Ldc { dest: d, val: sifv };
+
                 self.push_op(op);
+
                 return self.ri - 1;
             }
             _ => {
@@ -122,17 +127,28 @@ impl<'c> Compiler<'c> {
         self.lbl_cnt = self.lbl_cnt + 1;
     }
 
-    fn nextreg(&mut self) -> &DReg {
-        let reg = &self.dregs[self.ri];
+    fn nextreg(&mut self) -> Rc<DReg> {
+        let reg = Rc::clone(&self.dregs[self.ri]);
         self.ri = self.ri + 1;
         reg
     }
 
-    fn prevreg(&mut self) -> &DReg {
+    fn nextreg_w_val(&mut self, v: Option<SifVal>) -> Rc<DReg> {
+        let currname = &self.dregs[self.ri].name;
+        let replace = Rc::new(DReg::from_cont(currname.to_string(), v));
+
+        self.dregs[self.ri] = replace;
+        let reg = Rc::clone(&self.dregs[self.ri]);
+        self.ri = self.ri + 1;
+
+        reg
+    }
+
+    fn prevreg(&mut self) -> Rc<DReg> {
         if self.ri == 0 {
-            return &self.dregs[self.ri];
+            return Rc::clone(&self.dregs[self.ri]);
         }
 
-        &self.dregs[self.ri - 1]
+        Rc::clone(&self.dregs[self.ri - 1])
     }
 }

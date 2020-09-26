@@ -14,7 +14,7 @@ use sifc_parse::{
     parser::{Parser, ParserResult},
     symtab::SymTab,
 };
-use std::{fs::File, io};
+use std::{fs::File, io, rc::Rc};
 
 #[derive(Clap)]
 #[clap(version = "1.0")]
@@ -89,17 +89,15 @@ fn run_parser(filename: &str, symtab: &mut SymTab) -> ParserResult {
 }
 
 fn run_compiler(ast: &AstNode) -> CompileResult {
-    let ds = init_dregs();
-    let mut comp = Compiler::new(ast, ds);
-    comp.compile()
-}
-
-fn init_dregs() -> Vec<DReg> {
+    // Init data register array
     let mut regs = Vec::with_capacity(1024);
     for i in 0..1023 {
-        regs.push(DReg::new(format!("r{}", i)));
+        let reg = DReg::new(format!("r{}", i));
+        regs.push(Rc::new(reg));
     }
-    regs
+
+    let mut comp = Compiler::new(ast, regs);
+    comp.compile()
 }
 
 fn repl() {
