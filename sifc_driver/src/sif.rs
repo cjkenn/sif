@@ -6,6 +6,7 @@ use clap::Clap;
 use sifc_compiler::{
     compiler::{CompileResult, Compiler},
     dreg::DReg,
+    printer,
 };
 use sifc_err::err::SifErr;
 use sifc_parse::{
@@ -65,7 +66,7 @@ fn from_file(opts: SifOpts) {
     };
 
     if opts.dump_ir {
-        println!("{:#?}", comp_result.unwrap());
+        printer::dump(comp_result.unwrap());
     }
 
     // 3. Start vm and interpret instruction blocks
