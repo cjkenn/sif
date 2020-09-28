@@ -37,6 +37,7 @@ pub enum OpTy {
     Jmp,  // jump always
 
     Stop, // end program execution
+    Nop,  // no op
 }
 
 #[derive(Clone, Debug)]
@@ -85,5 +86,8 @@ pub enum Op {
     JumpA {
         ty: OpTy,
         lbl: String,
+    },
+    Nop {
+        ty: OpTy,
     },
 }

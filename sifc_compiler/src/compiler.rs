@@ -52,6 +52,7 @@ impl<'c> Compiler<'c> {
         match self.ast {
             AstNode::Program { blocks } => {
                 self.blocks(blocks);
+                self.push_op(Op::Nop { ty: OpTy::Nop });
                 Ok(self.ops.clone())
             }
             _ => Err(CompileErr::new(CompileErrTy::InvalidAst)),
@@ -81,29 +82,36 @@ impl<'c> Compiler<'c> {
             } => {
                 // Generate condition expression
                 self.expr(cond_expr);
-                self.newlbl();
 
                 // Generate jump. we use nextlbl() and the converse of the
                 // condition expression.
+                // TODO: this needs to be matched I think, as the operators
+                // dont necessarily correspond to the converse jumps
                 let jmp_op = Op::JumpCnd {
                     ty: OpTy::Jmpf,
                     src: self.prevreg(),
-                    lbl: self.nextlbl(),
+                    lbl: self.jmplbl(),
                 };
                 self.push_op(jmp_op);
+                self.newlbl();
 
                 // Generate statements for when the condition expression is true
                 self.block(if_stmts);
-                self.newlbl();
+                let jmpa_op = Op::JumpA {
+                    ty: OpTy::Jmp,
+                    lbl: self.jmplbl(),
+                };
+                self.push_op(jmpa_op);
 
                 // Generate statements for elif nodes
+                self.newlbl();
                 for ee in elif_exprs {
                     self.elif(ee);
                 }
 
                 // Generate statements for when the condition is false
-                self.blocks(else_stmts);
                 self.newlbl();
+                self.blocks(else_stmts);
             }
             _ => {
                 // generate nothing if we find some unknown block
@@ -115,16 +123,16 @@ impl<'c> Compiler<'c> {
         match elif {
             AstNode::ElifStmt { cond_expr, stmts } => {
                 self.expr(cond_expr);
-                self.newlbl();
 
                 // Generate jump. we use nextlbl() and the converse of the
                 // condition expression.
                 let jmp_op = Op::JumpCnd {
                     ty: OpTy::Jmpf,
                     src: self.prevreg(),
-                    lbl: self.nextlbl(),
+                    lbl: self.jmplbl(),
                 };
                 self.push_op(jmp_op);
+                self.newlbl();
 
                 self.block(stmts);
             }
@@ -138,6 +146,11 @@ impl<'c> Compiler<'c> {
                 AstNode::ExprStmt { expr } => {
                     self.expr(expr);
                 }
+                AstNode::VarDecl {
+                    ident_tkn,
+                    is_global: _,
+                    lhs,
+                } => self.vardecl(ident_tkn, lhs.clone()),
                 _ => (),
             }
         }
@@ -342,12 +355,16 @@ impl<'c> Compiler<'c> {
         self.ops.push(i);
     }
 
-    fn currlbl(&mut self) -> String {
+    fn currlbl(&self) -> String {
         format!("lbl{}", self.lbl_cnt)
     }
 
-    fn nextlbl(&mut self) -> String {
+    fn nextlbl(&self) -> String {
         format!("lbl{}", self.lbl_cnt + 1)
+    }
+
+    fn jmplbl(&self) -> String {
+        format!("lbl{}", self.lbl_cnt + 2)
     }
 
     fn newlbl(&mut self) {

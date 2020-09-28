@@ -66,6 +66,7 @@ fn from_file(opts: SifOpts) {
     };
 
     if opts.dump_ir {
+        //println!("{:#?}", comp_result.unwrap());
         printer::dump(comp_result.unwrap());
     }
 
