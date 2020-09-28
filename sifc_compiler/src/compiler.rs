@@ -60,17 +60,76 @@ impl<'c> Compiler<'c> {
 
     fn blocks(&mut self, blocks: &Vec<AstNode>) {
         for block in blocks {
-            match block {
-                AstNode::Block { decls, .. } => self.decls(decls),
-                AstNode::ExprStmt { expr } => self.expr(expr),
-                AstNode::VarDecl {
-                    ident_tkn,
-                    is_global: _,
-                    lhs,
-                } => self.vardecl(ident_tkn, lhs.clone()),
-                _ => (),
+            self.block(block);
+        }
+    }
+
+    fn block(&mut self, block: &AstNode) {
+        match block {
+            AstNode::Block { decls, .. } => self.decls(decls),
+            AstNode::ExprStmt { expr } => self.expr(expr),
+            AstNode::VarDecl {
+                ident_tkn,
+                is_global: _,
+                lhs,
+            } => self.vardecl(ident_tkn, lhs.clone()),
+            AstNode::IfStmt {
+                cond_expr,
+                if_stmts,
+                elif_exprs,
+                else_stmts,
+            } => {
+                // Generate condition expression
+                self.expr(cond_expr);
+                self.newlbl();
+
+                // Generate jump. we use nextlbl() and the converse of the
+                // condition expression.
+                let jmp_op = Op::JumpCnd {
+                    ty: OpTy::Jmpf,
+                    src: self.prevreg(),
+                    lbl: self.nextlbl(),
+                };
+                self.push_op(jmp_op);
+
+                // Generate statements for when the condition expression is true
+                self.block(if_stmts);
+                self.newlbl();
+
+                // Generate statements for elif nodes
+                for ee in elif_exprs {
+                    self.elif(ee);
+                }
+
+                // Generate statements for when the condition is false
+                self.blocks(else_stmts);
+                self.newlbl();
+            }
+            _ => {
+                // generate nothing if we find some unknown block
             }
         }
+    }
+
+    fn elif(&mut self, elif: &AstNode) {
+        match elif {
+            AstNode::ElifStmt { cond_expr, stmts } => {
+                self.expr(cond_expr);
+                self.newlbl();
+
+                // Generate jump. we use nextlbl() and the converse of the
+                // condition expression.
+                let jmp_op = Op::JumpCnd {
+                    ty: OpTy::Jmpf,
+                    src: self.prevreg(),
+                    lbl: self.nextlbl(),
+                };
+                self.push_op(jmp_op);
+
+                self.block(stmts);
+            }
+            _ => {}
+        };
     }
 
     fn decls(&mut self, decls: &Vec<AstNode>) {
@@ -155,6 +214,14 @@ impl<'c> Compiler<'c> {
                 TokenTy::Star => self.binop(OpTy::Mul, lhs, rhs),
                 TokenTy::Slash => self.binop(OpTy::Div, lhs, rhs),
                 TokenTy::Percent => self.binop(OpTy::Modu, lhs, rhs),
+                TokenTy::EqEq => self.binop(OpTy::Eq, lhs, rhs),
+                TokenTy::LtEq => self.binop(OpTy::LtEq, lhs, rhs),
+                TokenTy::Lt => self.binop(OpTy::Lt, lhs, rhs),
+                TokenTy::GtEq => self.binop(OpTy::GtEq, lhs, rhs),
+                TokenTy::Gt => self.binop(OpTy::Gt, lhs, rhs),
+                TokenTy::AmpAmp => self.binop(OpTy::Land, lhs, rhs),
+                TokenTy::PipePipe => self.binop(OpTy::Lor, lhs, rhs),
+                TokenTy::BangEq => self.binop(OpTy::Lnot, lhs, rhs),
                 _ => (),
             },
             AstNode::LogicalExpr { op_tkn, lhs, rhs } => match op_tkn.ty {
@@ -279,6 +346,10 @@ impl<'c> Compiler<'c> {
         format!("lbl{}", self.lbl_cnt)
     }
 
+    fn nextlbl(&mut self) -> String {
+        format!("lbl{}", self.lbl_cnt + 1)
+    }
+
     fn newlbl(&mut self) {
         self.lbl_cnt = self.lbl_cnt + 1;
     }
@@ -295,6 +366,10 @@ impl<'c> Compiler<'c> {
         }
 
         Rc::clone(&self.dregs[self.ri - 1])
+    }
+
+    fn currreg(&self) -> Rc<RefCell<DReg>> {
+        Rc::clone(&self.dregs[self.ri])
     }
 
     fn advance(&mut self) {

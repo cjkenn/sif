@@ -30,6 +30,13 @@ pub enum OpTy {
     Stc, // store constant
     Stn, // store name
     Str, // store register
+
+    // Control flow transfer
+    Jmpt, // jump if true
+    Jmpf, // jump if false
+    Jmp,  // jump always
+
+    Stop, // end program execution
 }
 
 #[derive(Clone, Debug)]
@@ -69,5 +76,14 @@ pub enum Op {
         ty: OpTy,
         name: String,
         src: Rc<RefCell<DReg>>,
+    },
+    JumpCnd {
+        ty: OpTy,
+        src: Rc<RefCell<DReg>>,
+        lbl: String,
+    },
+    JumpA {
+        ty: OpTy,
+        lbl: String,
     },
 }
