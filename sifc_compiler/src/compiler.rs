@@ -5,7 +5,10 @@ use crate::{
     sifv::SifVal,
 };
 use sifc_err::compile_err::{CompileErr, CompileErrTy};
-use sifc_parse::{ast::AstNode, token::TokenTy};
+use sifc_parse::{
+    ast::AstNode,
+    token::{Token, TokenTy},
+};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -60,6 +63,11 @@ impl<'c> Compiler<'c> {
             match block {
                 AstNode::Block { decls, .. } => self.decls(decls),
                 AstNode::ExprStmt { expr } => self.expr(expr),
+                AstNode::VarDecl {
+                    ident_tkn,
+                    is_global: _,
+                    lhs,
+                } => self.vardecl(ident_tkn, lhs.clone()),
                 _ => (),
             }
         }
@@ -74,6 +82,69 @@ impl<'c> Compiler<'c> {
                 _ => (),
             }
         }
+    }
+
+    fn vardecl(&mut self, tkn: &Token, rhs: Option<Box<AstNode>>) {
+        let st_name = self.build_name(tkn.get_name());
+        if rhs.is_none() {
+            // We generate a store for an empty value here, to ensure that the name is present
+            // in memory if we try to assign to it later. We can detect null value accesses at some
+            // point if we want to, or we can leave it to runtime.
+            let op = Op::StoreC {
+                ty: OpTy::Stc,
+                name: st_name,
+                val: SifVal::Null,
+            };
+            self.push_op(op);
+            return;
+        }
+
+        self.assign(st_name, &rhs.unwrap());
+    }
+
+    fn assign(&mut self, st_name: String, rhs: &AstNode) {
+        match rhs {
+            AstNode::PrimaryExpr { tkn } => {
+                match &tkn.ty {
+                    TokenTy::Val(v) => {
+                        let op = Op::StoreC {
+                            ty: OpTy::Stc,
+                            name: st_name,
+                            val: SifVal::Num(*v),
+                        };
+                        self.push_op(op);
+                    }
+                    TokenTy::Str(s) => {
+                        let op = Op::StoreC {
+                            ty: OpTy::Stc,
+                            name: st_name,
+                            val: SifVal::Str(s.clone()),
+                        };
+                        self.push_op(op);
+                    }
+                    TokenTy::Ident(i) => {
+                        let op = Op::StoreN {
+                            ty: OpTy::Stn,
+                            name1: st_name,
+                            name2: self.build_name(i.clone()),
+                        };
+                        self.push_op(op);
+                    }
+                    _ => {}
+                };
+            }
+            _ => {
+                // We assume that if we aren't assigning a declaration to a constant, we are using an
+                // expression. We store based on the correct register from the expression.
+                self.expr(&rhs);
+                let op = Op::StoreR {
+                    ty: OpTy::Str,
+                    name: st_name,
+                    src: Rc::clone(&self.prevreg()),
+                };
+                self.push_op(op);
+            }
+        };
     }
 
     fn expr(&mut self, expr: &AstNode) {
@@ -102,6 +173,17 @@ impl<'c> Compiler<'c> {
                 TokenTy::Minus => self.unop(OpTy::Nneg, rhs),
                 _ => (),
             },
+            AstNode::VarAssignExpr {
+                ident_tkn,
+                is_global: _,
+                rhs,
+            } => {
+                let st_name = self.build_name(ident_tkn.get_name());
+                self.assign(st_name, rhs);
+            }
+            AstNode::PrimaryExpr { .. } => {
+                // PrimaryExpr by itself does not generate anything
+            }
             _ => (),
         }
     }
@@ -132,58 +214,60 @@ impl<'c> Compiler<'c> {
     // Returns the index of the register in which the last stored value is
     fn binarg(&mut self, arg: &AstNode) -> usize {
         match arg {
-            AstNode::PrimaryExpr { tkn } => match tkn.ty {
+            AstNode::PrimaryExpr { tkn } => match &tkn.ty {
                 TokenTy::Val(v) => {
-                    let sifv = SifVal::Num(v);
+                    let sifv = SifVal::Num(*v);
                     let d = self.nextreg();
                     d.borrow_mut().cont = Some(sifv.clone());
 
-                    let op = Op::Load {
+                    let op = Op::LoadC {
                         ty: OpTy::Ldc,
                         dest: d,
                         val: sifv,
                     };
                     self.push_op(op);
-
-                    return self.ri - 1;
                 }
                 TokenTy::True => {
                     let d = self.nextreg();
                     let sifv = SifVal::Bl(true);
                     d.borrow_mut().cont = Some(sifv.clone());
 
-                    let op = Op::Load {
+                    let op = Op::LoadC {
                         ty: OpTy::Ldc,
                         dest: d,
                         val: sifv,
                     };
                     self.push_op(op);
-
-                    return self.ri - 1;
                 }
                 TokenTy::False => {
                     let d = self.nextreg();
                     let sifv = SifVal::Bl(false);
                     d.borrow_mut().cont = Some(sifv.clone());
 
-                    let op = Op::Load {
+                    let op = Op::LoadC {
                         ty: OpTy::Ldc,
                         dest: d,
                         val: sifv,
                     };
                     self.push_op(op);
+                }
+                TokenTy::Ident(i) => {
+                    let d = self.nextreg();
 
-                    return self.ri - 1;
+                    let op = Op::LoadN {
+                        ty: OpTy::Ldn,
+                        dest: d,
+                        name: i.clone(),
+                    };
+                    self.push_op(op);
                 }
-                _ => {
-                    return self.ri - 1;
-                }
+                _ => {}
             },
             _ => {
                 self.expr(arg);
-                return self.ri - 1;
             }
-        }
+        };
+        self.ri - 1
     }
 
     fn push_op(&mut self, op: Op) {
@@ -211,5 +295,13 @@ impl<'c> Compiler<'c> {
         }
 
         Rc::clone(&self.dregs[self.ri - 1])
+    }
+
+    fn advance(&mut self) {
+        self.ri = self.ri + 1;
+    }
+
+    fn build_name(&mut self, name: String) -> String {
+        format!("name::{}", name)
     }
 }
