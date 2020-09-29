@@ -52,7 +52,11 @@ impl<'c> Compiler<'c> {
         match self.ast {
             AstNode::Program { blocks } => {
                 self.blocks(blocks);
+
+                // TODO: we need this for labeling purposes right now, but
+                // could probably remove it later?
                 self.push_op(Op::Nop { ty: OpTy::Nop });
+
                 Ok(self.ops.clone())
             }
             _ => Err(CompileErr::new(CompileErrTy::InvalidAst)),
@@ -83,35 +87,74 @@ impl<'c> Compiler<'c> {
                 // Generate condition expression
                 self.expr(cond_expr);
 
-                // Generate jump. we use nextlbl() and the converse of the
-                // condition expression.
-                // TODO: this needs to be matched I think, as the operators
-                // dont necessarily correspond to the converse jumps
+                // The jmp labels for if statements are calculated as follows:
+                // 1. The initial if condition and statements take two labels
+                // 2. Each elif takes two labels, one for the condition and one for the
+                //    statements. This means we jump past them all from the initial
+                //    if statements: (# elifs * 2)
+                // 3. An else block takes 1 label, because there is no condition.
+                //
+                // We define two indices for this purpose:
+                // First, final_jmp_idx represents the label after the entire if block
+                // is completed.
+                // Second, el_jmp_idx represents the label of the optional else statement, which
+                // we must jump to from failed condition expressions if it exists.
+                let final_jmp_idx = (self.lbl_cnt + 2) + (elif_exprs.len() * 2) + else_stmts.len();
+                let mut el_jmp_idx = final_jmp_idx;
+                if else_stmts.len() > 0 {
+                    el_jmp_idx = el_jmp_idx - 1;
+                }
+
+                // This initial conditional jump instruction appears after the conditional has
+                // been evaluated above. If the conditional is false, we jump to the else block, or,
+                // if the else block doesn't exist, to the end of the if statement.
                 let jmp_op = Op::JumpCnd {
                     ty: OpTy::Jmpf,
                     src: self.prevreg(),
-                    lbl: self.jmplbl(),
+                    lbl: self.buildlbl(el_jmp_idx),
                 };
                 self.push_op(jmp_op);
                 self.newlbl();
 
-                // Generate statements for when the condition expression is true
+                // Generate statements for when the condition expression is true. Afterwards,
+                // we jump always to the end of the if statement, so we do not run the instructions
+                // contained in the else block.
                 self.block(if_stmts);
                 let jmpa_op = Op::JumpA {
                     ty: OpTy::Jmp,
-                    lbl: self.jmplbl(),
+                    lbl: self.buildlbl(final_jmp_idx),
                 };
                 self.push_op(jmpa_op);
 
-                // Generate statements for elif nodes
-                self.newlbl();
-                for ee in elif_exprs {
-                    self.elif(ee);
+                // Generate statements for elif nodes, if any. More label calculations are done here:
+                // each false elif condition should jump to the next possible elif, if it exists. If
+                // it does not, it should jump to the else block. If the else block doesn't exist, we
+                // jump to the end of the if statement.
+                // The label initially points to the else block index. However, if we have additional
+                // elif blocks to generate for, we alter the label so we jump to those conditionals
+                // by reducing the label count by 2 to accomodate for the 2 labels needed by the elif.
+                for (i, ee) in elif_exprs.iter().enumerate() {
+                    self.newlbl();
+
+                    let mut jmp_lbl = el_jmp_idx;
+                    if i != elif_exprs.len() - 1 {
+                        jmp_lbl = jmp_lbl - 2;
+                    }
+
+                    // We pass in jmp_lbl for the next elif expr, and final_jmp_idx to
+                    // get to the end of the if statement.
+                    self.elif(ee, jmp_lbl, final_jmp_idx);
                 }
 
-                // Generate statements for when the condition is false
+                // Generate statements for else nodes. No additional labeling is needed here,
+                // as the else will fall through to subsequent instructions after being evaluated.
+                if else_stmts.len() != 0 {
+                    self.newlbl();
+                    self.blocks(else_stmts);
+                }
+
+                // Set the next label for subsequent blocks
                 self.newlbl();
-                self.blocks(else_stmts);
             }
             _ => {
                 // generate nothing if we find some unknown block
@@ -119,22 +162,33 @@ impl<'c> Compiler<'c> {
         }
     }
 
-    fn elif(&mut self, elif: &AstNode) {
+    /// Generates instructions for an elif node. This takes in two jump label indices:
+    /// next_elif_jmp_idx: the index for the next subsequent elif block, if any.
+    /// final_jmp_idx: the label index for the end of the if statement.
+    fn elif(&mut self, elif: &AstNode, next_elif_jmp_idx: usize, final_jmp_idx: usize) {
         match elif {
             AstNode::ElifStmt { cond_expr, stmts } => {
                 self.expr(cond_expr);
 
-                // Generate jump. we use nextlbl() and the converse of the
-                // condition expression.
+                // If the condition is false, we go to the next elif condition expression.
+                // If the next elif condition doesn't exist, then this will jump to the
+                // end of the if statement (the index should be the same as final_jmp_idx).
                 let jmp_op = Op::JumpCnd {
                     ty: OpTy::Jmpf,
                     src: self.prevreg(),
-                    lbl: self.jmplbl(),
+                    lbl: self.buildlbl(next_elif_jmp_idx),
                 };
                 self.push_op(jmp_op);
                 self.newlbl();
 
+                // After we generate the statements for the elif block, we jump out of the
+                // if statement, skipping the else block if it exists.
                 self.block(stmts);
+                let jmpa_op = Op::JumpA {
+                    ty: OpTy::Jmp,
+                    lbl: self.buildlbl(final_jmp_idx),
+                };
+                self.push_op(jmpa_op);
             }
             _ => {}
         };
@@ -355,6 +409,11 @@ impl<'c> Compiler<'c> {
         self.ops.push(i);
     }
 
+    fn upd_op_at_idx(&mut self, op: Op, idx: usize) {
+        let i = &mut self.ops[idx];
+        i.op = op;
+    }
+
     fn currlbl(&self) -> String {
         format!("lbl{}", self.lbl_cnt)
     }
@@ -363,12 +422,12 @@ impl<'c> Compiler<'c> {
         format!("lbl{}", self.lbl_cnt + 1)
     }
 
-    fn jmplbl(&self) -> String {
-        format!("lbl{}", self.lbl_cnt + 2)
-    }
-
     fn newlbl(&mut self) {
         self.lbl_cnt = self.lbl_cnt + 1;
+    }
+
+    fn buildlbl(&self, cnt: usize) -> String {
+        format!("lbl{}", cnt)
     }
 
     fn nextreg(&mut self) -> Rc<RefCell<DReg>> {
@@ -394,6 +453,6 @@ impl<'c> Compiler<'c> {
     }
 
     fn build_name(&mut self, name: String) -> String {
-        format!("name::{}", name)
+        format!("ident:{}", name)
     }
 }
