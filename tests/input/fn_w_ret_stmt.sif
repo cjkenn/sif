@@ -1,9 +1,0 @@
-# expect::pass
-
-fn y() {
-   return;
-}
-
-fn x(g,y) {
-  return g + 1;
-}

@@ -1,9 +1,0 @@
-# expect::pass
-
-table x {
-  y => "y",
-  z => "z",
-  q => 10,
-}
-
-let t = x.y;

@@ -1,7 +1,0 @@
-# expect::pass
-
-fn x() {
-  return 0;
-}
-
-let y = x();
