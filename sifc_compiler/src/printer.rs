@@ -95,7 +95,18 @@ pub fn dump(ir: Vec<Instr>) {
                 let line = format!("\t{}\n", op_str);
                 dble.push_str(&line);
             }
-            _ => {}
+            Op::Incrr { ty, src } => {
+                let op_str = op_ty_str(ty);
+                let rstr = reg_str(src);
+                let line = format!("\t{} {}\n", op_str, rstr);
+                dble.push_str(&line);
+            }
+            Op::Decrr { ty, src } => {
+                let op_str = op_ty_str(ty);
+                let rstr = reg_str(src);
+                let line = format!("\t{} {}\n", op_str, rstr);
+                dble.push_str(&line);
+            }
         }
     }
 
@@ -127,6 +138,8 @@ fn op_ty_str(opty: OpTy) -> &'static str {
         OpTy::Jmpt => "jmpt",
         OpTy::Jmpf => "jmpf",
         OpTy::Jmp => "jmp",
+        OpTy::Incrr => "incrr",
+        OpTy::Decrr => "decrr",
         OpTy::Stop => "stp",
         OpTy::Nop => "nop",
     }

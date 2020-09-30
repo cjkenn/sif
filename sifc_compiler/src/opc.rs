@@ -36,6 +36,10 @@ pub enum OpTy {
     Jmpf, // jump if false
     Jmp,  // jump always
 
+    // register operations
+    Incrr, // increment register contents
+    Decrr, // decrement register contents
+
     Stop, // end program execution
     Nop,  // no op
 }
@@ -86,6 +90,14 @@ pub enum Op {
     JumpA {
         ty: OpTy,
         lbl: String,
+    },
+    Incrr {
+        ty: OpTy,
+        src: Rc<RefCell<DReg>>,
+    },
+    Decrr {
+        ty: OpTy,
+        src: Rc<RefCell<DReg>>,
     },
     Nop {
         ty: OpTy,
