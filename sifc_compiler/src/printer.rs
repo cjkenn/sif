@@ -156,5 +156,6 @@ fn val_str(v: SifVal) -> String {
         SifVal::Str(s) => s,
         SifVal::Bl(b) => b.to_string(),
         SifVal::Null => "null".to_string(),
+        SifVal::Arr(a) => format!("{:?}", a),
     }
 }

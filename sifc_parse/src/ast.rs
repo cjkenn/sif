@@ -99,7 +99,8 @@ pub enum AstNode {
 
     ArrayDecl {
         ident_tkn: Token,
-        arr_body: Option<Box<AstNode>>,
+        body: Option<Box<AstNode>>,
+        len: usize,
     },
 
     ArrayItems {

@@ -52,53 +52,64 @@ pub enum Op {
         src2: Rc<RefCell<DReg>>,
         dest: Rc<RefCell<DReg>>,
     },
+
     Unary {
         ty: OpTy,
         src1: Rc<RefCell<DReg>>,
         dest: Rc<RefCell<DReg>>,
     },
+
     LoadC {
         ty: OpTy,
         dest: Rc<RefCell<DReg>>,
         val: SifVal,
     },
+
     LoadN {
         ty: OpTy,
         dest: Rc<RefCell<DReg>>,
         name: String,
     },
+
     StoreC {
         ty: OpTy,
         name: String,
         val: SifVal,
     },
+
     StoreN {
         ty: OpTy,
         name1: String,
         name2: String,
     },
+
     StoreR {
         ty: OpTy,
         name: String,
         src: Rc<RefCell<DReg>>,
     },
+
     JumpCnd {
         ty: OpTy,
         src: Rc<RefCell<DReg>>,
         lbl: String,
     },
+
     JumpA {
         ty: OpTy,
         lbl: String,
     },
+
     Incrr {
         ty: OpTy,
         src: Rc<RefCell<DReg>>,
     },
+
     Decrr {
         ty: OpTy,
         src: Rc<RefCell<DReg>>,
     },
+
     Nop {
         ty: OpTy,
     },

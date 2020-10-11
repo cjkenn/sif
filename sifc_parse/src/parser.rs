@@ -417,20 +417,30 @@ impl<'l, 's> Parser<'l, 's> {
 
             let curr_item = self.expr()?;
             arr_items.push(curr_item);
-            self.expect(TokenTy::Comma)?;
+
+            // If we have a comma here, consume and continue. If we don't
+            // have one, break the loop
+            match self.optional(TokenTy::Comma) {
+                false => {
+                    break;
+                }
+                _ => {}
+            };
         }
 
         self.expect(TokenTy::RightBracket)?;
         self.expect(TokenTy::Semicolon)?;
 
-        let box_body = match arr_items.len() {
+        let len = arr_items.len();
+        let box_body = match len {
             0 => None,
             _ => Some(Box::new(AstNode::ArrayItems { items: arr_items })),
         };
 
         let node = AstNode::ArrayDecl {
             ident_tkn: ident_tkn.clone(),
-            arr_body: box_body,
+            body: box_body,
+            len: len,
         };
         self.sym_tab.store(&ident_tkn.get_name(), node.clone());
 
@@ -928,6 +938,16 @@ impl<'l, 's> Parser<'l, 's> {
             let err_ty = ParseErrTy::TknMismatch(tknty.to_string(), ty_str);
             Err(ParseErr::new(self.curr_tkn.line, self.curr_tkn.pos, err_ty))
         }
+    }
+
+    /// Checks that the token matches what we expect. If it does, we consume it and return true.
+    /// If not, return false.
+    fn optional(&mut self, tknty: TokenTy) -> bool {
+        if self.curr_tkn.ty == tknty {
+            self.consume();
+            return true;
+        }
+        false
     }
 
     /// Expects an identifier token to be passed in. If it is, returns a token that matches

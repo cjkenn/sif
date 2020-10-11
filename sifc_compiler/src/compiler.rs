@@ -95,9 +95,69 @@ impl<'c> Compiler<'c> {
                 in_expr_list,
                 stmts,
             } => self.forstmt(var_list, in_expr_list, stmts),
+            AstNode::ArrayDecl {
+                ident_tkn, body, ..
+            } => self.arraydecl(ident_tkn, body),
             _ => {
                 // generate nothing if we find some unknown block
             }
+        }
+    }
+
+    fn arraydecl(&mut self, ident_tkn: &Token, body: &Option<Box<AstNode>>) {
+        // Array declarations use a vec type wrapped in SifVal. This allows arrays
+        // to contain multiple types of values, but also causes overhead in
+        // memory allocation since we do not size the array and allocate in the heap
+        // here. This is far easier to implement, but should be less efficient.
+        let name = ident_tkn.get_name();
+
+        match body {
+            Some(ast) => {
+                let items = self.arrayitems(ast);
+                self.push_op(Op::StoreC {
+                    ty: OpTy::Stc,
+                    name: name,
+                    val: SifVal::Arr(items),
+                });
+            }
+            None => {
+                self.push_op(Op::StoreC {
+                    ty: OpTy::Stc,
+                    name: name,
+                    val: SifVal::Arr(Vec::new()),
+                });
+            }
+        };
+    }
+
+    fn arrayitems(&mut self, ast: &AstNode) -> Vec<SifVal> {
+        let mut vals = Vec::new();
+
+        match ast {
+            AstNode::ArrayItems { items } => {
+                for item in items {
+                    match item {
+                        AstNode::PrimaryExpr { tkn } => {
+                            let sv = self.val_from_primary(tkn);
+                            vals.push(sv);
+                        }
+                        _ => {} // TODO: need to process exprs inside array decls
+                    }
+                }
+            }
+            _ => {}
+        };
+        vals
+    }
+
+    fn val_from_primary(&self, tkn: &Token) -> SifVal {
+        // TODO: what about idents inside array decls?
+        match &tkn.ty {
+            TokenTy::Val(v) => SifVal::Num(*v),
+            TokenTy::Str(s) => SifVal::Str(s.clone()),
+            TokenTy::True => SifVal::Bl(true),
+            TokenTy::False => SifVal::Bl(false),
+            _ => SifVal::Null,
         }
     }
 
@@ -210,29 +270,40 @@ impl<'c> Compiler<'c> {
         };
     }
 
+    // TODO: need array decls
     fn forstmt(&mut self, var_list: &AstNode, in_expr_list: &AstNode, stmts: &AstNode) {
         self.newlbl();
-        // load index, local var, and loop expr var into registers
+
+        // Load the index register and set it to 0 initially.
         let idx_reg = self.nextreg();
-        let local_reg = self.nextreg();
-        let size_reg = self.nextreg();
         let (idx_name, local_name) = self.names_from_identpair(var_list);
 
-        self.push_op(Op::LoadC {
-            ty: OpTy::Ldc,
-            dest: Rc::clone(&idx_reg),
-            val: SifVal::Num(0.0),
-        });
-        self.push_op(Op::StoreR {
+        // TODO: right now we assume that the value we are looping over is always an array
+        self.push_op(Op::StoreC {
             ty: OpTy::Stc,
             name: idx_name.clone(),
-            src: Rc::clone(&idx_reg),
+            val: SifVal::Num(0.0),
+        });
+
+        self.newlbl();
+
+        // Load local var, and loop expr var into registers
+        let local_reg = self.nextreg();
+        let size_reg = self.nextreg();
+
+        // TODO: right now we assume that the value we are looping over is always an array
+        // Load the array index into register. We need to store the array size in the
+        // size reg and handle the generation of array declarations.
+        self.push_op(Op::LoadN {
+            ty: OpTy::Ldn,
+            dest: Rc::clone(&idx_reg),
+            name: idx_name.clone(),
         });
 
         // generate stmts, then check if we need to jmp back to loop start
         self.block(stmts);
 
-        // incr index reg and store it in the index var
+        // Increment index register and store it again
         self.push_op(Op::Incrr {
             ty: OpTy::Incrr,
             src: Rc::clone(&idx_reg),
@@ -509,10 +580,6 @@ impl<'c> Compiler<'c> {
         format!("lbl{}", self.lbl_cnt)
     }
 
-    fn nextlbl(&self) -> String {
-        format!("lbl{}", self.lbl_cnt + 1)
-    }
-
     fn newlbl(&mut self) {
         self.lbl_cnt = self.lbl_cnt + 1;
     }
@@ -533,14 +600,6 @@ impl<'c> Compiler<'c> {
         }
 
         Rc::clone(&self.dregs[self.ri - 1])
-    }
-
-    fn currreg(&self) -> Rc<RefCell<DReg>> {
-        Rc::clone(&self.dregs[self.ri])
-    }
-
-    fn advance(&mut self) {
-        self.ri = self.ri + 1;
     }
 
     fn build_name(&mut self, name: String) -> String {
