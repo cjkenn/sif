@@ -56,7 +56,7 @@ fn from_file(opts: SifOpts) {
     }
 
     // 2. Convert AST to instructions
-    let comp_result = run_compiler(&ast);
+    let comp_result = run_compiler(&ast, &symtab);
     match comp_result {
         Err(e) => {
             e.emit();
@@ -90,7 +90,7 @@ fn run_parser(filename: &str, symtab: &mut SymTab) -> ParserResult {
     parser.parse()
 }
 
-fn run_compiler(ast: &AstNode) -> CompileResult {
+fn run_compiler(ast: &AstNode, symtab: &SymTab) -> CompileResult {
     // Init data register array
     let mut regs = Vec::with_capacity(1024);
     for i in 0..1023 {
@@ -98,7 +98,7 @@ fn run_compiler(ast: &AstNode) -> CompileResult {
         regs.push(Rc::new(RefCell::new(reg)));
     }
 
-    let mut comp = Compiler::new(ast, regs);
+    let mut comp = Compiler::new(ast, symtab, regs);
     comp.compile()
 }
 
