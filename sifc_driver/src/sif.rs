@@ -48,7 +48,7 @@ fn from_file(opts: SifOpts) {
     // Any errors should already have been emitted by the
     // parser, whether or not they are continuable.
     if parse_result.has_err {
-        println!("sif: Exiting due to parser errors");
+        eprintln!("sif: Exiting due to parser errors");
         return;
     }
 
@@ -84,6 +84,7 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode, symtab: &SymTab) {
     match comp_result {
         Err(e) => {
             e.emit();
+            eprintln!("sif: exiting due to errors");
             return;
         }
         _ => (),

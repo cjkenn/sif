@@ -24,7 +24,7 @@ impl LexErr {
 
 impl SifErr for LexErr {
     fn emit(&self) {
-        println!("sif: Parse error - {}", self.to_msg());
+        eprintln!("sif: Parse error - {}", self.to_msg());
     }
 
     fn to_msg(&self) -> String {

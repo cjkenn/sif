@@ -18,14 +18,12 @@ impl CompileErr {
 
 impl SifErr for CompileErr {
     fn emit(&self) {
-        println!("sif: Compile error - {}", self.to_msg());
+        eprintln!("sif: Compile error - {}", self.to_msg());
     }
 
     fn to_msg(&self) -> String {
         match self.ty {
-            CompileErrTy::InvalidAst => {
-                String::from("fatal: invalid or unknown ast format provided")
-            }
+            CompileErrTy::InvalidAst => String::from("invalid or unknown ast format provided"),
         }
     }
 }
