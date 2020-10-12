@@ -4,15 +4,18 @@ use crate::{
     opc::{Op, OpTy},
     sifv::SifVal,
 };
+
 use sifc_err::compile_err::{CompileErr, CompileErrTy};
+
 use sifc_parse::{
     ast::AstNode,
     symtab::SymTab,
     token::{Token, TokenTy},
 };
-use std::cell::RefCell;
-use std::rc::Rc;
 
+use std::{cell::RefCell, rc::Rc};
+
+// TODO: might need to use &Instr instead
 pub type CompileResult = Result<Vec<Instr>, CompileErr>;
 
 pub struct Compiler<'c, 's> {
