@@ -1,8 +1,13 @@
 use crate::err::SifErr;
 
+/// RuntimeErrTy is intended to be the most specific error type in sif.
 #[derive(Debug, Clone)]
 pub enum RuntimeErrTy {
     InvalidName(String),
+    InvalidIncr,
+    InvalidIncrTy,
+    InvalidDecr,
+    InvalidDecrTy,
 }
 
 #[derive(Debug, Clone)]
@@ -24,6 +29,14 @@ impl SifErr for RuntimeErr {
     fn to_msg(&self) -> String {
         match &self.ty {
             RuntimeErrTy::InvalidName(n) => format!("invalid name '{}' provided: cannot access", n),
+            RuntimeErrTy::InvalidIncr => {
+                String::from("cannot increment register: no register contents found")
+            }
+            RuntimeErrTy::InvalidIncrTy => String::from("cannot increment a non-numerical value"),
+            RuntimeErrTy::InvalidDecr => {
+                String::from("cannot decrement register: no register contents found")
+            }
+            RuntimeErrTy::InvalidDecrTy => String::from("cannot decrement a non-numerical value"),
         }
     }
 }

@@ -78,7 +78,7 @@ impl VM {
     pub fn run(&mut self) {
         while self.cdr < self.code.len() {
             match self.execute() {
-                OK => {}
+                Ok(()) => {}
                 Err(e) => {
                     e.emit();
                     eprintln!("sif: exiting due to errors");
@@ -91,9 +91,9 @@ impl VM {
 
     fn execute(&mut self) -> Result<(), RuntimeErr> {
         let idx = self.cdr;
-        let curr = &self.code[idx];
+        let curr = &self.code[idx].op;
 
-        match &curr.op {
+        match curr {
             Op::LoadC { ty: _, dest, val } => {
                 let reg = &self.dregs[*dest];
                 reg.borrow_mut().cont = Some(val.clone());
@@ -101,16 +101,74 @@ impl VM {
             Op::LoadN { ty: _, dest, name } => {
                 let reg = &self.dregs[*dest];
                 match self.heap.get(name) {
-                    Some(n) => {
-                        reg.borrow_mut().cont = Some(n.clone());
-                    }
+                    Some(n) => reg.borrow_mut().cont = Some(n.clone()),
                     None => {
                         let err = RuntimeErr::new(RuntimeErrTy::InvalidName(name.clone()));
                         return Err(err);
                     }
                 };
             }
-            Op::StoreC { ty: _, name, val } => {}
+            Op::StoreC { ty: _, name, val } => {
+                self.heap.insert(name.to_string(), val.clone());
+            }
+            Op::StoreR { ty: _, name, src } => {
+                let reg = &self.dregs[*src];
+                let to_store = &reg.borrow().cont;
+                match to_store {
+                    Some(v) => self.heap.insert(name.to_string(), v.clone()),
+                    None => self.heap.insert(name.to_string(), SifVal::Null),
+                };
+            }
+            Op::StoreN {
+                ty: _,
+                srcname,
+                destname,
+            } => {
+                // let destval = self.heap.get(destname);
+                match self.heap.get(destname) {
+                    Some(v) => self.heap.insert(srcname.to_string(), v.clone()),
+                    None => self.heap.insert(srcname.to_string(), SifVal::Null),
+                };
+            }
+            Op::Incrr { ty: _, src } => {
+                let reg = &self.dregs[*src];
+                let contents = reg.borrow().cont.clone();
+
+                // If contents are None, we have nothing to increment so we set a runtime err.
+                // If contents are Some, we must match on the val and ensure the kind of val
+                // can be incremented (ie. only a num). If it isn't we err. If it is, we can
+                // replace the value with an incremented one.
+                match contents {
+                    Some(v) => match v {
+                        SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n + 1.0)),
+                        _ => {
+                            let err = RuntimeErr::new(RuntimeErrTy::InvalidIncrTy);
+                            return Err(err);
+                        }
+                    },
+                    None => {
+                        let err = RuntimeErr::new(RuntimeErrTy::InvalidIncr);
+                        return Err(err);
+                    }
+                };
+            }
+            Op::Decrr { ty: _, src } => {
+                let reg = &self.dregs[*src];
+                let contents = reg.borrow().cont.clone();
+                match contents {
+                    Some(v) => match v {
+                        SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n - 1.0)),
+                        _ => {
+                            let err = RuntimeErr::new(RuntimeErrTy::InvalidDecrTy);
+                            return Err(err);
+                        }
+                    },
+                    None => {
+                        let err = RuntimeErr::new(RuntimeErrTy::InvalidDecr);
+                        return Err(err);
+                    }
+                };
+            }
             _ => {}
         };
 

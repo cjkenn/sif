@@ -50,6 +50,21 @@ pub enum OpTy {
 /// 1. A register, represented as a usize. This is really just the number of the register
 /// 2. A value, for loading or storing
 /// 3. A name, for loading from memory
+///
+/// The destination location (register or memory) is always the last argument in the op.
+/// Examples:
+///
+/// add r0 r1 r2
+/// adds registers r0 and r1, stores in r2. The destination register can overwrite a src register
+///
+/// ldc 10 r0
+/// loads the constent 10 into register r0.
+///
+/// stc 10 y
+/// stores the constant 10 into the memory address where the name y is stored.
+///
+/// stn x y
+/// stores the value located at "x" into the address for "y"
 #[derive(Clone, Debug)]
 pub enum Op {
     Binary {
@@ -79,14 +94,14 @@ pub enum Op {
 
     StoreC {
         ty: OpTy,
-        name: String,
         val: SifVal,
+        name: String,
     },
 
     StoreN {
         ty: OpTy,
-        name1: String,
-        name2: String,
+        srcname: String,
+        destname: String,
     },
 
     StoreR {

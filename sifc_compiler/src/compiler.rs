@@ -131,10 +131,6 @@ impl<'c, 's> Compiler<'c, 's> {
         self.ri - 1
     }
 
-    pub fn build_name(&mut self, name: String) -> String {
-        format!("ident:{}", name)
-    }
-
     pub fn push_op(&mut self, op: Op) {
         let i = Instr::new(self.currlbl(), op);
         self.ops.push(i);
@@ -179,7 +175,7 @@ impl<'c, 's> Compiler<'c, 's> {
                 is_global: _,
                 rhs,
             } => {
-                let st_name = self.build_name(ident_tkn.get_name());
+                let st_name = ident_tkn.get_name();
                 self.assign(st_name, rhs);
             }
             AstNode::PrimaryExpr { .. } => {
@@ -281,15 +277,15 @@ impl<'c, 's> Compiler<'c, 's> {
     }
 
     fn vardecl(&mut self, tkn: &Token, rhs: Option<Box<AstNode>>) {
-        let st_name = self.build_name(tkn.get_name());
+        let st_name = tkn.get_name();
         if rhs.is_none() {
             // We generate a store for an empty value here, to ensure that the name is present
             // in memory if we try to assign to it later. We can detect null value accesses at some
             // point if we want to, or we can leave it to runtime.
             let op = Op::StoreC {
                 ty: OpTy::Stc,
-                name: st_name,
                 val: SifVal::Null,
+                name: st_name,
             };
             self.push_op(op);
             return;
@@ -305,24 +301,24 @@ impl<'c, 's> Compiler<'c, 's> {
                     TokenTy::Val(v) => {
                         let op = Op::StoreC {
                             ty: OpTy::Stc,
-                            name: st_name,
                             val: SifVal::Num(*v),
+                            name: st_name,
                         };
                         self.push_op(op);
                     }
                     TokenTy::Str(s) => {
                         let op = Op::StoreC {
                             ty: OpTy::Stc,
-                            name: st_name,
                             val: SifVal::Str(s.clone()),
+                            name: st_name,
                         };
                         self.push_op(op);
                     }
                     TokenTy::Ident(i) => {
                         let op = Op::StoreN {
                             ty: OpTy::Stn,
-                            name1: st_name,
-                            name2: self.build_name(i.clone()),
+                            srcname: i.clone(),
+                            destname: st_name,
                         };
                         self.push_op(op);
                     }
@@ -342,9 +338,4 @@ impl<'c, 's> Compiler<'c, 's> {
             }
         };
     }
-
-    // fn upd_op_at_idx(&mut self, op: Op, idx: usize) {
-    //     let i = &mut self.ops[idx];
-    //     i.op = op;
-    // }
 }

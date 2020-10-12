@@ -62,12 +62,16 @@ pub fn dump(ir: Vec<Instr>) {
             Op::StoreC { ty, name, val } => {
                 let op_str = op_ty_str(ty);
                 let vstr = val_str(val);
-                let line = format!("\t{} {} {}\n", op_str, name, vstr);
+                let line = format!("\t{} {} {}\n", op_str, vstr, name);
                 dble.push_str(&line);
             }
-            Op::StoreN { ty, name1, name2 } => {
+            Op::StoreN {
+                ty,
+                srcname,
+                destname,
+            } => {
                 let op_str = op_ty_str(ty);
-                let line = format!("\t{} {} {}\n", op_str, name2, name1);
+                let line = format!("\t{} {} {}\n", op_str, srcname, destname);
                 dble.push_str(&line);
             }
             Op::StoreR { ty, name, src } => {
