@@ -3,12 +3,14 @@ use crate::{
     opc::{Op, OpTy},
     sifv::SifVal,
 };
+
 use sifc_parse::ast::AstNode;
+
 use std::rc::Rc;
 
 /// Contains compiler functions for if-stmts and for-stmts.
 
-impl<'c, 's> Compiler<'c, 's> {
+impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
     pub fn ifstmt(
         &mut self,
         cond_expr: &AstNode,

@@ -1,6 +1,5 @@
 use crate::{dreg::DReg, sifv::SifVal};
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 #[derive(Clone, Debug)]
 pub enum OpTy {

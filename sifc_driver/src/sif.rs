@@ -1,20 +1,23 @@
 extern crate clap;
 extern crate sifc_compiler;
 extern crate sifc_parse;
+extern crate sifc_vm;
 
 use clap::Clap;
-use sifc_compiler::{
-    compiler::{CompileResult, Compiler},
-    dreg::DReg,
-    printer,
-};
+
+use sifc_compiler::{compiler::Compiler, dreg::DReg, printer};
+
 use sifc_err::err::SifErr;
+
 use sifc_parse::{
     ast::AstNode,
     lex::Lexer,
     parser::{Parser, ParserResult},
     symtab::SymTab,
 };
+
+use sifc_vm::vm::VM;
+
 use std::{cell::RefCell, fs::File, io, rc::Rc};
 
 #[derive(Clap)]
@@ -38,9 +41,9 @@ fn main() {
 }
 
 fn from_file(opts: SifOpts) {
-    // 1. Run the lexer/parser.
     let mut symtab = SymTab::new();
-    let parse_result = run_parser(&opts.filename.unwrap(), &mut symtab);
+    let path = opts.filename.clone().unwrap();
+    let parse_result = parse(&path, &mut symtab);
 
     // Any errors should already have been emitted by the
     // parser, whether or not they are continuable.
@@ -55,29 +58,14 @@ fn from_file(opts: SifOpts) {
         println!("{:#?}", ast);
     }
 
-    // 2. Convert AST to instructions
-    let comp_result = run_compiler(&ast, &symtab);
-    match comp_result {
-        Err(e) => {
-            e.emit();
-            return;
-        }
-        _ => (),
-    };
-
-    if opts.dump_ir {
-        //println!("{:#?}", comp_result.unwrap());
-        printer::dump(comp_result.unwrap());
-    }
-
-    // 3. Start vm and interpret instruction blocks
+    compile_and_run(opts, &ast, &symtab);
 }
 
 /// Opens the file from the filename provided, creates a lexer for that file
 /// and a parser for that lexer. Fully parses the input file, and returns
 /// the result from the parser. This result will contain any errors, as well
 /// as the AST from parsing (which will be None if there are errors).
-fn run_parser(filename: &str, symtab: &mut SymTab) -> ParserResult {
+fn parse(filename: &str, symtab: &mut SymTab) -> ParserResult {
     let infile = match File::open(filename) {
         Ok(file) => file,
         Err(e) => {
@@ -90,16 +78,34 @@ fn run_parser(filename: &str, symtab: &mut SymTab) -> ParserResult {
     parser.parse()
 }
 
-fn run_compiler(ast: &AstNode, symtab: &SymTab) -> CompileResult {
+fn compile_and_run(opts: SifOpts, ast: &AstNode, symtab: &SymTab) {
     // Init data register array
+    // TODO: const size? do we allow more than this? how and why?
     let mut regs = Vec::with_capacity(1024);
     for i in 0..1023 {
         let reg = DReg::new(format!("r{}", i));
         regs.push(Rc::new(RefCell::new(reg)));
     }
 
-    let mut comp = Compiler::new(ast, symtab, regs);
-    comp.compile()
+    let mut comp = Compiler::new(ast, symtab, &regs);
+    let comp_result = comp.compile();
+    match comp_result {
+        Err(e) => {
+            e.emit();
+            return;
+        }
+        _ => (),
+    };
+
+    let code = comp_result.unwrap();
+
+    // TODO: add option to write to file and not run vm?
+    if opts.dump_ir {
+        printer::dump(code.clone());
+    }
+
+    let mut vm = VM::new(code, &regs);
+    vm.run();
 }
 
 fn repl() {

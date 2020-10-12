@@ -4,10 +4,12 @@ use crate::{
     symtab::SymTab,
     token::{Token, TokenTy},
 };
+
 use sifc_err::{
     err::SifErr,
     parse_err::{ParseErr, ParseErrTy},
 };
+
 use std::collections::HashMap;
 
 const FN_PARAM_MAX_LEN: usize = 64;

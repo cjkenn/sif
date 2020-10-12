@@ -3,12 +3,13 @@ use crate::{
     opc::{Op, OpTy},
     sifv::SifVal,
 };
+
 use sifc_parse::{
     ast::AstNode,
     token::{Token, TokenTy},
 };
 
-impl<'c, 's> Compiler<'c, 's> {
+impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
     /// Compiles and generates IR for AstNode::ArrayDecl types.
     pub fn arraydecl(&mut self, ident_tkn: &Token, body: &Option<Box<AstNode>>) {
         // Array declarations use a vec type wrapped in SifVal. This allows arrays

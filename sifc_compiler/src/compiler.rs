@@ -18,7 +18,7 @@ use std::{cell::RefCell, rc::Rc};
 // TODO: might need to use &Instr instead
 pub type CompileResult = Result<Vec<Instr>, CompileErr>;
 
-pub struct Compiler<'c, 's> {
+pub struct Compiler<'c, 's, 'd> {
     /// Ast supplied by the parser, assumed to be correct.
     ast: &'c AstNode,
 
@@ -35,7 +35,7 @@ pub struct Compiler<'c, 's> {
     /// pointers to mutable cells, although it's rare they will be mutated: occasionally
     /// constant values needed to be changed inside a register (particularly in load
     /// and store operations).
-    dregs: Vec<Rc<RefCell<DReg>>>,
+    dregs: &'d Vec<Rc<RefCell<DReg>>>,
 
     /// Current number of labels in the block being translated.
     lblcnt: usize,
@@ -44,8 +44,12 @@ pub struct Compiler<'c, 's> {
     ri: usize,
 }
 
-impl<'c, 's> Compiler<'c, 's> {
-    pub fn new(a: &'c AstNode, st: &'s SymTab, ds: Vec<Rc<RefCell<DReg>>>) -> Compiler<'c, 's> {
+impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
+    pub fn new(
+        a: &'c AstNode,
+        st: &'s SymTab,
+        ds: &'d Vec<Rc<RefCell<DReg>>>,
+    ) -> Compiler<'c, 's, 'd> {
         Compiler {
             ast: a,
             symtab: st,

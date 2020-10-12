@@ -7,13 +7,13 @@ use sifc_compiler::{
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-pub struct VM {
+pub struct VM<'d> {
     /// Code section. This contains the instructions compiled from
     /// the ast from the compiler and is assumed to be valid.
     code: Vec<Instr>,
 
     /// Data registers.
-    dregs: Vec<Rc<RefCell<DReg>>>,
+    dregs: &'d Vec<Rc<RefCell<DReg>>>,
 
     /// Heap section. This contains arrays, tables, records, and globals.
     heap: HashMap<String, SifVal>,
@@ -40,8 +40,8 @@ pub struct VM {
     dtop: usize,
 }
 
-impl VM {
-    pub fn new(i: Vec<Instr>, dr: Vec<Rc<RefCell<DReg>>>) -> VM {
+impl<'d> VM<'d> {
+    pub fn new(i: Vec<Instr>, dr: &'d Vec<Rc<RefCell<DReg>>>) -> VM<'d> {
         VM {
             code: i,
             dregs: dr,

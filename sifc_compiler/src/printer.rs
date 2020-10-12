@@ -4,8 +4,7 @@ use crate::{
     opc::{Op, OpTy},
     sifv::SifVal,
 };
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 /// dump will parse the vector of instrs and transform it into typical
 /// asm-looking strings for printing. We choose not to override the Debug
