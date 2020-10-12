@@ -7,13 +7,20 @@ use sifc_compiler::{
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-pub struct VM<'d> {
+type DataRegisterVec = Vec<Rc<RefCell<DReg>>>;
+
+// Max size of data register vec. Or rather, right now this
+// represents the initial size of the vec, but technically it
+// can grow beyond this value.
+const DREG_MAX_LEN: usize = 1024;
+
+pub struct VM {
     /// Code section. This contains the instructions compiled from
     /// the ast from the compiler and is assumed to be valid.
     code: Vec<Instr>,
 
-    /// Data registers.
-    dregs: &'d Vec<Rc<RefCell<DReg>>>,
+    /// Data register vector.
+    dregs: DataRegisterVec,
 
     /// Heap section. This contains arrays, tables, records, and globals.
     heap: HashMap<String, SifVal>,
@@ -40,11 +47,18 @@ pub struct VM<'d> {
     dtop: usize,
 }
 
-impl<'d> VM<'d> {
-    pub fn new(i: Vec<Instr>, dr: &'d Vec<Rc<RefCell<DReg>>>) -> VM<'d> {
+impl VM {
+    pub fn new(i: Vec<Instr>) -> VM {
+        // Init data register array
+        let mut regs = Vec::with_capacity(DREG_MAX_LEN);
+        for i in 0..1023 {
+            let reg = DReg::new(format!("r{}", i));
+            regs.push(Rc::new(RefCell::new(reg)));
+        }
+
         VM {
             code: i,
-            dregs: dr,
+            dregs: regs,
             heap: HashMap::new(),
             callst: Vec::new(),
             datast: Vec::new(),

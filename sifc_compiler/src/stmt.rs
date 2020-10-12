@@ -6,11 +6,9 @@ use crate::{
 
 use sifc_parse::ast::AstNode;
 
-use std::rc::Rc;
-
 /// Contains compiler functions for if-stmts and for-stmts.
 
-impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
+impl<'c, 's> Compiler<'c, 's> {
     pub fn ifstmt(
         &mut self,
         cond_expr: &AstNode,
@@ -146,7 +144,7 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
         // size reg and handle the generation of array declarations.
         self.push_op(Op::LoadN {
             ty: OpTy::Ldn,
-            dest: Rc::clone(&idx_reg),
+            dest: idx_reg,
             name: idx_name.clone(),
         });
 
@@ -156,12 +154,12 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
         // Increment index register and store it again
         self.push_op(Op::Incrr {
             ty: OpTy::Incrr,
-            src: Rc::clone(&idx_reg),
+            src: idx_reg,
         });
         self.push_op(Op::StoreR {
             ty: OpTy::Str,
             name: idx_name.clone(),
-            src: Rc::clone(&idx_reg),
+            src: idx_reg,
         });
 
         // Compare the index register to the size register. If index is >=
@@ -169,8 +167,8 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
         // we jump back to the loop start label.
         let idx_cmp = Op::Binary {
             ty: OpTy::Lt,
-            src1: Rc::clone(&idx_reg),
-            src2: Rc::clone(&size_reg),
+            src1: idx_reg,
+            src2: size_reg,
             dest: self.nextreg(),
         };
         self.push_op(idx_cmp);

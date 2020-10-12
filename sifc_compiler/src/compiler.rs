@@ -1,5 +1,4 @@
 use crate::{
-    dreg::DReg,
     instr::Instr,
     opc::{Op, OpTy},
     sifv::SifVal,
@@ -13,12 +12,10 @@ use sifc_parse::{
     token::{Token, TokenTy},
 };
 
-use std::{cell::RefCell, rc::Rc};
-
 // TODO: might need to use &Instr instead
 pub type CompileResult = Result<Vec<Instr>, CompileErr>;
 
-pub struct Compiler<'c, 's, 'd> {
+pub struct Compiler<'c, 's> {
     /// Ast supplied by the parser, assumed to be correct.
     ast: &'c AstNode,
 
@@ -30,13 +27,6 @@ pub struct Compiler<'c, 's, 'd> {
     /// known before interpreting begins.
     ops: Vec<Instr>,
 
-    /// Vector of data registers. We expect the list to contain already initialized
-    /// data registers with correct names and no values contained within. This is a vec of
-    /// pointers to mutable cells, although it's rare they will be mutated: occasionally
-    /// constant values needed to be changed inside a register (particularly in load
-    /// and store operations).
-    dregs: &'d Vec<Rc<RefCell<DReg>>>,
-
     /// Current number of labels in the block being translated.
     lblcnt: usize,
 
@@ -44,17 +34,12 @@ pub struct Compiler<'c, 's, 'd> {
     ri: usize,
 }
 
-impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
-    pub fn new(
-        a: &'c AstNode,
-        st: &'s SymTab,
-        ds: &'d Vec<Rc<RefCell<DReg>>>,
-    ) -> Compiler<'c, 's, 'd> {
+impl<'c, 's> Compiler<'c, 's> {
+    pub fn new(a: &'c AstNode, st: &'s SymTab) -> Compiler<'c, 's> {
         Compiler {
             ast: a,
             symtab: st,
             ops: Vec::new(),
-            dregs: ds,
             lblcnt: 0,
             ri: 0,
         }
@@ -132,18 +117,18 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
         format!("lbl{}", self.lblcnt)
     }
 
-    pub fn nextreg(&mut self) -> Rc<RefCell<DReg>> {
-        let reg = Rc::clone(&self.dregs[self.ri]);
+    pub fn nextreg(&mut self) -> usize {
+        let reg = self.ri;
         self.ri = self.ri + 1;
         reg
     }
 
-    pub fn prevreg(&mut self) -> Rc<RefCell<DReg>> {
+    pub fn prevreg(&mut self) -> usize {
         if self.ri == 0 {
-            return Rc::clone(&self.dregs[self.ri]);
+            return 0;
         }
 
-        Rc::clone(&self.dregs[self.ri - 1])
+        self.ri - 1
     }
 
     pub fn build_name(&mut self, name: String) -> String {
@@ -210,9 +195,9 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
 
         let op = Op::Binary {
             ty: ty,
-            src1: Rc::clone(&self.dregs[r0]),
-            src2: Rc::clone(&self.dregs[r1]),
-            dest: Rc::clone(&self.nextreg()),
+            src1: r0,
+            src2: r1,
+            dest: self.nextreg(),
         };
         self.push_op(op);
     }
@@ -221,8 +206,8 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
         let r0 = self.binarg(rhs);
         let op = Op::Unary {
             ty: ty,
-            src1: Rc::clone(&self.dregs[r0]),
-            dest: Rc::clone(&self.nextreg()),
+            src1: r0,
+            dest: self.nextreg(),
         };
         self.push_op(op);
     }
@@ -234,8 +219,6 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
                 TokenTy::Val(v) => {
                     let sifv = SifVal::Num(*v);
                     let d = self.nextreg();
-                    d.borrow_mut().cont = Some(sifv.clone());
-
                     let op = Op::LoadC {
                         ty: OpTy::Ldc,
                         dest: d,
@@ -246,8 +229,6 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
                 TokenTy::True => {
                     let d = self.nextreg();
                     let sifv = SifVal::Bl(true);
-                    d.borrow_mut().cont = Some(sifv.clone());
-
                     let op = Op::LoadC {
                         ty: OpTy::Ldc,
                         dest: d,
@@ -258,8 +239,6 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
                 TokenTy::False => {
                     let d = self.nextreg();
                     let sifv = SifVal::Bl(false);
-                    d.borrow_mut().cont = Some(sifv.clone());
-
                     let op = Op::LoadC {
                         ty: OpTy::Ldc,
                         dest: d,
@@ -269,7 +248,6 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
                 }
                 TokenTy::Ident(i) => {
                     let d = self.nextreg();
-
                     let op = Op::LoadN {
                         ty: OpTy::Ldn,
                         dest: d,
@@ -358,15 +336,15 @@ impl<'c, 's, 'd> Compiler<'c, 's, 'd> {
                 let op = Op::StoreR {
                     ty: OpTy::Str,
                     name: st_name,
-                    src: Rc::clone(&self.prevreg()),
+                    src: self.prevreg(),
                 };
                 self.push_op(op);
             }
         };
     }
 
-    fn upd_op_at_idx(&mut self, op: Op, idx: usize) {
-        let i = &mut self.ops[idx];
-        i.op = op;
-    }
+    // fn upd_op_at_idx(&mut self, op: Op, idx: usize) {
+    //     let i = &mut self.ops[idx];
+    //     i.op = op;
+    // }
 }

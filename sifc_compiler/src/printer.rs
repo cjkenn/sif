@@ -1,10 +1,8 @@
 use crate::{
-    dreg::DReg,
     instr::Instr,
     opc::{Op, OpTy},
     sifv::SifVal,
 };
-use std::{cell::RefCell, rc::Rc};
 
 /// dump will parse the vector of instrs and transform it into typical
 /// asm-looking strings for printing. We choose not to override the Debug
@@ -144,9 +142,8 @@ fn op_ty_str(opty: OpTy) -> &'static str {
     }
 }
 
-fn reg_str(reg: Rc<RefCell<DReg>>) -> String {
-    let s = &reg.borrow().name;
-    s.to_string()
+fn reg_str(reg: usize) -> String {
+    format!("r{}", reg)
 }
 
 fn val_str(v: SifVal) -> String {

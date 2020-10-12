@@ -5,7 +5,7 @@ extern crate sifc_vm;
 
 use clap::Clap;
 
-use sifc_compiler::{compiler::Compiler, dreg::DReg, printer};
+use sifc_compiler::{compiler::Compiler, printer};
 
 use sifc_err::err::SifErr;
 
@@ -18,7 +18,7 @@ use sifc_parse::{
 
 use sifc_vm::vm::VM;
 
-use std::{cell::RefCell, fs::File, io, rc::Rc};
+use std::{fs::File, io};
 
 #[derive(Clap)]
 #[clap(version = "1.0")]
@@ -79,15 +79,7 @@ fn parse(filename: &str, symtab: &mut SymTab) -> ParserResult {
 }
 
 fn compile_and_run(opts: SifOpts, ast: &AstNode, symtab: &SymTab) {
-    // Init data register array
-    // TODO: const size? do we allow more than this? how and why?
-    let mut regs = Vec::with_capacity(1024);
-    for i in 0..1023 {
-        let reg = DReg::new(format!("r{}", i));
-        regs.push(Rc::new(RefCell::new(reg)));
-    }
-
-    let mut comp = Compiler::new(ast, symtab, &regs);
+    let mut comp = Compiler::new(ast, symtab);
     let comp_result = comp.compile();
     match comp_result {
         Err(e) => {
@@ -104,7 +96,7 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode, symtab: &SymTab) {
         printer::dump(code.clone());
     }
 
-    let mut vm = VM::new(code, &regs);
+    let mut vm = VM::new(code);
     vm.run();
 }
 

@@ -1,5 +1,4 @@
-use crate::{dreg::DReg, sifv::SifVal};
-use std::{cell::RefCell, rc::Rc};
+use crate::sifv::SifVal;
 
 #[derive(Clone, Debug)]
 pub enum OpTy {
@@ -43,30 +42,38 @@ pub enum OpTy {
     Nop,  // no op
 }
 
+/// Each opcode. Some of these just wrap the op type, but the type is useful for
+/// operations: we don't need to have a 1-1 mapping from operators to opcode. We could
+/// almost do the same for loads and stores, but the required arguments are not the same.
+/// Each opcode contains a type and up to 3 arguments, of the following kinds:
+///
+/// 1. A register, represented as a usize. This is really just the number of the register
+/// 2. A value, for loading or storing
+/// 3. A name, for loading from memory
 #[derive(Clone, Debug)]
 pub enum Op {
     Binary {
         ty: OpTy,
-        src1: Rc<RefCell<DReg>>,
-        src2: Rc<RefCell<DReg>>,
-        dest: Rc<RefCell<DReg>>,
+        src1: usize,
+        src2: usize,
+        dest: usize,
     },
 
     Unary {
         ty: OpTy,
-        src1: Rc<RefCell<DReg>>,
-        dest: Rc<RefCell<DReg>>,
+        src1: usize,
+        dest: usize,
     },
 
     LoadC {
         ty: OpTy,
-        dest: Rc<RefCell<DReg>>,
+        dest: usize,
         val: SifVal,
     },
 
     LoadN {
         ty: OpTy,
-        dest: Rc<RefCell<DReg>>,
+        dest: usize,
         name: String,
     },
 
@@ -85,12 +92,12 @@ pub enum Op {
     StoreR {
         ty: OpTy,
         name: String,
-        src: Rc<RefCell<DReg>>,
+        src: usize,
     },
 
     JumpCnd {
         ty: OpTy,
-        src: Rc<RefCell<DReg>>,
+        src: usize,
         lbl: String,
     },
 
@@ -101,12 +108,12 @@ pub enum Op {
 
     Incrr {
         ty: OpTy,
-        src: Rc<RefCell<DReg>>,
+        src: usize,
     },
 
     Decrr {
         ty: OpTy,
-        src: Rc<RefCell<DReg>>,
+        src: usize,
     },
 
     Nop {
