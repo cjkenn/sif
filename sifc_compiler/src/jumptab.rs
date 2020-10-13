@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn single_instr() {
         let mut code = Vec::new();
-        code.push(Instr::new("lbl0".to_string(), 0, Op::Nop));
+        code.push(Instr::new(0, Op::Nop, 1));
         let res = compute_jumptab(&code);
 
         assert_eq!(1, res.len());
@@ -84,27 +84,26 @@ mod tests {
         let mut code = Vec::new();
 
         code.push(Instr::new(
-            "lbl0".to_string(),
             0,
             Op::LoadC {
                 ty: OpTy::Ldc,
                 dest: 0,
                 val: SifVal::Num(1.0),
             },
+            1,
         ));
 
         code.push(Instr::new(
-            "lbl0".to_string(),
             0,
             Op::LoadC {
                 ty: OpTy::Ldc,
                 dest: 1,
                 val: SifVal::Num(2.0),
             },
+            2,
         ));
 
         code.push(Instr::new(
-            "lbl0".to_string(),
             0,
             Op::Binary {
                 ty: OpTy::Lt,
@@ -112,10 +111,10 @@ mod tests {
                 src2: 1,
                 dest: 2,
             },
+            3,
         ));
 
         code.push(Instr::new(
-            "lbl0".to_string(),
             0,
             Op::JumpCnd {
                 ty: OpTy::Jmpf,
@@ -123,19 +122,20 @@ mod tests {
                 lbl: "lbl2".to_string(),
                 lblidx: 2,
             },
+            4,
         ));
 
         code.push(Instr::new(
-            "lbl1".to_string(),
             1,
             Op::JumpA {
                 ty: OpTy::Jmp,
                 lbl: "lbl2".to_string(),
                 lblidx: 2,
             },
+            5,
         ));
 
-        code.push(Instr::new("lbl2".to_string(), 2, Op::Nop));
+        code.push(Instr::new(2, Op::Nop, 6));
 
         code
     }

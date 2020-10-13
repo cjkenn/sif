@@ -380,7 +380,6 @@ impl VM {
     }
 
     fn newerr(&self, ty: RuntimeErrTy) -> RuntimeErr {
-        // TODO: encode line information here using the cdr for better errors
-        RuntimeErr::new(ty)
+        RuntimeErr::new(ty, self.cdr)
     }
 }

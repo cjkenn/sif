@@ -5,14 +5,16 @@ pub struct Instr {
     pub lbl: String,
     pub lblidx: usize,
     pub op: Op,
+    pub line: usize,
 }
 
 impl Instr {
-    pub fn new(l: String, i: usize, o: Op) -> Instr {
+    pub fn new(idx: usize, o: Op, l: usize) -> Instr {
         Instr {
-            lbl: l,
-            lblidx: i,
+            lbl: format!("lbl{}", idx),
+            lblidx: idx,
             op: o,
+            line: l,
         }
     }
 }

@@ -165,7 +165,7 @@ impl<'c> Compiler<'c> {
     }
 
     pub fn push_op(&mut self, op: Op) {
-        let i = Instr::new(self.currlbl(), self.lblcnt, op);
+        let i = Instr::new(self.lblcnt, op, self.ops.len() + 1);
         self.ops.push(i);
     }
 

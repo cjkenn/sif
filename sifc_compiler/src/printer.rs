@@ -36,33 +36,33 @@ pub fn dump(ir: Vec<Instr>) {
                 let reg1 = reg_str(src1);
                 let reg2 = reg_str(src2);
                 let dstr = reg_str(dest);
-                let line = format!("\t{} {} {} {}\n", op_str, reg1, reg2, dstr);
+                let line = format!("{}. \t{} {} {} {}\n", i.line, op_str, reg1, reg2, dstr);
                 dble.push_str(&line);
             }
             Op::Unary { ty, src1, dest } => {
                 let op_str = op_ty_str(ty);
                 let reg1 = reg_str(src1);
                 let dstr = reg_str(dest);
-                let line = format!("\t{} {} {}\n", op_str, reg1, dstr);
+                let line = format!("{}. \t{} {} {}\n", i.line, op_str, reg1, dstr);
                 dble.push_str(&line);
             }
             Op::LoadC { ty, dest, val } => {
                 let op_str = op_ty_str(ty);
                 let dstr = reg_str(dest);
                 let vstr = val_str(val);
-                let line = format!("\t{} {} {}\n", op_str, vstr, dstr);
+                let line = format!("{}. \t{} {} {}\n", i.line, op_str, vstr, dstr);
                 dble.push_str(&line);
             }
             Op::LoadN { ty, dest, name } => {
                 let op_str = op_ty_str(ty);
                 let dstr = reg_str(dest);
-                let line = format!("\t{} {} {}\n", op_str, name, dstr);
+                let line = format!("{}. \t{} {} {}\n", i.line, op_str, name, dstr);
                 dble.push_str(&line);
             }
             Op::StoreC { ty, name, val } => {
                 let op_str = op_ty_str(ty);
                 let vstr = val_str(val);
-                let line = format!("\t{} {} {}\n", op_str, vstr, name);
+                let line = format!("{}. \t{} {} {}\n", i.line, op_str, vstr, name);
                 dble.push_str(&line);
             }
             Op::StoreN {
@@ -71,44 +71,44 @@ pub fn dump(ir: Vec<Instr>) {
                 destname,
             } => {
                 let op_str = op_ty_str(ty);
-                let line = format!("\t{} {} {}\n", op_str, srcname, destname);
+                let line = format!("{}. \t{} {} {}\n", i.line, op_str, srcname, destname);
                 dble.push_str(&line);
             }
             Op::StoreR { ty, name, src } => {
                 let op_str = op_ty_str(ty);
                 let rstr = reg_str(src);
-                let line = format!("\t{} {} {}\n", op_str, rstr, name);
+                let line = format!("{}. \t{} {} {}\n", i.line, op_str, rstr, name);
                 dble.push_str(&line);
             }
             Op::JumpCnd { ty, src, lbl, .. } => {
                 let op_str = op_ty_str(ty);
                 let rstr = reg_str(src);
-                let line = format!("\t{} {} {}\n", op_str, rstr, lbl);
+                let line = format!("{}. \t{} {} {}\n", i.line, op_str, rstr, lbl);
                 dble.push_str(&line);
             }
             Op::JumpA { ty, lbl, .. } => {
                 let op_str = op_ty_str(ty);
-                let line = format!("\t{} {}\n", op_str, lbl);
+                let line = format!("{}. \t{} {}\n", i.line, op_str, lbl);
                 dble.push_str(&line);
             }
             Op::Nop => {
-                let line = format!("\t{}\n", "nop");
+                let line = format!("{}. \t{}\n", i.line, "nop");
                 dble.push_str(&line);
             }
             Op::Incrr { ty, src } => {
                 let op_str = op_ty_str(ty);
                 let rstr = reg_str(src);
-                let line = format!("\t{} {}\n", op_str, rstr);
+                let line = format!("{}. \t{} {}\n", i.line, op_str, rstr);
                 dble.push_str(&line);
             }
             Op::Decrr { ty, src } => {
                 let op_str = op_ty_str(ty);
                 let rstr = reg_str(src);
-                let line = format!("\t{} {}\n", op_str, rstr);
+                let line = format!("{}. \t{} {}\n", i.line, op_str, rstr);
                 dble.push_str(&line);
             }
             Op::Stop => {
-                let line = format!("\t{}\n", "stop");
+                let line = format!("{}. \t{}\n", i.line, "stop");
                 dble.push_str(&line);
             }
         }

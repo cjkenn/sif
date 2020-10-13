@@ -1,6 +1,5 @@
 use crate::err::SifErr;
 
-/// RuntimeErrTy is intended to be the most specific error type in sif.
 #[derive(Debug, Clone)]
 pub enum RuntimeErrTy {
     InvalidName(String),
@@ -16,17 +15,22 @@ pub enum RuntimeErrTy {
 #[derive(Debug, Clone)]
 pub struct RuntimeErr {
     pub ty: RuntimeErrTy,
+    pub line: usize,
 }
 
 impl RuntimeErr {
-    pub fn new(t: RuntimeErrTy) -> RuntimeErr {
-        RuntimeErr { ty: t }
+    pub fn new(t: RuntimeErrTy, l: usize) -> RuntimeErr {
+        RuntimeErr { ty: t, line: l }
     }
 }
 
 impl SifErr for RuntimeErr {
     fn emit(&self) {
-        eprintln!("sif: runtime error - {}", self.to_msg());
+        eprintln!(
+            "sif: runtime error at instruction #{} : {}",
+            self.line,
+            self.to_msg()
+        );
     }
 
     fn to_msg(&self) -> String {
