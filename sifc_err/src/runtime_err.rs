@@ -8,6 +8,8 @@ pub enum RuntimeErrTy {
     InvalidIncrTy,
     InvalidDecr,
     InvalidDecrTy,
+    InvalidOp,
+    TyMismatch,
 }
 
 #[derive(Debug, Clone)]
@@ -37,6 +39,10 @@ impl SifErr for RuntimeErr {
                 String::from("cannot decrement register: no register contents found")
             }
             RuntimeErrTy::InvalidDecrTy => String::from("cannot decrement a non-numerical value"),
+            RuntimeErrTy::InvalidOp => String::from("invalid or unknown instruction found"),
+            RuntimeErrTy::TyMismatch => {
+                String::from("operator cannot be applied to value in desired register")
+            }
         }
     }
 }

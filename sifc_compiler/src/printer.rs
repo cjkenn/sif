@@ -77,7 +77,7 @@ pub fn dump(ir: Vec<Instr>) {
             Op::StoreR { ty, name, src } => {
                 let op_str = op_ty_str(ty);
                 let rstr = reg_str(src);
-                let line = format!("\t{} {} {}\n", op_str, name, rstr);
+                let line = format!("\t{} {} {}\n", op_str, rstr, name);
                 dble.push_str(&line);
             }
             Op::JumpCnd { ty, src, lbl } => {
@@ -91,9 +91,8 @@ pub fn dump(ir: Vec<Instr>) {
                 let line = format!("\t{} {}\n", op_str, lbl);
                 dble.push_str(&line);
             }
-            Op::Nop { ty } => {
-                let op_str = op_ty_str(ty);
-                let line = format!("\t{}\n", op_str);
+            Op::Nop => {
+                let line = format!("\t{}\n", "nop");
                 dble.push_str(&line);
             }
             Op::Incrr { ty, src } => {
@@ -106,6 +105,10 @@ pub fn dump(ir: Vec<Instr>) {
                 let op_str = op_ty_str(ty);
                 let rstr = reg_str(src);
                 let line = format!("\t{} {}\n", op_str, rstr);
+                dble.push_str(&line);
+            }
+            Op::Stop => {
+                let line = format!("\t{}\n", "stop");
                 dble.push_str(&line);
             }
         }
@@ -141,7 +144,7 @@ fn op_ty_str(opty: OpTy) -> &'static str {
         OpTy::Jmp => "jmp",
         OpTy::Incrr => "incrr",
         OpTy::Decrr => "decrr",
-        OpTy::Stop => "stp",
+        OpTy::Stop => "stop",
         OpTy::Nop => "nop",
     }
 }

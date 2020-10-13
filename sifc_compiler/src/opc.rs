@@ -65,6 +65,9 @@ pub enum OpTy {
 ///
 /// stn x y
 /// stores the value located at "x" into the address for "y"
+///
+/// str r2 y
+/// stores the value located in r2 into the address for "y"
 #[derive(Clone, Debug)]
 pub enum Op {
     Binary {
@@ -106,8 +109,8 @@ pub enum Op {
 
     StoreR {
         ty: OpTy,
-        name: String,
         src: usize,
+        name: String,
     },
 
     JumpCnd {
@@ -131,7 +134,6 @@ pub enum Op {
         src: usize,
     },
 
-    Nop {
-        ty: OpTy,
-    },
+    Nop,
+    Stop,
 }

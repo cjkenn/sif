@@ -27,7 +27,10 @@ pub struct VM {
     /// Data register vector.
     dregs: DataRegisterVec,
 
-    /// Heap section. This contains arrays, tables, records, and globals.
+    /// Heap section. This contains arrays, tables, records, and globals. We use the
+    /// name of the data as a key to retrieve and store information in the heap.
+    /// This is likely not memory efficient and a more sophisticated structure + allocating
+    /// space before vm startup could be more performant.
     heap: HashMap<String, SifVal>,
 
     /// The call stack.
@@ -85,6 +88,7 @@ impl VM {
                     return;
                 }
             };
+
             self.cdr = self.cdr + 1;
         }
     }
@@ -102,10 +106,7 @@ impl VM {
                 let reg = &self.dregs[*dest];
                 match self.heap.get(name) {
                     Some(n) => reg.borrow_mut().cont = Some(n.clone()),
-                    None => {
-                        let err = RuntimeErr::new(RuntimeErrTy::InvalidName(name.clone()));
-                        return Err(err);
-                    }
+                    None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
                 };
             }
             Op::StoreC { ty: _, name, val } => {
@@ -124,12 +125,21 @@ impl VM {
                 srcname,
                 destname,
             } => {
-                // let destval = self.heap.get(destname);
                 match self.heap.get(destname) {
-                    Some(v) => self.heap.insert(srcname.to_string(), v.clone()),
+                    Some(v) => {
+                        let to_insert = v.clone();
+                        self.heap.insert(srcname.to_string(), to_insert)
+                    }
                     None => self.heap.insert(srcname.to_string(), SifVal::Null),
                 };
             }
+            Op::Unary { ty, src1, dest } => self.unop(ty.clone(), *src1, *dest)?,
+            Op::Binary {
+                ty,
+                src1,
+                src2,
+                dest,
+            } => self.binop(ty.clone(), *src1, *src2, *dest)?,
             Op::Incrr { ty: _, src } => {
                 let reg = &self.dregs[*src];
                 let contents = reg.borrow().cont.clone();
@@ -141,15 +151,9 @@ impl VM {
                 match contents {
                     Some(v) => match v {
                         SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n + 1.0)),
-                        _ => {
-                            let err = RuntimeErr::new(RuntimeErrTy::InvalidIncrTy);
-                            return Err(err);
-                        }
+                        _ => return Err(self.newerr(RuntimeErrTy::InvalidIncrTy)),
                     },
-                    None => {
-                        let err = RuntimeErr::new(RuntimeErrTy::InvalidIncr);
-                        return Err(err);
-                    }
+                    None => return Err(self.newerr(RuntimeErrTy::InvalidIncr)),
                 };
             }
             Op::Decrr { ty: _, src } => {
@@ -158,20 +162,161 @@ impl VM {
                 match contents {
                     Some(v) => match v {
                         SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n - 1.0)),
-                        _ => {
-                            let err = RuntimeErr::new(RuntimeErrTy::InvalidDecrTy);
-                            return Err(err);
-                        }
+                        _ => return Err(self.newerr(RuntimeErrTy::InvalidDecrTy)),
                     },
-                    None => {
-                        let err = RuntimeErr::new(RuntimeErrTy::InvalidDecr);
-                        return Err(err);
-                    }
+                    None => return Err(self.newerr(RuntimeErrTy::InvalidDecr)),
                 };
             }
-            _ => {}
+            Op::Nop => {}
+            Op::Stop => {
+                eprintln!("sif: stop instruction found, halting execution");
+                return Ok(());
+            }
+            _ => return Err(self.newerr(RuntimeErrTy::InvalidOp)),
         };
 
         Ok(())
+    }
+
+    fn unop(&self, ty: OpTy, src1: usize, dest: usize) -> Result<(), RuntimeErr> {
+        let srcreg = &self.dregs[src1];
+        let destreg = &self.dregs[dest];
+        let mb_contents = srcreg.borrow().cont.clone();
+
+        if mb_contents.is_none() {
+            return Err(self.newerr(RuntimeErrTy::TyMismatch));
+        }
+
+        let contents = mb_contents.unwrap();
+
+        match ty {
+            OpTy::Lneg => {
+                match contents {
+                    SifVal::Bl(bl) => destreg.borrow_mut().cont = Some(SifVal::Bl(!bl)),
+                    _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+                };
+            }
+            OpTy::Nneg => {
+                match contents {
+                    SifVal::Num(num) => destreg.borrow_mut().cont = Some(SifVal::Num(-num)),
+                    _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+                };
+            }
+            _ => return Err(self.newerr(RuntimeErrTy::InvalidOp)),
+        };
+
+        Ok(())
+    }
+
+    fn binop(&self, ty: OpTy, src1: usize, src2: usize, dest: usize) -> Result<(), RuntimeErr> {
+        let src1reg = &self.dregs[src1];
+        let src2reg = &self.dregs[src2];
+        let destreg = &self.dregs[dest];
+
+        // TODO: what if src1 and src2 are the same reg? Can we still borrow?
+        let mb_contents1 = src1reg.borrow().cont.clone();
+        let mb_contents2 = src2reg.borrow().cont.clone();
+
+        if mb_contents1.is_none() || mb_contents2.is_none() {
+            return Err(self.newerr(RuntimeErrTy::TyMismatch));
+        }
+
+        let contents1 = mb_contents1.unwrap();
+        let contents2 = mb_contents2.unwrap();
+
+        match ty {
+            OpTy::Add => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 + n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Sub => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 - n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Mul => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 * n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Div => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 / n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Modu => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 % n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Eq => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 == n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Neq => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 != n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::LtEq => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 <= n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Lt => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 < n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::GtEq => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 >= n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Gt => match (contents1, contents2) {
+                (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 > n2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Land => match (contents1, contents2) {
+                (SifVal::Bl(b1), SifVal::Bl(b2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Bl(b1 && b2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Lnot => match (contents1, contents2) {
+                (SifVal::Bl(b1), SifVal::Bl(b2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Bl(b1 != b2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            OpTy::Lor => match (contents1, contents2) {
+                (SifVal::Bl(b1), SifVal::Bl(b2)) => {
+                    destreg.borrow_mut().cont = Some(SifVal::Bl(b1 || b2));
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+            },
+            _ => return Err(self.newerr(RuntimeErrTy::InvalidOp)),
+        };
+
+        Ok(())
+    }
+
+    fn newerr(&self, ty: RuntimeErrTy) -> RuntimeErr {
+        // TODO: encode line information here using the cdr for better errors
+        RuntimeErr::new(ty)
     }
 }

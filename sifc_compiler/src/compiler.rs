@@ -53,7 +53,7 @@ impl<'c, 's> Compiler<'c, 's> {
                 // TODO: we need this for labeling purposes right now, but
                 // could probably remove it later
                 self.newlbl();
-                self.push_op(Op::Nop { ty: OpTy::Nop });
+                self.push_op(Op::Nop);
 
                 Ok(self.ops.clone())
             }
