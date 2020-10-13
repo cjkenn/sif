@@ -22,7 +22,7 @@ pub struct CompileResult {
     /// a vm to execute.
     pub code: Vec<Instr>,
 
-    /// Branch table that maps label indices to code indices. When you look
+    /// Jump table that maps label indices to code indices. When you look
     /// up a label index, this returns the index of the first instruction
     /// under than label. Both indices being at 0. For example:
     ///
@@ -32,12 +32,12 @@ pub struct CompileResult {
     /// lbl1:
     ///     add r0 r1 r2
     ///
-    /// If we call branchtab.get(0), it would return 0. If we call branchtab.get(1),
+    /// If we call jumptab.get(0), it would return 0. If we call jumptab.get(1),
     /// we would get back 2, since the third (index 2) instruction is the first under
     /// lbl1.
     /// This requires a separate pass to compute, after the initial compilation phase
     /// which generates instructions and labels.
-    pub branchtab: HashMap<usize, usize>,
+    pub jumptab: HashMap<usize, usize>,
 
     /// Any errors that were encountered during compilation. The compiler does not
     /// attempt to continue on any error, it should exit immediately upon error.
@@ -85,9 +85,11 @@ impl<'c> Compiler<'c> {
             _ => currerr = Some(CompileErr::new(CompileErrTy::InvalidAst)),
         };
 
+        let jumptab = crate::jumptab::compute_jumptab(&self.ops);
+
         CompileResult {
             code: self.ops.to_vec(),
-            branchtab: HashMap::new(),
+            jumptab: jumptab,
             err: currerr,
         }
     }
@@ -163,7 +165,7 @@ impl<'c> Compiler<'c> {
     }
 
     pub fn push_op(&mut self, op: Op) {
-        let i = Instr::new(self.currlbl(), op);
+        let i = Instr::new(self.currlbl(), self.lblcnt, op);
         self.ops.push(i);
     }
 

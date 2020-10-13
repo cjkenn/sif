@@ -9,6 +9,7 @@ pub enum RuntimeErrTy {
     InvalidDecr,
     InvalidDecrTy,
     InvalidOp,
+    InvalidJump,
     TyMismatch,
 }
 
@@ -40,6 +41,9 @@ impl SifErr for RuntimeErr {
             }
             RuntimeErrTy::InvalidDecrTy => String::from("cannot decrement a non-numerical value"),
             RuntimeErrTy::InvalidOp => String::from("invalid or unknown instruction found"),
+            RuntimeErrTy::InvalidJump => {
+                String::from("could not compute jump index from instruction")
+            }
             RuntimeErrTy::TyMismatch => {
                 String::from("operator cannot be applied to value in desired register")
             }

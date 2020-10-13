@@ -114,13 +114,13 @@ pub enum Op {
         ty: OpTy,
         src: usize,
         lbl: String,
-        instr: usize,
+        lblidx: usize,
     },
 
     JumpA {
         ty: OpTy,
         lbl: String,
-        instr: usize,
+        lblidx: usize,
     },
 
     Incrr {

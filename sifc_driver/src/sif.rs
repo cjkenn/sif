@@ -90,13 +90,14 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
     }
 
     let code = comp_result.code;
+    let jumptab = comp_result.jumptab;
 
     // TODO: add option to write to file and not run vm?
     if opts.dump_ir {
         printer::dump(code.clone());
     }
 
-    let mut vm = VM::new(code);
+    let mut vm = VM::new(code, jumptab);
     vm.run();
 }
 

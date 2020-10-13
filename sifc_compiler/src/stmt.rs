@@ -44,7 +44,7 @@ impl<'c> Compiler<'c> {
             ty: OpTy::Jmpf,
             src: self.prevreg(),
             lbl: self.buildlbl(el_jmp_idx),
-            instr: el_jmp_idx,
+            lblidx: el_jmp_idx,
         };
         self.push_op(jmp_op);
         self.newlbl();
@@ -56,7 +56,7 @@ impl<'c> Compiler<'c> {
         let jmpa_op = Op::JumpA {
             ty: OpTy::Jmp,
             lbl: self.buildlbl(final_jmp_idx),
-            instr: final_jmp_idx,
+            lblidx: final_jmp_idx,
         };
         self.push_op(jmpa_op);
 
@@ -103,7 +103,7 @@ impl<'c> Compiler<'c> {
                     ty: OpTy::Jmpf,
                     src: self.prevreg(),
                     lbl: self.buildlbl(next_elif_jmp_idx),
-                    instr: next_elif_jmp_idx,
+                    lblidx: next_elif_jmp_idx,
                 };
                 self.push_op(jmp_op);
                 self.newlbl();
@@ -114,7 +114,7 @@ impl<'c> Compiler<'c> {
                 let jmpa_op = Op::JumpA {
                     ty: OpTy::Jmp,
                     lbl: self.buildlbl(final_jmp_idx),
-                    instr: final_jmp_idx,
+                    lblidx: final_jmp_idx,
                 };
                 self.push_op(jmpa_op);
             }
@@ -181,7 +181,7 @@ impl<'c> Compiler<'c> {
             ty: OpTy::Jmpt,
             src: self.prevreg(),
             lbl: self.currlbl(),
-            instr: self.prevreg(), //TODO: could be wrong!
+            lblidx: self.prevreg(), //TODO: could be wrong!
         };
         self.push_op(idx_jmp);
     }
