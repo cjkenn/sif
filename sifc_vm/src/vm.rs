@@ -196,33 +196,8 @@ impl VM {
                 src2,
                 dest,
             } => self.binop(ty.clone(), *src1, *src2, *dest)?,
-            Op::Incrr { ty: _, src } => {
-                let reg = &self.dregs[*src];
-                let contents = reg.borrow().cont.clone();
-
-                // If contents are None, we have nothing to increment so we set a runtime err.
-                // If contents are Some, we must match on the val and ensure the kind of val
-                // can be incremented (ie. only a num). If it isn't we err. If it is, we can
-                // replace the value with an incremented one.
-                match contents {
-                    Some(v) => match v {
-                        SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n + 1.0)),
-                        _ => return Err(self.newerr(RuntimeErrTy::InvalidIncrTy)),
-                    },
-                    None => return Err(self.newerr(RuntimeErrTy::InvalidIncr)),
-                };
-            }
-            Op::Decrr { ty: _, src } => {
-                let reg = &self.dregs[*src];
-                let contents = reg.borrow().cont.clone();
-                match contents {
-                    Some(v) => match v {
-                        SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n - 1.0)),
-                        _ => return Err(self.newerr(RuntimeErrTy::InvalidDecrTy)),
-                    },
-                    None => return Err(self.newerr(RuntimeErrTy::InvalidDecr)),
-                };
-            }
+            Op::Incrr { ty: _, src } => self.incrr(*src)?,
+            Op::Decrr { ty: _, src } => self.decrr(*src)?,
             Op::Nop => {}
             Op::Stop => {
                 eprintln!("sif: stop instruction found, halting execution");
@@ -366,6 +341,39 @@ impl VM {
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             _ => return Err(self.newerr(RuntimeErrTy::InvalidOp)),
+        };
+
+        Ok(())
+    }
+
+    fn incrr(&self, src: usize) -> Result<(), RuntimeErr> {
+        let reg = &self.dregs[src];
+        let contents = reg.borrow().cont.clone();
+
+        // If contents are None, we have nothing to increment so we set a runtime err.
+        // If contents are Some, we must match on the val and ensure the kind of val
+        // can be incremented (ie. only a num). If it isn't we err. If it is, we can
+        // replace the value with an incremented one.
+        match contents {
+            Some(v) => match v {
+                SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n + 1.0)),
+                _ => return Err(self.newerr(RuntimeErrTy::InvalidIncrTy)),
+            },
+            None => return Err(self.newerr(RuntimeErrTy::InvalidIncr)),
+        };
+
+        Ok(())
+    }
+
+    fn decrr(&self, src: usize) -> Result<(), RuntimeErr> {
+        let reg = &self.dregs[src];
+        let contents = reg.borrow().cont.clone();
+        match contents {
+            Some(v) => match v {
+                SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n - 1.0)),
+                _ => return Err(self.newerr(RuntimeErrTy::InvalidDecrTy)),
+            },
+            None => return Err(self.newerr(RuntimeErrTy::InvalidDecr)),
         };
 
         Ok(())
