@@ -58,7 +58,7 @@ fn from_file(opts: SifOpts) {
         println!("{:#?}", ast);
     }
 
-    compile_and_run(opts, &ast, &symtab);
+    compile_and_run(opts, &ast);
 }
 
 /// Opens the file from the filename provided, creates a lexer for that file
@@ -78,19 +78,18 @@ fn parse(filename: &str, symtab: &mut SymTab) -> ParserResult {
     parser.parse()
 }
 
-fn compile_and_run(opts: SifOpts, ast: &AstNode, symtab: &SymTab) {
-    let mut comp = Compiler::new(ast, symtab);
+fn compile_and_run(opts: SifOpts, ast: &AstNode) {
+    let mut comp = Compiler::new(ast);
     let comp_result = comp.compile();
-    match comp_result {
-        Err(e) => {
-            e.emit();
-            eprintln!("sif: exiting due to errors");
-            return;
-        }
-        _ => (),
-    };
 
-    let code = comp_result.unwrap();
+    let maybe_err = comp_result.err;
+    if maybe_err.is_some() {
+        maybe_err.unwrap().emit();
+        eprintln!("sif: exiting due to errors");
+        return;
+    }
+
+    let code = comp_result.code;
 
     // TODO: add option to write to file and not run vm?
     if opts.dump_ir {

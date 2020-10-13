@@ -37,9 +37,6 @@ pub enum OpTy {
     // register operations
     Incrr, // increment register contents
     Decrr, // decrement register contents
-
-    Stop, // end program execution
-    Nop,  // no op
 }
 
 /// Each opcode. Some of these just wrap the op type, but the type is useful for
@@ -117,11 +114,13 @@ pub enum Op {
         ty: OpTy,
         src: usize,
         lbl: String,
+        instr: usize,
     },
 
     JumpA {
         ty: OpTy,
         lbl: String,
+        instr: usize,
     },
 
     Incrr {

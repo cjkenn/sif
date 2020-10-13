@@ -133,6 +133,44 @@ impl VM {
                     None => self.heap.insert(srcname.to_string(), SifVal::Null),
                 };
             }
+            Op::JumpA {
+                ty: _,
+                lbl: _,
+                instr,
+            } => {
+                self.cdr = *instr;
+            }
+            Op::JumpCnd {
+                ty,
+                src,
+                lbl,
+                instr,
+            } => {
+                let reg = &self.dregs[*src];
+                let contents = reg.borrow().cont.clone();
+                if contents.is_none() {
+                    return Err(self.newerr(RuntimeErrTy::TyMismatch));
+                }
+
+                match contents.unwrap() {
+                    SifVal::Bl(b) => {
+                        match *ty {
+                            OpTy::Jmpt => {
+                                if b {
+                                    self.cdr = *instr;
+                                }
+                            }
+                            OpTy::Jmpf => {
+                                if !b {
+                                    self.cdr = *instr;
+                                }
+                            }
+                            _ => {}
+                        };
+                    }
+                    _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
+                };
+            }
             Op::Unary { ty, src1, dest } => self.unop(ty.clone(), *src1, *dest)?,
             Op::Binary {
                 ty,
