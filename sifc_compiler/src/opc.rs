@@ -92,6 +92,20 @@ pub enum Op {
         name: String,
     },
 
+    /// Loads the size (length) of the array by the given name.
+    LoadArrs {
+        name: String,
+        dest: usize,
+    },
+
+    /// Loads the value of the array at the index given. The idx field
+    /// is expected to be a register.
+    LoadArrv {
+        name: String,
+        idx: usize,
+        dest: usize,
+    },
+
     StoreC {
         ty: OpTy,
         val: SifVal,

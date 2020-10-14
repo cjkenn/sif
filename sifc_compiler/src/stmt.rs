@@ -129,26 +129,48 @@ impl<'c> Compiler<'c> {
         let idx_reg = self.nextreg();
         let (idx_name, local_name) = self.names_from_identpair(var_list);
 
-        // TODO: right now we assume that the value we are looping over is always an array
+        let loop_var_name = match in_expr_list {
+            AstNode::PrimaryExpr { tkn, .. } => tkn.get_name(),
+            _ => panic!("invalid expression list in ast!"),
+        };
+
+        // TODO: right now we assume that the value we are looping over is always an array.
+        // later we could determine this by examining the in_expr_list node for other kinds.
         self.push_op(Op::StoreC {
             ty: OpTy::Stc,
             name: idx_name.clone(),
             val: SifVal::Num(0.0),
         });
 
-        self.newlbl();
-
-        // Load local var, and loop expr var into registers
-        let local_reg = self.nextreg();
         let size_reg = self.nextreg();
 
-        // TODO: right now we assume that the value we are looping over is always an array
-        // Load the array index into register. We need to store the array size in the
-        // size reg and handle the generation of array declarations.
+        // Load array size into size register.
+        self.push_op(Op::LoadArrs {
+            name: loop_var_name.clone(),
+            dest: size_reg,
+        });
+
+        // This new label is used to jump to at the end of the loop. We can perform the previous
+        // steps outside of the actual loop body and at least save a few instructions inside
+        // the loop.
+        self.newlbl();
+
         self.push_op(Op::LoadN {
             ty: OpTy::Ldn,
             dest: idx_reg,
             name: idx_name.clone(),
+        });
+
+        let local_reg = self.nextreg();
+        self.push_op(Op::LoadArrv {
+            name: loop_var_name.clone(),
+            idx: idx_reg,
+            dest: local_reg,
+        });
+        self.push_op(Op::StoreR {
+            ty: OpTy::Str,
+            name: local_name.clone(),
+            src: local_reg,
         });
 
         // generate stmts, then check if we need to jmp back to loop start

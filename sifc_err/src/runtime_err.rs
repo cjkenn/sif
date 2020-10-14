@@ -10,6 +10,7 @@ pub enum RuntimeErrTy {
     InvalidOp,
     InvalidJump,
     TyMismatch,
+    NotAnArray(String),
 }
 
 #[derive(Debug, Clone)]
@@ -50,6 +51,9 @@ impl SifErr for RuntimeErr {
             }
             RuntimeErrTy::TyMismatch => {
                 String::from("operator cannot be applied to value in desired register")
+            }
+            RuntimeErrTy::NotAnArray(n) => {
+                format!("Cannot load value: '{}' is not an array or sized type", n)
             }
         }
     }

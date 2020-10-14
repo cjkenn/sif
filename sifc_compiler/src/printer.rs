@@ -59,6 +59,17 @@ pub fn dump(ir: Vec<Instr>) {
                 let line = format!("{}. \t{} {} {}\n", i.line, op_str, name, dstr);
                 dble.push_str(&line);
             }
+            Op::LoadArrs { name, dest } => {
+                let dstr = reg_str(dest);
+                let line = format!("{}. \tldarrs {} {}\n", i.line, name, dstr);
+                dble.push_str(&line);
+            }
+            Op::LoadArrv { name, idx, dest } => {
+                let dstr = reg_str(dest);
+                let istr = reg_str(idx);
+                let line = format!("{}. \tldarrv {} {} {}\n", i.line, name, istr, dstr);
+                dble.push_str(&line);
+            }
             Op::StoreC { ty, name, val } => {
                 let op_str = op_ty_str(ty);
                 let vstr = val_str(val);

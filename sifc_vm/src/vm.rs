@@ -115,6 +115,36 @@ impl VM {
                     None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
                 };
             }
+            Op::LoadArrs { name, dest } => {
+                let reg = &self.dregs[*dest];
+                match self.heap.get(name) {
+                    Some(n) => match n {
+                        SifVal::Arr(v) => reg.borrow_mut().cont = Some(SifVal::Num(v.len() as f64)),
+                        _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
+                    },
+                    None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
+                };
+            }
+            Op::LoadArrv { name, idx, dest } => {
+                let reg = &self.dregs[*dest];
+                let idx_sv = &self.dregs[*idx].borrow().cont;
+                if idx_sv.is_none() {
+                    return Err(self.newerr(RuntimeErrTy::TyMismatch));
+                }
+
+                let to_idx = match &idx_sv.as_ref().unwrap() {
+                    SifVal::Num(f) => *f as usize,
+                    _ => panic!("invalid array index"),
+                };
+
+                match self.heap.get(name) {
+                    Some(n) => match n {
+                        SifVal::Arr(v) => reg.borrow_mut().cont = Some(v[to_idx].clone()),
+                        _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
+                    },
+                    None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
+                };
+            }
             Op::StoreC { ty: _, name, val } => {
                 self.heap.insert(name.to_string(), val.clone());
             }
@@ -131,12 +161,12 @@ impl VM {
                 srcname,
                 destname,
             } => {
-                match self.heap.get(destname) {
+                match self.heap.get(srcname) {
                     Some(v) => {
                         let to_insert = v.clone();
-                        self.heap.insert(srcname.to_string(), to_insert)
+                        self.heap.insert(destname.to_string(), to_insert)
                     }
-                    None => self.heap.insert(srcname.to_string(), SifVal::Null),
+                    None => self.heap.insert(destname.to_string(), SifVal::Null),
                 };
             }
             Op::JumpA {
