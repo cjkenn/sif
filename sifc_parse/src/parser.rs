@@ -164,7 +164,8 @@ impl<'l, 's> Parser<'l, 's> {
 
         let maybe_ident_tkn = self.match_ident();
         if maybe_ident_tkn.is_none() {
-            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+            let ty_str = self.curr_tkn.ty.to_string();
+            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
@@ -206,7 +207,8 @@ impl<'l, 's> Parser<'l, 's> {
 
         let maybe_ident_tkn = self.match_ident();
         if maybe_ident_tkn.is_none() {
-            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+            let ty_str = self.curr_tkn.ty.to_string();
+            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
@@ -264,9 +266,8 @@ impl<'l, 's> Parser<'l, 's> {
 
                     let maybe_ident_tkn = self.match_ident();
                     if maybe_ident_tkn.is_none() {
-                        return Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
-                            "expected identifier",
-                        ))));
+                        let ty_str = self.curr_tkn.ty.to_string();
+                        return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
                     }
 
                     let ident_tkn = maybe_ident_tkn.unwrap();
@@ -287,7 +288,8 @@ impl<'l, 's> Parser<'l, 's> {
 
         let maybe_ident_tkn = self.match_ident();
         if maybe_ident_tkn.is_none() {
-            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+            let ty_str = self.curr_tkn.ty.to_string();
+            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
@@ -319,9 +321,8 @@ impl<'l, 's> Parser<'l, 's> {
 
             let maybe_ident_tkn = self.match_ident();
             if maybe_ident_tkn.is_none() {
-                return Err(
-                    self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier")))
-                );
+                let ty_str = self.curr_tkn.ty.to_string();
+                return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
             }
             let ident_tkn = maybe_ident_tkn.unwrap();
             let node = match self.curr_tkn.ty {
@@ -357,7 +358,8 @@ impl<'l, 's> Parser<'l, 's> {
 
         let maybe_ident_tkn = self.match_ident();
         if maybe_ident_tkn.is_none() {
-            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+            let ty_str = self.curr_tkn.ty.to_string();
+            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
@@ -410,7 +412,8 @@ impl<'l, 's> Parser<'l, 's> {
 
         let maybe_ident_tkn = self.match_ident();
         if maybe_ident_tkn.is_none() {
-            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+            let ty_str = self.curr_tkn.ty.to_string();
+            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
@@ -530,7 +533,8 @@ impl<'l, 's> Parser<'l, 's> {
 
         let maybe_first_ident = self.match_ident();
         if maybe_first_ident.is_none() {
-            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+            let ty_str = self.curr_tkn.ty.to_string();
+            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
         }
         let first_ident = maybe_first_ident.unwrap();
         idents.push(AstNode::PrimaryExpr { tkn: first_ident });
@@ -539,7 +543,8 @@ impl<'l, 's> Parser<'l, 's> {
 
         let maybe_sec_ident = self.match_ident();
         if maybe_sec_ident.is_none() {
-            return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected identifier"))));
+            let ty_str = self.curr_tkn.ty.to_string();
+            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
         }
         let second_ident = maybe_sec_ident.unwrap();
         idents.push(AstNode::PrimaryExpr { tkn: second_ident });

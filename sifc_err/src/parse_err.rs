@@ -12,6 +12,7 @@ pub enum ParseErrTy {
     WrongFnParmCnt(usize, usize),
     UndeclSym(String),
     UnassignedVar(String),
+    ExpectedIdent(String),
 }
 
 #[derive(Debug, Clone)]
@@ -83,6 +84,10 @@ impl SifErr for ParseErr {
             ParseErrTy::UndeclSym(ref found) => {
                 format!("{} Undeclared symbol '{}' found", str_pos, found)
             }
+            ParseErrTy::ExpectedIdent(ref found) => format!(
+                "{} Identifier expected, found '{}'. Is this a reserved word?",
+                str_pos, found
+            ),
         }
     }
 }
