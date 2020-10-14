@@ -5,6 +5,7 @@ use std::collections::HashMap;
 /// Scope is a map of ident names to their AST definitions.
 type Scope = HashMap<String, AstNode>;
 
+#[derive(Debug)]
 pub struct SymTab {
     /// Current scope level in the symbol table. 0 is the global scope,
     /// and when the table is created we allocate a new hashmap to hold that scope.

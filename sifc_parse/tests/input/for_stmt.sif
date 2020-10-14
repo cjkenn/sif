@@ -1,8 +1,8 @@
 # expect::pass
 
-let q;
+array q = [];
 
-for idx, var in q {
-  let y;
-  let x = idx + 1;
+for idx, val in q {
+  var y;
+  var x = idx + 1;
 }

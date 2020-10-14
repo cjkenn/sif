@@ -1,15 +1,15 @@
 # expect::pass
 
-let x = true && false;
-let y = false || true;
-let z = 1 + 2;
-let g = 1 - 0;
-let j = 10 / 2;
-let k = 5 * 8;
-let l = 4 % 2;
+var x = true && false;
+var y = false || true;
+var z = 1 + 2;
+var g = 1 - 0;
+var j = 10 / 2;
+var k = 5 * 8;
+var l = 4 % 2;
 
-let m = !y;
-let n = -z;
+var m = !y;
+var n = -z;
 
-let r = (9 + 1) / (2 % 0) + 10;
-let d = z + g * j - l;
+var r = (9 + 1) / (2 % 0) + 10;
+var d = z + g * j - l;

@@ -122,7 +122,6 @@ impl<'c> Compiler<'c> {
         };
     }
 
-    // TODO: need array decls
     pub fn forstmt(&mut self, var_list: &AstNode, in_expr_list: &AstNode, stmts: &AstNode) {
         self.newlbl();
 

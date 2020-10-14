@@ -97,7 +97,7 @@ impl<'l, 's> Parser<'l, 's> {
 
     fn decl(&mut self) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty {
-            TokenTy::Let => self.var_decl(),
+            TokenTy::Var => self.var_decl(),
             TokenTy::Fn => self.fn_decl(),
             TokenTy::Record => self.record_decl(),
             TokenTy::Table => self.table_decl(),
@@ -160,7 +160,7 @@ impl<'l, 's> Parser<'l, 's> {
     }
 
     fn var_decl(&mut self) -> Result<AstNode, ParseErr> {
-        self.expect(TokenTy::Let)?;
+        self.expect(TokenTy::Var)?;
 
         let maybe_ident_tkn = self.match_ident();
         if maybe_ident_tkn.is_none() {
@@ -291,6 +291,8 @@ impl<'l, 's> Parser<'l, 's> {
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
+        self.expect(TokenTy::Eq)?;
+
         self.expect(TokenTy::LeftBrace)?;
         let items = self.var_list()?;
         self.expect(TokenTy::RightBrace)?;
@@ -300,6 +302,7 @@ impl<'l, 's> Parser<'l, 's> {
             items: Box::new(items),
         };
         self.sym_tab.store(&ident_tkn.get_name(), node.clone());
+        self.expect(TokenTy::Semicolon)?;
 
         Ok(node)
     }
@@ -358,6 +361,8 @@ impl<'l, 's> Parser<'l, 's> {
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
+        self.expect(TokenTy::Eq)?;
+
         self.expect(TokenTy::LeftBrace)?;
         let items = self.item_list()?;
         self.expect(TokenTy::RightBrace)?;
@@ -367,6 +372,8 @@ impl<'l, 's> Parser<'l, 's> {
             items: Box::new(items),
         };
         self.sym_tab.store(&ident_tkn.get_name(), node.clone());
+
+        self.expect(TokenTy::Semicolon)?;
 
         Ok(node)
     }
@@ -407,6 +414,7 @@ impl<'l, 's> Parser<'l, 's> {
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
+        self.expect(TokenTy::Eq)?;
         self.expect(TokenTy::LeftBracket)?;
 
         let mut arr_items = Vec::new();

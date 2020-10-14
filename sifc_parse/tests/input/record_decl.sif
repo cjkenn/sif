@@ -1,8 +1,8 @@
 # expect::pass
 
-record x {
+record x = {
   y = 10,
   q,
-}
+};
 
-let t = x->y;
+var t = x->y;

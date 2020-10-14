@@ -17,11 +17,11 @@ varlist    ::= { IDENT [ "=" expr ] "," } ;
 itemlist   ::= { IDENT "=>" expr "," } ;
 paramlist  ::= [ { IDENT [ "," ] } ] ;
 
-vardecl    ::= "let" IDENT [ "=" expr ] ";" ;
+vardecl    ::= "var" IDENT [ "=" expr ] ";" ;
 funcdecl   ::= "fn" IDENT "(" [ paramlist ] ")" block ;
-recorddecl ::= "record" IDENT "{" [ varlist ] "}" ;
-tabledecl  ::= "table" IDENT "{" [ itemlist ] "}" ;
-arraydecl  ::= "array" IDENT "[" { expr "," } "]" ";" ;
+recorddecl ::= "record" IDENT "=" "{" [ varlist ] "}" ";" ;
+tabledecl  ::= "table" IDENT "=" "{" [ itemlist ] "}" ";" ;
+arraydecl  ::= "array" IDENT "=" "[" { expr "," } "]" ";" ;
 
 ifstmt     ::= "if" expr block { "elif" expr block } [ "else" block ] ;
 forstmt    ::= "for" identpair "in" expr block ;

@@ -44,6 +44,7 @@ fn from_file(opts: SifOpts) {
     let mut symtab = SymTab::new();
     let path = opts.filename.clone().unwrap();
     let parse_result = parse(&path, &mut symtab);
+    println!("{:#?}", symtab);
 
     // Any errors should already have been emitted by the
     // parser, whether or not they are continuable.

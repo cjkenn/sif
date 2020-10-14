@@ -7,5 +7,5 @@ fn y(g) {}
 fn h(g,j,k) {}
 
 fn k() {
-  let y = 10;
+  var y = 10;
 }

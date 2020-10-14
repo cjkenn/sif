@@ -39,7 +39,7 @@ pub enum TokenTy {
     Val(f64),
 
     // Reserved word literals
-    Let,
+    Var,
     Fn,
     Return,
     Record,
@@ -153,7 +153,7 @@ impl fmt::Display for TokenTy {
             TokenTy::Str(name) => format!("{}", name),
             TokenTy::Val(val) => format!("{}", val),
 
-            TokenTy::Let => "let".to_string(),
+            TokenTy::Var => "var".to_string(),
             TokenTy::Fn => "fn".to_string(),
             TokenTy::Return => "return".to_string(),
             TokenTy::Record => "record".to_string(),

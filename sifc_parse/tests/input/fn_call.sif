@@ -4,4 +4,4 @@ fn x() {
   return 0;
 }
 
-let y = x();
+var y = x();

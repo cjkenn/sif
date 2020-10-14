@@ -380,6 +380,6 @@ impl VM {
     }
 
     fn newerr(&self, ty: RuntimeErrTy) -> RuntimeErr {
-        RuntimeErr::new(ty, self.cdr)
+        RuntimeErr::new(ty, self.cdr + 1) // use cdr+1 because linenums are 1-indexed
     }
 }
