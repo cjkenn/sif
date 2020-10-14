@@ -3,7 +3,7 @@ use crate::sifv::SifVal;
 /// OpTy is only used for opcodes that are structurally the same, but only differ in the
 /// resulting operation performed. For example, binary opcodes can be differentiated based
 /// on their OpTy fields, but load/store opcodes don't bother with OpTy because they are
-/// are structually unique and this would map 1-1 with OpTy, making the type useless.
+/// are structurally unique and this would map 1-1 with OpTy, making the type useless.
 #[derive(Clone, Debug)]
 pub enum OpTy {
     // Binary ops
@@ -57,6 +57,7 @@ pub enum OpTy {
 /// stores the value located in r2 into the address for "y"
 #[derive(Clone, Debug)]
 pub enum Op {
+    /// Binary operator with 2 register sources
     Binary {
         ty: OpTy,
         src1: usize,
@@ -64,6 +65,7 @@ pub enum Op {
         dest: usize,
     },
 
+    /// Unary operator with a single register source
     Unary {
         ty: OpTy,
         src1: usize,
@@ -114,6 +116,7 @@ pub enum Op {
         name: String,
     },
 
+    /// Jump conditionally, based on the value in src register
     JumpCnd {
         ty: OpTy,
         src: usize,
@@ -121,6 +124,7 @@ pub enum Op {
         lblidx: usize,
     },
 
+    /// Always jump to given lbl
     JumpA {
         ty: OpTy,
         lbl: String,
