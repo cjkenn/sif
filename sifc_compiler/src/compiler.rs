@@ -248,37 +248,24 @@ impl<'c> Compiler<'c> {
                 TokenTy::Val(v) => {
                     let sifv = SifVal::Num(*v);
                     let d = self.nextreg();
-                    let op = Op::LoadC {
-                        ty: OpTy::Ldc,
-                        dest: d,
-                        val: sifv,
-                    };
+                    let op = Op::LoadC { dest: d, val: sifv };
                     self.push_op(op);
                 }
                 TokenTy::True => {
                     let d = self.nextreg();
                     let sifv = SifVal::Bl(true);
-                    let op = Op::LoadC {
-                        ty: OpTy::Ldc,
-                        dest: d,
-                        val: sifv,
-                    };
+                    let op = Op::LoadC { dest: d, val: sifv };
                     self.push_op(op);
                 }
                 TokenTy::False => {
                     let d = self.nextreg();
                     let sifv = SifVal::Bl(false);
-                    let op = Op::LoadC {
-                        ty: OpTy::Ldc,
-                        dest: d,
-                        val: sifv,
-                    };
+                    let op = Op::LoadC { dest: d, val: sifv };
                     self.push_op(op);
                 }
                 TokenTy::Ident(i) => {
                     let d = self.nextreg();
                     let op = Op::LoadN {
-                        ty: OpTy::Ldn,
                         dest: d,
                         name: i.clone(),
                     };
@@ -316,7 +303,6 @@ impl<'c> Compiler<'c> {
             // in memory if we try to assign to it later. We can detect null value accesses at some
             // point if we want to, or we can leave it to runtime.
             let op = Op::StoreC {
-                ty: OpTy::Stc,
                 val: SifVal::Null,
                 name: st_name,
             };
@@ -333,7 +319,6 @@ impl<'c> Compiler<'c> {
                 match &tkn.ty {
                     TokenTy::Val(v) => {
                         let op = Op::StoreC {
-                            ty: OpTy::Stc,
                             val: SifVal::Num(*v),
                             name: st_name,
                         };
@@ -341,7 +326,6 @@ impl<'c> Compiler<'c> {
                     }
                     TokenTy::Str(s) => {
                         let op = Op::StoreC {
-                            ty: OpTy::Stc,
                             val: SifVal::Str(s.clone()),
                             name: st_name,
                         };
@@ -349,7 +333,6 @@ impl<'c> Compiler<'c> {
                     }
                     TokenTy::Ident(i) => {
                         let op = Op::StoreN {
-                            ty: OpTy::Stn,
                             srcname: i.clone(),
                             destname: st_name,
                         };
@@ -363,7 +346,6 @@ impl<'c> Compiler<'c> {
                 // expression. We store based on the correct register from the expression.
                 self.expr(&rhs);
                 let op = Op::StoreR {
-                    ty: OpTy::Str,
                     name: st_name,
                     src: self.prevreg(),
                 };

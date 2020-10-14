@@ -104,11 +104,11 @@ impl VM {
         let curr = &self.code[idx].op;
 
         match curr {
-            Op::LoadC { ty: _, dest, val } => {
+            Op::LoadC { dest, val } => {
                 let reg = &self.dregs[*dest];
                 reg.borrow_mut().cont = Some(val.clone());
             }
-            Op::LoadN { ty: _, dest, name } => {
+            Op::LoadN { dest, name } => {
                 let reg = &self.dregs[*dest];
                 match self.heap.get(name) {
                     Some(n) => reg.borrow_mut().cont = Some(n.clone()),
@@ -145,10 +145,10 @@ impl VM {
                     None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
                 };
             }
-            Op::StoreC { ty: _, name, val } => {
+            Op::StoreC { name, val } => {
                 self.heap.insert(name.to_string(), val.clone());
             }
-            Op::StoreR { ty: _, name, src } => {
+            Op::StoreR { name, src } => {
                 let reg = &self.dregs[*src];
                 let to_store = &reg.borrow().cont;
                 match to_store {
@@ -156,11 +156,7 @@ impl VM {
                     None => self.heap.insert(name.to_string(), SifVal::Null),
                 };
             }
-            Op::StoreN {
-                ty: _,
-                srcname,
-                destname,
-            } => {
+            Op::StoreN { srcname, destname } => {
                 match self.heap.get(srcname) {
                     Some(v) => {
                         let to_insert = v.clone();
@@ -226,8 +222,8 @@ impl VM {
                 src2,
                 dest,
             } => self.binop(ty.clone(), *src1, *src2, *dest)?,
-            Op::Incrr { ty: _, src } => self.incrr(*src)?,
-            Op::Decrr { ty: _, src } => self.decrr(*src)?,
+            Op::Incrr { src } => self.incrr(*src)?,
+            Op::Decrr { src } => self.decrr(*src)?,
             Op::Nop => {}
             Op::Stop => {
                 eprintln!("sif: stop instruction found, halting execution");

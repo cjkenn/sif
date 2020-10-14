@@ -22,14 +22,12 @@ impl<'c> Compiler<'c> {
             Some(ast) => {
                 let items = self.arrayitems(ast);
                 self.push_op(Op::StoreC {
-                    ty: OpTy::Stc,
                     name: name,
                     val: SifVal::Arr(items),
                 });
             }
             None => {
                 self.push_op(Op::StoreC {
-                    ty: OpTy::Stc,
                     name: name,
                     val: SifVal::Arr(Vec::new()),
                 });

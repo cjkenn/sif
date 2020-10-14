@@ -1,5 +1,9 @@
 use crate::sifv::SifVal;
 
+/// OpTy is only used for opcodes that are structurally the same, but only differ in the
+/// resulting operation performed. For example, binary opcodes can be differentiated based
+/// on their OpTy fields, but load/store opcodes don't bother with OpTy because they are
+/// are structually unique and this would map 1-1 with OpTy, making the type useless.
 #[derive(Clone, Debug)]
 pub enum OpTy {
     // Binary ops
@@ -22,26 +26,12 @@ pub enum OpTy {
     Lneg,
     Nneg,
 
-    // Load/stores
-    Ldc, // load constant
-    Ldn, // load name
-    Stc, // store constant
-    Stn, // store name
-    Str, // store register
-
     // Control flow transfer
     Jmpt, // jump if true
     Jmpf, // jump if false
     Jmp,  // jump always
-
-    // register operations
-    Incrr, // increment register contents
-    Decrr, // decrement register contents
 }
 
-/// Each opcode. Some of these just wrap the op type, but the type is useful for
-/// operations: we don't need to have a 1-1 mapping from operators to opcode. We could
-/// almost do the same for loads and stores, but the required arguments are not the same.
 /// Each opcode contains a type and up to 3 arguments, of the following kinds:
 ///
 /// 1. A register, represented as a usize. This is really just the number of the register
@@ -80,14 +70,14 @@ pub enum Op {
         dest: usize,
     },
 
+    /// Load a constant SifVal
     LoadC {
-        ty: OpTy,
         dest: usize,
         val: SifVal,
     },
 
+    /// Load a name
     LoadN {
-        ty: OpTy,
         dest: usize,
         name: String,
     },
@@ -106,20 +96,20 @@ pub enum Op {
         dest: usize,
     },
 
+    /// Store a constant
     StoreC {
-        ty: OpTy,
         val: SifVal,
         name: String,
     },
 
+    /// Store a name
     StoreN {
-        ty: OpTy,
         srcname: String,
         destname: String,
     },
 
+    /// Store a register
     StoreR {
-        ty: OpTy,
         src: usize,
         name: String,
     },
@@ -137,16 +127,16 @@ pub enum Op {
         lblidx: usize,
     },
 
+    /// Increment src register
     Incrr {
-        ty: OpTy,
         src: usize,
     },
 
+    /// Decrement src register
     Decrr {
-        ty: OpTy,
         src: usize,
     },
 
-    Nop,
-    Stop,
+    Nop,  // no-op
+    Stop, // halt vm execution
 }

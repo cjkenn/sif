@@ -137,7 +137,6 @@ impl<'c> Compiler<'c> {
         // TODO: right now we assume that the value we are looping over is always an array.
         // later we could determine this by examining the in_expr_list node for other kinds.
         self.push_op(Op::StoreC {
-            ty: OpTy::Stc,
             name: idx_name.clone(),
             val: SifVal::Num(0.0),
         });
@@ -152,11 +151,16 @@ impl<'c> Compiler<'c> {
 
         // This new label is used to jump to at the end of the loop. We can perform the previous
         // steps outside of the actual loop body and at least save a few instructions inside
-        // the loop.
+        // the loop. We store this in loop_lbl in case we need to refer to it later on, and
+        // to make sure we always jump to this label at the end of the loop.
         self.newlbl();
+        let loop_lbl = self.lblcnt();
 
+        // 1. Load the index name into the index reg at the start of each loop iteration.
+        // 2. Load the array value into the local register
+        // 3. Store the array value into the local name at each iteration, so if it
+        // is accessed by name we return the correct contents.
         self.push_op(Op::LoadN {
-            ty: OpTy::Ldn,
             dest: idx_reg,
             name: idx_name.clone(),
         });
@@ -168,21 +172,16 @@ impl<'c> Compiler<'c> {
             dest: local_reg,
         });
         self.push_op(Op::StoreR {
-            ty: OpTy::Str,
             name: local_name.clone(),
             src: local_reg,
         });
 
-        // generate stmts, then check if we need to jmp back to loop start
+        // Generate instructions for the actual loop statements.
         self.block(stmts);
 
-        // Increment index register and store it again
-        self.push_op(Op::Incrr {
-            ty: OpTy::Incrr,
-            src: idx_reg,
-        });
+        // Increment index register and store it again.
+        self.push_op(Op::Incrr { src: idx_reg });
         self.push_op(Op::StoreR {
-            ty: OpTy::Str,
             name: idx_name.clone(),
             src: idx_reg,
         });
@@ -202,7 +201,7 @@ impl<'c> Compiler<'c> {
             ty: OpTy::Jmpt,
             src: self.prevreg(),
             lbl: self.currlbl(),
-            lblidx: self.prevreg(), //TODO: could be wrong!
+            lblidx: loop_lbl,
         };
         self.push_op(idx_jmp);
     }

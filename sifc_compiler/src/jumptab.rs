@@ -86,7 +86,6 @@ mod tests {
         code.push(Instr::new(
             0,
             Op::LoadC {
-                ty: OpTy::Ldc,
                 dest: 0,
                 val: SifVal::Num(1.0),
             },
@@ -96,7 +95,6 @@ mod tests {
         code.push(Instr::new(
             0,
             Op::LoadC {
-                ty: OpTy::Ldc,
                 dest: 1,
                 val: SifVal::Num(2.0),
             },

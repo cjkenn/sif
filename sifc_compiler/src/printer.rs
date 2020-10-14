@@ -46,17 +46,15 @@ pub fn dump(ir: Vec<Instr>) {
                 let line = format!("{}. \t{} {} {}\n", i.line, op_str, reg1, dstr);
                 dble.push_str(&line);
             }
-            Op::LoadC { ty, dest, val } => {
-                let op_str = op_ty_str(ty);
+            Op::LoadC { dest, val } => {
                 let dstr = reg_str(dest);
                 let vstr = val_str(val);
-                let line = format!("{}. \t{} {} {}\n", i.line, op_str, vstr, dstr);
+                let line = format!("{}. \tldc {} {}\n", i.line, vstr, dstr);
                 dble.push_str(&line);
             }
-            Op::LoadN { ty, dest, name } => {
-                let op_str = op_ty_str(ty);
+            Op::LoadN { dest, name } => {
                 let dstr = reg_str(dest);
-                let line = format!("{}. \t{} {} {}\n", i.line, op_str, name, dstr);
+                let line = format!("{}. \tldn {} {}\n", i.line, name, dstr);
                 dble.push_str(&line);
             }
             Op::LoadArrs { name, dest } => {
@@ -70,25 +68,18 @@ pub fn dump(ir: Vec<Instr>) {
                 let line = format!("{}. \tldarrv {} {} {}\n", i.line, name, istr, dstr);
                 dble.push_str(&line);
             }
-            Op::StoreC { ty, name, val } => {
-                let op_str = op_ty_str(ty);
+            Op::StoreC { name, val } => {
                 let vstr = val_str(val);
-                let line = format!("{}. \t{} {} {}\n", i.line, op_str, vstr, name);
+                let line = format!("{}. \tstc {} {}\n", i.line, vstr, name);
                 dble.push_str(&line);
             }
-            Op::StoreN {
-                ty,
-                srcname,
-                destname,
-            } => {
-                let op_str = op_ty_str(ty);
-                let line = format!("{}. \t{} {} {}\n", i.line, op_str, srcname, destname);
+            Op::StoreN { srcname, destname } => {
+                let line = format!("{}. \tstn {} {}\n", i.line, srcname, destname);
                 dble.push_str(&line);
             }
-            Op::StoreR { ty, name, src } => {
-                let op_str = op_ty_str(ty);
+            Op::StoreR { name, src } => {
                 let rstr = reg_str(src);
-                let line = format!("{}. \t{} {} {}\n", i.line, op_str, rstr, name);
+                let line = format!("{}. \tstrr {} {}\n", i.line, rstr, name);
                 dble.push_str(&line);
             }
             Op::JumpCnd { ty, src, lbl, .. } => {
@@ -106,16 +97,14 @@ pub fn dump(ir: Vec<Instr>) {
                 let line = format!("{}. \t{}\n", i.line, "nop");
                 dble.push_str(&line);
             }
-            Op::Incrr { ty, src } => {
-                let op_str = op_ty_str(ty);
+            Op::Incrr { src } => {
                 let rstr = reg_str(src);
-                let line = format!("{}. \t{} {}\n", i.line, op_str, rstr);
+                let line = format!("{}. \tincrr {}\n", i.line, rstr);
                 dble.push_str(&line);
             }
-            Op::Decrr { ty, src } => {
-                let op_str = op_ty_str(ty);
+            Op::Decrr { src } => {
                 let rstr = reg_str(src);
-                let line = format!("{}. \t{} {}\n", i.line, op_str, rstr);
+                let line = format!("{}. \tdecrr {}\n", i.line, rstr);
                 dble.push_str(&line);
             }
             Op::Stop => {
@@ -145,16 +134,9 @@ fn op_ty_str(opty: OpTy) -> &'static str {
         OpTy::Lnot => "not",
         OpTy::Lor => "or",
         OpTy::Lneg | OpTy::Nneg => "neg",
-        OpTy::Ldc => "ldc",
-        OpTy::Ldn => "ldn",
-        OpTy::Stc => "stc",
-        OpTy::Stn => "stn",
-        OpTy::Str => "str",
         OpTy::Jmpt => "jmpt",
         OpTy::Jmpf => "jmpf",
         OpTy::Jmp => "jmp",
-        OpTy::Incrr => "incrr",
-        OpTy::Decrr => "decrr",
     }
 }
 
