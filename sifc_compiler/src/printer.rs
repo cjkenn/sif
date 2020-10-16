@@ -1,6 +1,6 @@
 use crate::{
     instr::Instr,
-    opc::{Op, OpTy},
+    opc::{BinOpKind, JmpOpKind, Op, UnOpKind},
     sifv::SifVal,
 };
 
@@ -27,20 +27,20 @@ pub fn dump(ir: Vec<Instr>) {
 
         match i.op {
             Op::Binary {
-                ty,
+                kind,
                 src1,
                 src2,
                 dest,
             } => {
-                let op_str = op_ty_str(ty);
+                let op_str = bin_kind_str(kind);
                 let reg1 = reg_str(src1);
                 let reg2 = reg_str(src2);
                 let dstr = reg_str(dest);
                 let line = format!("{}. \t{} {} {} {}\n", i.line, op_str, reg1, reg2, dstr);
                 dble.push_str(&line);
             }
-            Op::Unary { ty, src1, dest } => {
-                let op_str = op_ty_str(ty);
+            Op::Unary { kind, src1, dest } => {
+                let op_str = un_kind_str(kind);
                 let reg1 = reg_str(src1);
                 let dstr = reg_str(dest);
                 let line = format!("{}. \t{} {} {}\n", i.line, op_str, reg1, dstr);
@@ -82,15 +82,14 @@ pub fn dump(ir: Vec<Instr>) {
                 let line = format!("{}. \tstrr {} {}\n", i.line, rstr, name);
                 dble.push_str(&line);
             }
-            Op::JumpCnd { ty, src, lbl, .. } => {
-                let op_str = op_ty_str(ty);
+            Op::JumpCnd { kind, src, lbl, .. } => {
+                let op_str = jmp_kind_str(kind);
                 let rstr = reg_str(src);
                 let line = format!("{}. \t{} {} {}\n", i.line, op_str, rstr, lbl);
                 dble.push_str(&line);
             }
-            Op::JumpA { ty, lbl, .. } => {
-                let op_str = op_ty_str(ty);
-                let line = format!("{}. \t{} {}\n", i.line, op_str, lbl);
+            Op::JumpA { lbl, .. } => {
+                let line = format!("{}. \tjmpa {}\n", i.line, lbl);
                 dble.push_str(&line);
             }
             Op::Nop => {
@@ -117,26 +116,36 @@ pub fn dump(ir: Vec<Instr>) {
     println!("{}", dble);
 }
 
-fn op_ty_str(opty: OpTy) -> &'static str {
-    match opty {
-        OpTy::Add => "add",
-        OpTy::Sub => "sub",
-        OpTy::Mul => "mul",
-        OpTy::Div => "div",
-        OpTy::Modu => "mod",
-        OpTy::Eq => "eq",
-        OpTy::Neq => "neq",
-        OpTy::LtEq => "lteq",
-        OpTy::Lt => "lt",
-        OpTy::GtEq => "gteq",
-        OpTy::Gt => "gt",
-        OpTy::Land => "and",
-        OpTy::Lnot => "not",
-        OpTy::Lor => "or",
-        OpTy::Lneg | OpTy::Nneg => "neg",
-        OpTy::Jmpt => "jmpt",
-        OpTy::Jmpf => "jmpf",
-        OpTy::Jmp => "jmp",
+fn bin_kind_str(kind: BinOpKind) -> &'static str {
+    match kind {
+        BinOpKind::Add => "add",
+        BinOpKind::Sub => "sub",
+        BinOpKind::Mul => "mul",
+        BinOpKind::Div => "div",
+        BinOpKind::Modu => "mod",
+        BinOpKind::Eq => "eq",
+        BinOpKind::Neq => "neq",
+        BinOpKind::LtEq => "lteq",
+        BinOpKind::Lt => "lt",
+        BinOpKind::GtEq => "gteq",
+        BinOpKind::Gt => "gt",
+        BinOpKind::Land => "and",
+        BinOpKind::Lnot => "not",
+        BinOpKind::Lor => "or",
+    }
+}
+
+fn un_kind_str(kind: UnOpKind) -> &'static str {
+    match kind {
+        UnOpKind::Lneg => "lneg",
+        UnOpKind::Nneg => "nneg",
+    }
+}
+
+fn jmp_kind_str(kind: JmpOpKind) -> &'static str {
+    match kind {
+        JmpOpKind::Jmpt => "jmpt",
+        JmpOpKind::Jmpf => "jmpf",
     }
 }
 

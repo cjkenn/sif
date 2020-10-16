@@ -1,6 +1,6 @@
 use crate::{
     compiler::Compiler,
-    opc::{Op, OpTy},
+    opc::{BinOpKind, JmpOpKind, Op},
     sifv::SifVal,
 };
 
@@ -41,7 +41,7 @@ impl<'c> Compiler<'c> {
         // been evaluated above. If the conditional is false, we jump to the else block, or,
         // if the else block doesn't exist, to the end of the if statement.
         let jmp_op = Op::JumpCnd {
-            ty: OpTy::Jmpf,
+            kind: JmpOpKind::Jmpf,
             src: self.prevreg(),
             lbl: self.buildlbl(el_jmp_idx),
             lblidx: el_jmp_idx,
@@ -54,7 +54,6 @@ impl<'c> Compiler<'c> {
         // contained in the else block.
         self.block(if_stmts);
         let jmpa_op = Op::JumpA {
-            ty: OpTy::Jmp,
             lbl: self.buildlbl(final_jmp_idx),
             lblidx: final_jmp_idx,
         };
@@ -100,7 +99,7 @@ impl<'c> Compiler<'c> {
                 // If the next elif condition doesn't exist, then this will jump to the
                 // end of the if statement (the index should be the same as final_jmp_idx).
                 let jmp_op = Op::JumpCnd {
-                    ty: OpTy::Jmpf,
+                    kind: JmpOpKind::Jmpf,
                     src: self.prevreg(),
                     lbl: self.buildlbl(next_elif_jmp_idx),
                     lblidx: next_elif_jmp_idx,
@@ -112,7 +111,6 @@ impl<'c> Compiler<'c> {
                 // if statement, skipping the else block if it exists.
                 self.block(stmts);
                 let jmpa_op = Op::JumpA {
-                    ty: OpTy::Jmp,
                     lbl: self.buildlbl(final_jmp_idx),
                     lblidx: final_jmp_idx,
                 };
@@ -190,7 +188,7 @@ impl<'c> Compiler<'c> {
         // our defined loop size, we fall through to the next instructions. If not,
         // we jump back to the loop start label.
         let idx_cmp = Op::Binary {
-            ty: OpTy::Lt,
+            kind: BinOpKind::Lt,
             src1: idx_reg,
             src2: size_reg,
             dest: self.nextreg(),
@@ -198,7 +196,7 @@ impl<'c> Compiler<'c> {
         self.push_op(idx_cmp);
 
         let idx_jmp = Op::JumpCnd {
-            ty: OpTy::Jmpt,
+            kind: JmpOpKind::Jmpt,
             src: self.prevreg(),
             lbl: self.currlbl(),
             lblidx: loop_lbl,

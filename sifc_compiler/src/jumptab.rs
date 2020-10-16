@@ -1,8 +1,4 @@
-use crate::{
-    instr::Instr,
-    opc::{Op, OpTy},
-    sifv::SifVal,
-};
+use crate::instr::Instr;
 use std::collections::HashMap;
 
 /// Returns a map from usize to usize. The key is the index of the label,
@@ -30,6 +26,10 @@ pub fn compute_jumptab(ops: &Vec<Instr>) -> HashMap<usize, usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        opc::{BinOpKind, JmpOpKind, Op},
+        sifv::SifVal,
+    };
 
     #[test]
     fn empty_on_no_code() {
@@ -104,7 +104,7 @@ mod tests {
         code.push(Instr::new(
             0,
             Op::Binary {
-                ty: OpTy::Lt,
+                kind: BinOpKind::Lt,
                 src1: 0,
                 src2: 1,
                 dest: 2,
@@ -115,7 +115,7 @@ mod tests {
         code.push(Instr::new(
             0,
             Op::JumpCnd {
-                ty: OpTy::Jmpf,
+                kind: JmpOpKind::Jmpf,
                 src: 2,
                 lbl: "lbl2".to_string(),
                 lblidx: 2,
@@ -126,7 +126,6 @@ mod tests {
         code.push(Instr::new(
             1,
             Op::JumpA {
-                ty: OpTy::Jmp,
                 lbl: "lbl2".to_string(),
                 lblidx: 2,
             },

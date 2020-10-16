@@ -1,8 +1,4 @@
-use crate::{
-    compiler::Compiler,
-    opc::{Op, OpTy},
-    sifv::SifVal,
-};
+use crate::{compiler::Compiler, opc::Op, sifv::SifVal};
 
 use sifc_parse::{
     ast::AstNode,
@@ -64,7 +60,7 @@ impl<'c> Compiler<'c> {
             TokenTy::Str(s) => SifVal::Str(s.clone()),
             TokenTy::True => SifVal::Bl(true),
             TokenTy::False => SifVal::Bl(false),
-            TokenTy::Ident(i) => unimplemented!("cannot generate ir for idents in array decls"),
+            TokenTy::Ident(_i) => unimplemented!("cannot generate ir for idents in array decls"),
             _ => SifVal::Null,
         }
     }

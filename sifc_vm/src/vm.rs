@@ -1,7 +1,7 @@
 use sifc_compiler::{
     dreg::DReg,
     instr::Instr,
-    opc::{Op, OpTy},
+    opc::{BinOpKind, JmpOpKind, Op, UnOpKind},
     sifv::SifVal,
 };
 
@@ -165,11 +165,7 @@ impl VM {
                     None => self.heap.insert(destname.to_string(), SifVal::Null),
                 };
             }
-            Op::JumpA {
-                ty: _,
-                lbl: _,
-                lblidx,
-            } => {
+            Op::JumpA { lbl: _, lblidx } => {
                 let codeidx = self.jumptab.get(lblidx);
                 match codeidx {
                     Some(i) => self.cdr = *i,
@@ -177,9 +173,9 @@ impl VM {
                 };
             }
             Op::JumpCnd {
-                ty,
+                kind,
                 src,
-                lbl,
+                lbl: _,
                 lblidx,
             } => {
                 let reg = &self.dregs[*src];
@@ -190,8 +186,8 @@ impl VM {
 
                 match contents.unwrap() {
                     SifVal::Bl(b) => {
-                        match *ty {
-                            OpTy::Jmpt => {
+                        match *kind {
+                            JmpOpKind::Jmpt => {
                                 if b {
                                     let codeidx = self.jumptab.get(lblidx);
                                     match codeidx {
@@ -200,7 +196,7 @@ impl VM {
                                     };
                                 }
                             }
-                            OpTy::Jmpf => {
+                            JmpOpKind::Jmpf => {
                                 if !b {
                                     let codeidx = self.jumptab.get(lblidx);
                                     match codeidx {
@@ -209,19 +205,18 @@ impl VM {
                                     };
                                 }
                             }
-                            _ => {}
                         };
                     }
                     _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
                 };
             }
-            Op::Unary { ty, src1, dest } => self.unop(ty.clone(), *src1, *dest)?,
+            Op::Unary { kind, src1, dest } => self.unop(kind.clone(), *src1, *dest)?,
             Op::Binary {
-                ty,
+                kind,
                 src1,
                 src2,
                 dest,
-            } => self.binop(ty.clone(), *src1, *src2, *dest)?,
+            } => self.binop(kind.clone(), *src1, *src2, *dest)?,
             Op::Incrr { src } => self.incrr(*src)?,
             Op::Decrr { src } => self.decrr(*src)?,
             Op::Nop => {}
@@ -229,13 +224,12 @@ impl VM {
                 eprintln!("sif: stop instruction found, halting execution");
                 return Ok(());
             }
-            _ => return Err(self.newerr(RuntimeErrTy::InvalidOp)),
         };
 
         Ok(())
     }
 
-    fn unop(&self, ty: OpTy, src1: usize, dest: usize) -> Result<(), RuntimeErr> {
+    fn unop(&self, kind: UnOpKind, src1: usize, dest: usize) -> Result<(), RuntimeErr> {
         let srcreg = &self.dregs[src1];
         let destreg = &self.dregs[dest];
         let mb_contents = srcreg.borrow().cont.clone();
@@ -246,26 +240,31 @@ impl VM {
 
         let contents = mb_contents.unwrap();
 
-        match ty {
-            OpTy::Lneg => {
+        match kind {
+            UnOpKind::Lneg => {
                 match contents {
                     SifVal::Bl(bl) => destreg.borrow_mut().cont = Some(SifVal::Bl(!bl)),
                     _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
                 };
             }
-            OpTy::Nneg => {
+            UnOpKind::Nneg => {
                 match contents {
                     SifVal::Num(num) => destreg.borrow_mut().cont = Some(SifVal::Num(-num)),
                     _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
                 };
             }
-            _ => return Err(self.newerr(RuntimeErrTy::InvalidOp)),
         };
 
         Ok(())
     }
 
-    fn binop(&self, ty: OpTy, src1: usize, src2: usize, dest: usize) -> Result<(), RuntimeErr> {
+    fn binop(
+        &self,
+        kind: BinOpKind,
+        src1: usize,
+        src2: usize,
+        dest: usize,
+    ) -> Result<(), RuntimeErr> {
         let src1reg = &self.dregs[src1];
         let src2reg = &self.dregs[src2];
         let destreg = &self.dregs[dest];
@@ -281,92 +280,91 @@ impl VM {
         let contents1 = mb_contents1.unwrap();
         let contents2 = mb_contents2.unwrap();
 
-        match ty {
-            OpTy::Add => match (contents1, contents2) {
+        match kind {
+            BinOpKind::Add => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Num(n1 + n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Sub => match (contents1, contents2) {
+            BinOpKind::Sub => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Num(n1 - n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Mul => match (contents1, contents2) {
+            BinOpKind::Mul => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Num(n1 * n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Div => match (contents1, contents2) {
+            BinOpKind::Div => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Num(n1 / n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Modu => match (contents1, contents2) {
+            BinOpKind::Modu => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Num(n1 % n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Eq => match (contents1, contents2) {
+            BinOpKind::Eq => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Bl(n1 == n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Neq => match (contents1, contents2) {
+            BinOpKind::Neq => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Bl(n1 != n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::LtEq => match (contents1, contents2) {
+            BinOpKind::LtEq => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Bl(n1 <= n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Lt => match (contents1, contents2) {
+            BinOpKind::Lt => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Bl(n1 < n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::GtEq => match (contents1, contents2) {
+            BinOpKind::GtEq => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Bl(n1 >= n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Gt => match (contents1, contents2) {
+            BinOpKind::Gt => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Bl(n1 > n2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Land => match (contents1, contents2) {
+            BinOpKind::Land => match (contents1, contents2) {
                 (SifVal::Bl(b1), SifVal::Bl(b2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Bl(b1 && b2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Lnot => match (contents1, contents2) {
+            BinOpKind::Lnot => match (contents1, contents2) {
                 (SifVal::Bl(b1), SifVal::Bl(b2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Bl(b1 != b2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            OpTy::Lor => match (contents1, contents2) {
+            BinOpKind::Lor => match (contents1, contents2) {
                 (SifVal::Bl(b1), SifVal::Bl(b2)) => {
                     destreg.borrow_mut().cont = Some(SifVal::Bl(b1 || b2));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            _ => return Err(self.newerr(RuntimeErrTy::InvalidOp)),
         };
 
         Ok(())

@@ -1,12 +1,7 @@
 use crate::sifv::SifVal;
 
-/// OpTy is only used for opcodes that are structurally the same, but only differ in the
-/// resulting operation performed. For example, binary opcodes can be differentiated based
-/// on their OpTy fields, but load/store opcodes don't bother with OpTy because they are
-/// are structurally unique and this would map 1-1 with OpTy, making the type useless.
 #[derive(Clone, Debug)]
-pub enum OpTy {
-    // Binary ops
+pub enum BinOpKind {
     Add,
     Sub,
     Mul,
@@ -21,15 +16,18 @@ pub enum OpTy {
     Land,
     Lnot,
     Lor,
+}
 
-    // Unary ops
+#[derive(Clone, Debug)]
+pub enum UnOpKind {
     Lneg,
     Nneg,
+}
 
-    // Control flow transfer
-    Jmpt, // jump if true
-    Jmpf, // jump if false
-    Jmp,  // jump always
+#[derive(Clone, Debug)]
+pub enum JmpOpKind {
+    Jmpt,
+    Jmpf,
 }
 
 /// Each opcode contains a type and up to 3 arguments, of the following kinds:
@@ -45,7 +43,7 @@ pub enum OpTy {
 /// adds registers r0 and r1, stores in r2. The destination register can overwrite a src register
 ///
 /// ldc 10 r0
-/// loads the constent 10 into register r0.
+/// loads the constant 10 into register r0.
 ///
 /// stc 10 y
 /// stores the constant 10 into the memory address where the name y is stored.
@@ -59,7 +57,7 @@ pub enum OpTy {
 pub enum Op {
     /// Binary operator with 2 register sources
     Binary {
-        ty: OpTy,
+        kind: BinOpKind,
         src1: usize,
         src2: usize,
         dest: usize,
@@ -67,7 +65,7 @@ pub enum Op {
 
     /// Unary operator with a single register source
     Unary {
-        ty: OpTy,
+        kind: UnOpKind,
         src1: usize,
         dest: usize,
     },
@@ -118,7 +116,7 @@ pub enum Op {
 
     /// Jump conditionally, based on the value in src register
     JumpCnd {
-        ty: OpTy,
+        kind: JmpOpKind,
         src: usize,
         lbl: String,
         lblidx: usize,
@@ -126,7 +124,6 @@ pub enum Op {
 
     /// Always jump to given lbl
     JumpA {
-        ty: OpTy,
         lbl: String,
         lblidx: usize,
     },

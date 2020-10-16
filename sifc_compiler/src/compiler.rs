@@ -1,6 +1,6 @@
 use crate::{
     instr::Instr,
-    opc::{Op, OpTy},
+    opc::{BinOpKind, Op, UnOpKind},
     sifv::SifVal,
 };
 
@@ -8,7 +8,6 @@ use sifc_err::compile_err::{CompileErr, CompileErrTy};
 
 use sifc_parse::{
     ast::AstNode,
-    symtab::SymTab,
     token::{Token, TokenTy},
 };
 
@@ -172,35 +171,35 @@ impl<'c> Compiler<'c> {
     pub fn expr(&mut self, expr: &AstNode) {
         match expr {
             AstNode::BinaryExpr { op_tkn, lhs, rhs } => match op_tkn.ty {
-                TokenTy::Plus => self.binop(OpTy::Add, lhs, rhs),
-                TokenTy::Minus => self.binop(OpTy::Sub, lhs, rhs),
-                TokenTy::Star => self.binop(OpTy::Mul, lhs, rhs),
-                TokenTy::Slash => self.binop(OpTy::Div, lhs, rhs),
-                TokenTy::Percent => self.binop(OpTy::Modu, lhs, rhs),
-                TokenTy::EqEq => self.binop(OpTy::Eq, lhs, rhs),
-                TokenTy::LtEq => self.binop(OpTy::LtEq, lhs, rhs),
-                TokenTy::Lt => self.binop(OpTy::Lt, lhs, rhs),
-                TokenTy::GtEq => self.binop(OpTy::GtEq, lhs, rhs),
-                TokenTy::Gt => self.binop(OpTy::Gt, lhs, rhs),
-                TokenTy::AmpAmp => self.binop(OpTy::Land, lhs, rhs),
-                TokenTy::PipePipe => self.binop(OpTy::Lor, lhs, rhs),
-                TokenTy::BangEq => self.binop(OpTy::Lnot, lhs, rhs),
+                TokenTy::Plus => self.binop(BinOpKind::Add, lhs, rhs),
+                TokenTy::Minus => self.binop(BinOpKind::Sub, lhs, rhs),
+                TokenTy::Star => self.binop(BinOpKind::Mul, lhs, rhs),
+                TokenTy::Slash => self.binop(BinOpKind::Div, lhs, rhs),
+                TokenTy::Percent => self.binop(BinOpKind::Modu, lhs, rhs),
+                TokenTy::EqEq => self.binop(BinOpKind::Eq, lhs, rhs),
+                TokenTy::LtEq => self.binop(BinOpKind::LtEq, lhs, rhs),
+                TokenTy::Lt => self.binop(BinOpKind::Lt, lhs, rhs),
+                TokenTy::GtEq => self.binop(BinOpKind::GtEq, lhs, rhs),
+                TokenTy::Gt => self.binop(BinOpKind::Gt, lhs, rhs),
+                TokenTy::AmpAmp => self.binop(BinOpKind::Land, lhs, rhs),
+                TokenTy::PipePipe => self.binop(BinOpKind::Lor, lhs, rhs),
+                TokenTy::BangEq => self.binop(BinOpKind::Lnot, lhs, rhs),
                 _ => (),
             },
             AstNode::LogicalExpr { op_tkn, lhs, rhs } => match op_tkn.ty {
-                TokenTy::EqEq => self.binop(OpTy::Eq, lhs, rhs),
-                TokenTy::LtEq => self.binop(OpTy::LtEq, lhs, rhs),
-                TokenTy::Lt => self.binop(OpTy::Lt, lhs, rhs),
-                TokenTy::GtEq => self.binop(OpTy::GtEq, lhs, rhs),
-                TokenTy::Gt => self.binop(OpTy::Gt, lhs, rhs),
-                TokenTy::AmpAmp => self.binop(OpTy::Land, lhs, rhs),
-                TokenTy::PipePipe => self.binop(OpTy::Lor, lhs, rhs),
-                TokenTy::BangEq => self.binop(OpTy::Lnot, lhs, rhs),
+                TokenTy::EqEq => self.binop(BinOpKind::Eq, lhs, rhs),
+                TokenTy::LtEq => self.binop(BinOpKind::LtEq, lhs, rhs),
+                TokenTy::Lt => self.binop(BinOpKind::Lt, lhs, rhs),
+                TokenTy::GtEq => self.binop(BinOpKind::GtEq, lhs, rhs),
+                TokenTy::Gt => self.binop(BinOpKind::Gt, lhs, rhs),
+                TokenTy::AmpAmp => self.binop(BinOpKind::Land, lhs, rhs),
+                TokenTy::PipePipe => self.binop(BinOpKind::Lor, lhs, rhs),
+                TokenTy::BangEq => self.binop(BinOpKind::Lnot, lhs, rhs),
                 _ => (),
             },
             AstNode::UnaryExpr { op_tkn, rhs } => match op_tkn.ty {
-                TokenTy::Bang => self.unop(OpTy::Lneg, rhs),
-                TokenTy::Minus => self.unop(OpTy::Nneg, rhs),
+                TokenTy::Bang => self.unop(UnOpKind::Lneg, rhs),
+                TokenTy::Minus => self.unop(UnOpKind::Nneg, rhs),
                 _ => (),
             },
             AstNode::VarAssignExpr {
@@ -218,12 +217,12 @@ impl<'c> Compiler<'c> {
         }
     }
 
-    fn binop(&mut self, ty: OpTy, lhs: &AstNode, rhs: &AstNode) {
+    fn binop(&mut self, kind: BinOpKind, lhs: &AstNode, rhs: &AstNode) {
         let r0 = self.binarg(lhs);
         let r1 = self.binarg(rhs);
 
         let op = Op::Binary {
-            ty: ty,
+            kind: kind,
             src1: r0,
             src2: r1,
             dest: self.nextreg(),
@@ -231,10 +230,10 @@ impl<'c> Compiler<'c> {
         self.push_op(op);
     }
 
-    fn unop(&mut self, ty: OpTy, rhs: &AstNode) {
+    fn unop(&mut self, kind: UnOpKind, rhs: &AstNode) {
         let r0 = self.binarg(rhs);
         let op = Op::Unary {
-            ty: ty,
+            kind: kind,
             src1: r0,
             dest: self.nextreg(),
         };
