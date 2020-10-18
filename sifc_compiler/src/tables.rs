@@ -1,10 +1,41 @@
-use crate::instr::Instr;
+use crate::{instr::Instr, opc::Op};
 use std::collections::HashMap;
+
+pub fn compute(
+    ops: &Vec<Instr>,
+    decls: &Vec<Instr>,
+) -> (HashMap<usize, usize>, HashMap<String, usize>) {
+    let jt = compute_jumptab(ops);
+    let ft = compute_fntab(decls);
+
+    (jt, ft)
+}
+
+/// The value in the resulting map is the index into the decl vector. This
+/// may not match up with the total number of instructions, as they are split
+/// across two vectors.
+fn compute_fntab(decls: &Vec<Instr>) -> HashMap<String, usize> {
+    let mut map = HashMap::new();
+    if decls.len() == 0 {
+        return map;
+    }
+
+    for (i, decl) in decls.iter().enumerate() {
+        match &decl.op {
+            Op::Fn { name, .. } => {
+                map.insert(name.clone(), i);
+            }
+            _ => {}
+        }
+    }
+
+    map
+}
 
 /// Returns a map from usize to usize. The key is the index of the label,
 /// and the value is the index of the first instruction in the code vector
 /// under that label.
-pub fn compute_jumptab(ops: &Vec<Instr>) -> HashMap<usize, usize> {
+fn compute_jumptab(ops: &Vec<Instr>) -> HashMap<usize, usize> {
     let mut map = HashMap::new();
     if ops.len() == 0 {
         return map;

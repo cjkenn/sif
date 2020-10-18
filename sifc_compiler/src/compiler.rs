@@ -21,6 +21,12 @@ pub struct CompileResult {
     /// a vm to execute.
     pub code: Vec<Instr>,
 
+    /// Vector containing declarations of global vars and function symbols.
+    /// A vm can execute this code, but it must be kept separate from the
+    /// code vector as it is executed on demand (ie. by call instructions),
+    /// not in the order code appears.
+    pub decls: Vec<Instr>,
+
     /// Jump table that maps label indices to code indices. When you look
     /// up a label index, this returns the index of the first instruction
     /// under than label. Both indices being at 0. For example:
@@ -38,6 +44,11 @@ pub struct CompileResult {
     /// which generates instructions and labels.
     pub jumptab: HashMap<usize, usize>,
 
+    /// Similar to jumptab, this contains function names as keys and decl vector
+    /// indices as values. When we find a call instruction, we look up the name
+    /// being called and find the index to the correct instruction to jump to.
+    pub fntab: HashMap<String, usize>,
+
     /// Any errors that were encountered during compilation. The compiler does not
     /// attempt to continue on any error, it should exit immediately upon error.
     pub err: Option<CompileErr>,
@@ -52,11 +63,20 @@ pub struct Compiler<'c> {
     /// known before interpreting begins.
     ops: Vec<Instr>,
 
+    /// Vector of instructions which the compiler will fill with declarations,
+    /// particularly function bodies.
+    decls: Vec<Instr>,
+
     /// Current number of labels in the block being translated.
     lblcnt: usize,
 
     /// Current available register
     ri: usize,
+
+    /// If true, we write to decl section. If false, write to code section.
+    // This is really more of a hack, we should process things without having to
+    // switch this flag on and off for decls...
+    decl_scope: bool,
 }
 
 impl<'c> Compiler<'c> {
@@ -64,8 +84,10 @@ impl<'c> Compiler<'c> {
         Compiler {
             ast: a,
             ops: Vec::new(),
+            decls: Vec::new(),
             lblcnt: 0,
             ri: 0,
+            decl_scope: false,
         }
     }
 
@@ -84,11 +106,13 @@ impl<'c> Compiler<'c> {
             _ => currerr = Some(CompileErr::new(CompileErrTy::InvalidAst)),
         };
 
-        let jumptab = crate::jumptab::compute_jumptab(&self.ops);
+        let (jumptab, fntab) = crate::tables::compute(&self.ops, &self.decls);
 
         CompileResult {
             code: self.ops.to_vec(),
+            decls: self.decls.to_vec(),
             jumptab: jumptab,
+            fntab: fntab,
             err: currerr,
         }
     }
@@ -101,7 +125,7 @@ impl<'c> Compiler<'c> {
 
     pub fn block(&mut self, block: &AstNode) {
         match block {
-            AstNode::Block { decls, .. } => self.decls(decls),
+            AstNode::Block { decls, .. } => self.blocks(decls.to_vec()),
             AstNode::ExprStmt { expr } => self.expr(expr),
             AstNode::VarDecl {
                 ident_tkn,
@@ -133,13 +157,28 @@ impl<'c> Compiler<'c> {
                 fn_body,
                 ..
             } => self.fndecl(ident_tkn, fn_params, fn_body),
+            AstNode::ReturnStmt { ret_expr } => self.ret(ret_expr),
             _ => {
                 // generate nothing if we find some unknown block
             }
         }
     }
 
-    pub fn fndecl(&mut self, ident_tkn: &Token, fn_params: &AstNode, fn_body: &AstNode) {
+    fn ret(&mut self, ret_expr: &Option<Box<AstNode>>) {
+        match ret_expr {
+            Some(exp) => {
+                self.expr(exp);
+                // return moves the value from last reg into the frr register
+                let op = Op::FnRetR {
+                    src: self.prevreg(),
+                };
+                self.push_op(op);
+            }
+            None => self.push_op(Op::FnRet),
+        };
+    }
+
+    fn fndecl(&mut self, ident_tkn: &Token, fn_params: &AstNode, fn_body: &AstNode) {
         let fn_name = ident_tkn.get_name();
         let mut param_names = Vec::new();
         match fn_params {
@@ -154,13 +193,17 @@ impl<'c> Compiler<'c> {
             _ => {}
         };
 
+        self.decl_scope = true;
+
         self.push_op(Op::Fn {
             name: fn_name,
             params: param_names,
         });
 
         // TODO: param scoping - need to be able to access names in vm using the stack
-        self.block(&*fn_body);
+        self.block(fn_body);
+
+        self.decl_scope = false;
     }
 
     pub fn lblcnt(&self) -> usize {
@@ -194,8 +237,13 @@ impl<'c> Compiler<'c> {
     }
 
     pub fn push_op(&mut self, op: Op) {
-        let i = Instr::new(self.lblcnt, op, self.ops.len() + 1);
-        self.ops.push(i);
+        if self.decl_scope {
+            let i = Instr::new(self.lblcnt, op, self.decls.len() + 1);
+            self.decls.push(i);
+        } else {
+            let i = Instr::new(self.lblcnt, op, self.ops.len() + 1);
+            self.ops.push(i);
+        }
     }
 
     pub fn expr(&mut self, expr: &AstNode) {
@@ -307,22 +355,6 @@ impl<'c> Compiler<'c> {
             }
         };
         self.ri - 1
-    }
-
-    fn decls(&mut self, decls: &Vec<AstNode>) {
-        for decl in decls {
-            match decl {
-                AstNode::ExprStmt { expr } => {
-                    self.expr(expr);
-                }
-                AstNode::VarDecl {
-                    ident_tkn,
-                    is_global: _,
-                    lhs,
-                } => self.vardecl(ident_tkn, lhs.clone()),
-                _ => (),
-            }
-        }
     }
 
     fn vardecl(&mut self, tkn: &Token, rhs: Option<Box<AstNode>>) {

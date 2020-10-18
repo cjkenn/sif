@@ -5,5 +5,5 @@ pub mod printer;
 pub mod sifv;
 
 mod array;
-mod jumptab;
 mod stmt;
+mod tables;

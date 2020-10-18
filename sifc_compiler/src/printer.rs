@@ -9,13 +9,13 @@ use crate::{
 /// and Display traits as they can still be useful for pretty printing
 /// the actual structs and vectors at other times, as this method
 /// does not contain all the information held in those structs.
-pub fn dump(ir: Vec<Instr>) {
+pub fn dump(ir: Vec<Instr>, name: &str) {
     if ir.len() == 0 {
         return;
     }
 
+    let mut dble = format!("SECTION_ {}\n", name);
     let mut currlbl = ir[0].lbl.clone();
-    let mut dble = String::new();
     dble.push_str(&format!("{}:\n", currlbl));
 
     for i in ir {
@@ -108,6 +108,15 @@ pub fn dump(ir: Vec<Instr>) {
             }
             Op::Fn { name, params } => {
                 let line = format!("fn @{} {:?}\n", name, params);
+                dble.push_str(&line);
+            }
+            Op::FnRetR { src } => {
+                let rstr = reg_str(src);
+                let line = format!("{}. \tretr {}\n", i.line, rstr);
+                dble.push_str(&line);
+            }
+            Op::FnRet => {
+                let line = format!("{}. \tret \n", i.line);
                 dble.push_str(&line);
             }
             Op::Stop => {

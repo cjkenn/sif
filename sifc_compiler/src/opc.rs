@@ -144,6 +144,16 @@ pub enum Op {
         params: Vec<String>,
     },
 
+    /// Move the return value in src to the frr register, then
+    /// returns to previous code location.
+    FnRetR {
+        src: usize,
+    },
+
+    /// When we have no expression to return, we simply jump to the appropriate
+    /// code location.
+    FnRet,
+
     Nop,  // no-op
     Stop, // halt vm execution
 }
