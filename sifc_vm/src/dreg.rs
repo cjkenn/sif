@@ -1,4 +1,4 @@
-use crate::sifv::SifVal;
+use sifc_compiler::sifv::SifVal;
 
 /// DReg represents a data register.
 #[derive(Clone, Debug)]

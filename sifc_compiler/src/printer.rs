@@ -106,6 +106,10 @@ pub fn dump(ir: Vec<Instr>) {
                 let line = format!("{}. \tdecrr {}\n", i.line, rstr);
                 dble.push_str(&line);
             }
+            Op::Fn { name, params } => {
+                let line = format!("fn @{} {:?}\n", name, params);
+                dble.push_str(&line);
+            }
             Op::Stop => {
                 let line = format!("{}. \t{}\n", i.line, "stop");
                 dble.push_str(&line);

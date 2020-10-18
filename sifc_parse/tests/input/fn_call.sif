@@ -5,3 +5,9 @@ fn x() {
 }
 
 var y = x();
+
+fn h(q) {
+   return 0;
+}
+
+var g = h(10+10);

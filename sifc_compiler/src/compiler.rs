@@ -127,10 +127,40 @@ impl<'c> Compiler<'c> {
             AstNode::ArrayDecl {
                 ident_tkn, body, ..
             } => self.arraydecl(ident_tkn, body),
+            AstNode::FnDecl {
+                ident_tkn,
+                fn_params,
+                fn_body,
+                ..
+            } => self.fndecl(ident_tkn, fn_params, fn_body),
             _ => {
                 // generate nothing if we find some unknown block
             }
         }
+    }
+
+    pub fn fndecl(&mut self, ident_tkn: &Token, fn_params: &AstNode, fn_body: &AstNode) {
+        let fn_name = ident_tkn.get_name();
+        let mut param_names = Vec::new();
+        match fn_params {
+            AstNode::FnParams { params } => {
+                for p in params {
+                    match p {
+                        AstNode::PrimaryExpr { tkn } => param_names.push(tkn.get_name()),
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        };
+
+        self.push_op(Op::Fn {
+            name: fn_name,
+            params: param_names,
+        });
+
+        // TODO: param scoping - need to be able to access names in vm using the stack
+        self.block(&*fn_body);
     }
 
     pub fn lblcnt(&self) -> usize {

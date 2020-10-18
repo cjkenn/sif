@@ -138,6 +138,12 @@ pub enum Op {
         src: usize,
     },
 
+    /// Function declaration
+    Fn {
+        name: String,
+        params: Vec<String>,
+    },
+
     Nop,  // no-op
     Stop, // halt vm execution
 }

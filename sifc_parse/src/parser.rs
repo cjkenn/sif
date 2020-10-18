@@ -213,7 +213,7 @@ impl<'l, 's> Parser<'l, 's> {
         let ident_tkn = maybe_ident_tkn.unwrap();
 
         self.expect(TokenTy::LeftParen)?;
-        let params = self.param_list()?;
+        let params = self.param_list(false)?;
         self.expect(TokenTy::RightParen)?;
 
         let bindings = match &params {
@@ -241,7 +241,12 @@ impl<'l, 's> Parser<'l, 's> {
         Ok(node)
     }
 
-    fn param_list(&mut self) -> Result<AstNode, ParseErr> {
+    // This is called to process param lists when we declare a function and when we call a function.
+    // When we declar a function, params can only be identifiers, so we do not recurse and instead
+    // match on the ident. We need to pass false in as could_be_expr in this case.
+    // When we call this from a function call expression, we need to pass true here, because
+    // our params passed in could be expressions and we need to parse them.
+    fn param_list(&mut self, could_be_expr: bool) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty {
             TokenTy::RightParen => {
                 // this indicates an empty param list
@@ -264,14 +269,19 @@ impl<'l, 's> Parser<'l, 's> {
                         ))));
                     }
 
-                    let maybe_ident_tkn = self.match_ident();
-                    if maybe_ident_tkn.is_none() {
-                        let ty_str = self.curr_tkn.ty.to_string();
-                        return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
-                    }
+                    if could_be_expr {
+                        let param = self.expr()?;
+                        param_list.push(param);
+                    } else {
+                        let maybe_ident_tkn = self.match_ident();
+                        if maybe_ident_tkn.is_none() {
+                            let ty_str = self.curr_tkn.ty.to_string();
+                            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
+                        }
 
-                    let ident_tkn = maybe_ident_tkn.unwrap();
-                    param_list.push(AstNode::PrimaryExpr { tkn: ident_tkn });
+                        let ident_tkn = maybe_ident_tkn.unwrap();
+                        param_list.push(AstNode::PrimaryExpr { tkn: ident_tkn });
+                    }
 
                     if self.curr_tkn.ty != TokenTy::RightParen {
                         self.expect(TokenTy::Comma)?;
@@ -846,7 +856,7 @@ impl<'l, 's> Parser<'l, 's> {
         match self.curr_tkn.ty {
             TokenTy::LeftParen => {
                 self.expect(TokenTy::LeftParen)?;
-                let params_list = self.param_list()?;
+                let params_list = self.param_list(true)?;
                 self.expect(TokenTy::RightParen)?;
                 match params_list {
                     AstNode::FnParams {
