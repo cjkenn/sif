@@ -170,11 +170,22 @@ pub enum Op {
     /// Function call
     Call {
         name: String,
+        param_count: usize,
     },
 
     /// When we have no expression to return, we simply jump to the appropriate
     /// code location.
     FnRet,
+
+    /// Push a value in a register onto the function stack.
+    FnStackPush {
+        src: usize,
+    },
+
+    /// Pop a value off of the function stack into the specified register.
+    FnStackPop {
+        dest: usize,
+    },
 
     Nop,  // no-op
     Stop, // halt vm execution

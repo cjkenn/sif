@@ -181,11 +181,27 @@ impl<'c> Compiler<'c> {
     fn fndecl(&mut self, ident_tkn: &Token, fn_params: &AstNode, fn_body: &AstNode) {
         let fn_name = ident_tkn.get_name();
         let mut param_names = Vec::new();
+        let mut stkops = Vec::new();
+
         match fn_params {
             AstNode::FnParams { params } => {
                 for p in params {
                     match p {
-                        AstNode::PrimaryExpr { tkn } => param_names.push(tkn.get_name()),
+                        AstNode::PrimaryExpr { tkn } => {
+                            // TODO: probably don't need to pop and then store params
+                            // here for subsequent loads. We should just refer to the proper
+                            // reg instead (this could be done in an optimizer)
+                            param_names.push(tkn.get_name());
+                            let stkop = Op::FnStackPop {
+                                dest: self.nextreg(),
+                            };
+                            stkops.push(stkop);
+                            let strop = Op::StoreR {
+                                src: self.prevreg(),
+                                name: tkn.get_name(),
+                            };
+                            stkops.push(strop);
+                        }
                         _ => {}
                     }
                 }
@@ -193,6 +209,7 @@ impl<'c> Compiler<'c> {
             _ => {}
         };
 
+        // set our section to the decl section for function declaration instructions.
         self.decl_scope = true;
 
         self.push_op(Op::Fn {
@@ -200,9 +217,15 @@ impl<'c> Compiler<'c> {
             params: param_names,
         });
 
+        // Add the stack pop operations for param handling.
+        for op in stkops {
+            self.push_op(op);
+        }
+
         // TODO: param scoping - need to be able to access names in vm using the stack
         self.block(fn_body);
 
+        // go back to code section.
         self.decl_scope = false;
     }
 
@@ -292,8 +315,17 @@ impl<'c> Compiler<'c> {
                 fn_ident_tkn,
                 fn_params,
             } => {
+                for param in fn_params {
+                    self.expr(param);
+                    let param_op = Op::FnStackPush {
+                        src: self.prevreg(),
+                    };
+                    self.push_op(param_op)
+                }
+
                 let op = Op::Call {
                     name: fn_ident_tkn.get_name(),
+                    param_count: fn_params.len(), // TODO: might be wrong
                 };
                 self.push_op(op);
                 let frrop = Op::MvFRR {
@@ -326,7 +358,6 @@ impl<'c> Compiler<'c> {
                     }
                     _ => {}
                 };
-                // PrimaryExpr by itself does not generate anything
             }
             _ => (),
         }
@@ -443,14 +474,24 @@ impl<'c> Compiler<'c> {
                 fn_ident_tkn,
                 fn_params,
             } => {
-                // We have to handle function calls slightly differently from other expressions,
-                // to ensure that we use any return results placed in the frr.
+                for param in fn_params {
+                    self.expr(param);
+                    let param_op = Op::FnStackPush {
+                        src: self.prevreg(),
+                    };
+                    self.push_op(param_op)
+                }
+
+                println!("param len: {}", fn_params.len());
                 let op = Op::Call {
                     name: fn_ident_tkn.get_name(),
+                    param_count: fn_params.len(), // TODO: might be wrong
                 };
                 self.push_op(op);
-                let strop = Op::StoreFRR { name: st_name };
-                self.push_op(strop);
+                let frrop = Op::MvFRR {
+                    dest: self.nextreg(),
+                };
+                self.push_op(frrop);
             }
             _ => {
                 // We assume that if we aren't assigning a declaration to a constant, we are using an

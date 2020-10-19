@@ -22,7 +22,7 @@ pub fn dump_code(code: Vec<Instr>) {
     }
 
     let mut dble = String::from("SECTION_ code\n");
-    let mut currlbl = code[0].lbl.clone();
+    let currlbl = code[0].lbl.clone();
     dble.push_str(&format!("{}:\n", currlbl));
 
     dump(code, &mut dble);
@@ -151,8 +151,18 @@ fn dump(ir: Vec<Instr>, dble: &mut String) {
                 let line = format!("\t ret \t\t ; {} \n", i.line);
                 dble.push_str(&line);
             }
-            Op::Call { name } => {
+            Op::Call { name, .. } => {
                 let line = format!("\t call {}\t ; {} \n", name, i.line);
+                dble.push_str(&line);
+            }
+            Op::FnStackPush { src } => {
+                let rstr = reg_str(src);
+                let line = format!("\t fstpush {}\t ; {} \n", rstr, i.line);
+                dble.push_str(&line);
+            }
+            Op::FnStackPop { dest } => {
+                let rstr = reg_str(dest);
+                let line = format!("\t fstpop {}\t ; {}\n", rstr, i.line);
                 dble.push_str(&line);
             }
             Op::Stop => {

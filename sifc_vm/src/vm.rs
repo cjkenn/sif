@@ -65,6 +65,10 @@ pub struct VM {
     /// space before vm startup could be more performant.
     heap: HashMap<String, SifVal>,
 
+    /// Stack for storing function params. Note that we do not use this for function return
+    /// values, which are placed into frr.
+    fnst: Vec<SifVal>,
+
     /// Index of the start of the code vector. The IP initially points to this
     /// instruction, as this is where execution would normally begin.
     csi: usize,
@@ -103,14 +107,13 @@ impl VM {
             frr: Rc::new(RefCell::new(DReg::new(String::from("frr")))),
             cdr: 0,
             heap: HashMap::new(),
+            fnst: Vec::new(),
             csi: code_start,
             ip: code_start,
         }
     }
 
     pub fn run(&mut self) {
-        // TODO: code and decls must match up: should we combine them? and set ip to
-        // start in the middle?
         while self.ip < self.prog.len() {
             match self.execute() {
                 Ok(()) => {}
@@ -280,7 +283,10 @@ impl VM {
                 // Nothing to return here, so we just jump back to regular execution.
                 self.ip = self.cdr;
             }
-            Op::Call { name } => {
+            Op::Call {
+                name,
+                param_count: _,
+            } => {
                 let maybe_loc = self.fntab.get(name);
                 if maybe_loc.is_none() {
                     return Err(self.newerr(RuntimeErrTy::InvalidFnSym(name.to_string())));
@@ -292,6 +298,16 @@ impl VM {
                 let loc = maybe_loc.unwrap();
                 self.cdr = self.ip;
                 self.ip = *loc;
+            }
+            Op::FnStackPush { src } => {
+                let srcreg = &self.dregs[*src];
+                let to_push = srcreg.borrow().cont.clone();
+                self.fnst.push(to_push.unwrap());
+            }
+            Op::FnStackPop { dest } => {
+                let to_pop = self.fnst.pop();
+                let destreg = &self.dregs[*dest];
+                destreg.borrow_mut().cont = to_pop;
             }
             Op::Nop => {}
             Op::Stop => {
