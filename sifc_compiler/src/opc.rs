@@ -150,6 +150,11 @@ pub enum Op {
         src: usize,
     },
 
+    /// Function call
+    Call {
+        name: String,
+    },
+
     /// When we have no expression to return, we simply jump to the appropriate
     /// code location.
     FnRet,

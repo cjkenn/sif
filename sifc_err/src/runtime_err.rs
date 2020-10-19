@@ -11,6 +11,7 @@ pub enum RuntimeErrTy {
     InvalidJump,
     TyMismatch,
     NotAnArray(String),
+    InvalidFnSym(String),
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +55,9 @@ impl SifErr for RuntimeErr {
             }
             RuntimeErrTy::NotAnArray(n) => {
                 format!("Cannot load value: '{}' is not an array or sized type", n)
+            }
+            RuntimeErrTy::InvalidFnSym(s) => {
+                format!("Cannot call function {}, declaration not found", s)
             }
         }
     }

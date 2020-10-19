@@ -89,7 +89,7 @@ impl VM {
         }
 
         // Decls MUST come first to match table indices
-        let code_start = d.len() + 1;
+        let code_start = d.len();
         let mut prog_vec = d.clone();
         prog_vec.extend(i.iter().cloned());
 
@@ -128,6 +128,7 @@ impl VM {
     fn execute(&mut self) -> Result<(), RuntimeErr> {
         let idx = self.ip;
         let curr = &self.prog[idx].op;
+        println!("{:#?}", curr);
 
         match curr {
             Op::LoadC { dest, val } => {
@@ -261,6 +262,19 @@ impl VM {
             Op::FnRet => {
                 // Nothing to return here, so we just jump back to regular execution.
                 self.ip = self.cdr;
+            }
+            Op::Call { name } => {
+                let maybe_loc = self.fntab.get(name);
+                if maybe_loc.is_none() {
+                    return Err(self.newerr(RuntimeErrTy::InvalidFnSym(name.to_string())));
+                }
+
+                // Get the function location, and save our current location in cdr. This allows
+                // the call to return to our correct spot when completed. Then, jump to
+                // the location by setting ip to it.
+                let loc = maybe_loc.unwrap();
+                self.cdr = self.ip;
+                self.ip = *loc;
             }
             Op::Nop => {}
             Op::Stop => {

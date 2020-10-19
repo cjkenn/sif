@@ -288,7 +288,40 @@ impl<'c> Compiler<'c> {
                 let st_name = ident_tkn.get_name();
                 self.assign(st_name, rhs);
             }
-            AstNode::PrimaryExpr { .. } => {
+            AstNode::FnCallExpr {
+                fn_ident_tkn,
+                fn_params,
+            } => {
+                let op = Op::Call {
+                    name: fn_ident_tkn.get_name(),
+                };
+                self.push_op(op);
+            }
+            AstNode::PrimaryExpr { tkn } => {
+                match &tkn.ty {
+                    TokenTy::Val(v) => {
+                        let op = Op::LoadC {
+                            dest: self.nextreg(),
+                            val: SifVal::Num(*v),
+                        };
+                        self.push_op(op);
+                    }
+                    TokenTy::Str(s) => {
+                        let op = Op::LoadC {
+                            dest: self.nextreg(),
+                            val: SifVal::Str(s.clone()),
+                        };
+                        self.push_op(op);
+                    }
+                    TokenTy::Ident(i) => {
+                        let op = Op::LoadN {
+                            dest: self.nextreg(),
+                            name: i.clone(),
+                        };
+                        self.push_op(op);
+                    }
+                    _ => {}
+                };
                 // PrimaryExpr by itself does not generate anything
             }
             _ => (),

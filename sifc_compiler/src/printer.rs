@@ -15,6 +15,8 @@ pub fn dump(ir: Vec<Instr>, name: &str) {
     }
 
     let mut dble = format!("SECTION_ {}\n", name);
+
+    // TODO: dont do this for non-code sections
     let mut currlbl = ir[0].lbl.clone();
     dble.push_str(&format!("{}:\n", currlbl));
 
@@ -117,6 +119,10 @@ pub fn dump(ir: Vec<Instr>, name: &str) {
             }
             Op::FnRet => {
                 let line = format!("\t ret \t\t ; {} \n", i.line);
+                dble.push_str(&line);
+            }
+            Op::Call { name } => {
+                let line = format!("\t call {}\t ; {} \n", name, i.line);
                 dble.push_str(&line);
             }
             Op::Stop => {
