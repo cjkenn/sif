@@ -128,7 +128,6 @@ impl VM {
     fn execute(&mut self) -> Result<(), RuntimeErr> {
         let idx = self.ip;
         let curr = &self.prog[idx].op;
-        println!("{:#?}", curr);
 
         match curr {
             Op::LoadC { dest, val } => {
@@ -141,6 +140,17 @@ impl VM {
                     Some(n) => reg.borrow_mut().cont = Some(n.clone()),
                     None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
                 };
+            }
+            Op::MvFRR { dest } => {
+                let reg = &self.dregs[*dest];
+                let contents = &self.frr.borrow().cont;
+                reg.borrow_mut().cont = contents.clone();
+            }
+            Op::Mv { src, dest } => {
+                let srcreg = &self.dregs[*src];
+                let destreg = &self.dregs[*dest];
+                let to_move = &srcreg.borrow().cont;
+                destreg.borrow_mut().cont = to_move.clone();
             }
             Op::LoadArrs { name, dest } => {
                 let reg = &self.dregs[*dest];

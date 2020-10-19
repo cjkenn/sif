@@ -4,22 +4,37 @@ use crate::{
     sifv::SifVal,
 };
 
+/// Prints the declaration section to stdout.
+pub fn dump_decls(decls: Vec<Instr>) {
+    if decls.len() == 0 {
+        return;
+    }
+
+    let mut dble = String::from("SECTION_ decls\n");
+
+    dump(decls, &mut dble)
+}
+
+/// Prints the code section to stdout.
+pub fn dump_code(code: Vec<Instr>) {
+    if code.len() == 0 {
+        return;
+    }
+
+    let mut dble = String::from("SECTION_ code\n");
+    let mut currlbl = code[0].lbl.clone();
+    dble.push_str(&format!("{}:\n", currlbl));
+
+    dump(code, &mut dble);
+}
+
 /// dump will parse the vector of instrs and transform it into typical
 /// asm-looking strings for printing. We choose not to override the Debug
 /// and Display traits as they can still be useful for pretty printing
 /// the actual structs and vectors at other times, as this method
 /// does not contain all the information held in those structs.
-pub fn dump(ir: Vec<Instr>, name: &str) {
-    if ir.len() == 0 {
-        return;
-    }
-
-    let mut dble = format!("SECTION_ {}\n", name);
-
-    // TODO: dont do this for non-code sections
+fn dump(ir: Vec<Instr>, dble: &mut String) {
     let mut currlbl = ir[0].lbl.clone();
-    dble.push_str(&format!("{}:\n", currlbl));
-
     for i in ir {
         if i.lbl != currlbl {
             let line = format!("{}:\n", &i.lbl);
@@ -57,6 +72,17 @@ pub fn dump(ir: Vec<Instr>, name: &str) {
             Op::LoadN { dest, name } => {
                 let dstr = reg_str(dest);
                 let line = format!("\t ldn {} {}\t ; {}\n", name, dstr, i.line);
+                dble.push_str(&line);
+            }
+            Op::MvFRR { dest } => {
+                let dstr = reg_str(dest);
+                let line = format!("\t mvfrr {}\t ; {}\n", dstr, i.line);
+                dble.push_str(&line);
+            }
+            Op::Mv { src, dest } => {
+                let rstr = reg_str(src);
+                let dstr = reg_str(dest);
+                let line = format!("\t mv {} {}\t ; {}\n", rstr, dstr, i.line);
                 dble.push_str(&line);
             }
             Op::LoadArrs { name, dest } => {

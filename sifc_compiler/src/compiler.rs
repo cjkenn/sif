@@ -296,6 +296,10 @@ impl<'c> Compiler<'c> {
                     name: fn_ident_tkn.get_name(),
                 };
                 self.push_op(op);
+                let frrop = Op::MvFRR {
+                    dest: self.nextreg(),
+                };
+                self.push_op(frrop);
             }
             AstNode::PrimaryExpr { tkn } => {
                 match &tkn.ty {

@@ -82,6 +82,18 @@ pub enum Op {
         name: String,
     },
 
+    /// Moves the frr into the next available register for subsequent expressions
+    MvFRR {
+        dest: usize,
+    },
+
+    /// Moves (copies) the contents of one register to another. Does not erase the
+    /// contents of the src register.
+    Mv {
+        src: usize,
+        dest: usize,
+    },
+
     /// Loads the size (length) of the array by the given name.
     LoadArrs {
         name: String,
