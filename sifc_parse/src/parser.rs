@@ -229,10 +229,41 @@ impl<'l, 's> Parser<'l, 's> {
 
         let body = self.block(bindings)?;
 
+        // We don't need to write a return statement in every function, but we need
+        // to insert the return ast if we don't have one so we can generate the right code
+        // and jumps later when we compile.
+        let body_w_ret = match body {
+            AstNode::Block { ref decls, scope } => match decls.len() {
+                0 => {
+                    let mut new_decls = decls.clone();
+                    new_decls.push(AstNode::ReturnStmt { ret_expr: None });
+                    AstNode::Block {
+                        decls: new_decls,
+                        scope: scope,
+                    }
+                }
+                _ => {
+                    let last_node = &decls[decls.len() - 1];
+                    match last_node {
+                        AstNode::ReturnStmt { .. } => body.clone(),
+                        _ => {
+                            let mut new_decls = decls.clone();
+                            new_decls.push(AstNode::ReturnStmt { ret_expr: None });
+                            AstNode::Block {
+                                decls: new_decls,
+                                scope: scope,
+                            }
+                        }
+                    }
+                }
+            },
+            _ => body,
+        };
+
         let node = AstNode::FnDecl {
             ident_tkn: ident_tkn.clone(),
             fn_params: Box::new(params),
-            fn_body: Box::new(body),
+            fn_body: Box::new(body_w_ret),
             scope: self.sym_tab.level(),
         };
 
