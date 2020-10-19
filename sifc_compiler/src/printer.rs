@@ -84,6 +84,10 @@ pub fn dump(ir: Vec<Instr>, name: &str) {
                 let line = format!("\t strr {} {}\t ; {}\n", rstr, name, i.line);
                 dble.push_str(&line);
             }
+            Op::StoreFRR { name } => {
+                let line = format!("\t strfrr {}\t ; {}\n", name, i.line);
+                dble.push_str(&line);
+            }
             Op::JumpCnd { kind, src, lbl, .. } => {
                 let op_str = jmp_kind_str(kind);
                 let rstr = reg_str(src);

@@ -192,6 +192,13 @@ impl VM {
                     None => self.heap.insert(destname.to_string(), SifVal::Null),
                 };
             }
+            Op::StoreFRR { name } => {
+                let to_store = &self.frr.borrow().cont;
+                match to_store {
+                    Some(v) => self.heap.insert(name.to_string(), v.clone()),
+                    None => self.heap.insert(name.to_string(), SifVal::Null),
+                };
+            }
             Op::JumpA { lbl: _, lblidx } => {
                 let codeidx = self.jumptab.get(lblidx);
                 match codeidx {

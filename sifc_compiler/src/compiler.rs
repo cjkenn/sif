@@ -435,6 +435,19 @@ impl<'c> Compiler<'c> {
                     _ => {}
                 };
             }
+            AstNode::FnCallExpr {
+                fn_ident_tkn,
+                fn_params,
+            } => {
+                // We have to handle function calls slightly differently from other expressions,
+                // to ensure that we use any return results placed in the frr.
+                let op = Op::Call {
+                    name: fn_ident_tkn.get_name(),
+                };
+                self.push_op(op);
+                let strop = Op::StoreFRR { name: st_name };
+                self.push_op(strop);
+            }
             _ => {
                 // We assume that if we aren't assigning a declaration to a constant, we are using an
                 // expression. We store based on the correct register from the expression.

@@ -114,6 +114,11 @@ pub enum Op {
         name: String,
     },
 
+    /// Store frr (function return register)
+    StoreFRR {
+        name: String,
+    },
+
     /// Jump conditionally, based on the value in src register
     JumpCnd {
         kind: JmpOpKind,
@@ -145,7 +150,7 @@ pub enum Op {
     },
 
     /// Move the return value in src to the frr register, then
-    /// returns to previous code location.
+    /// jumps to previous code location.
     FnRetR {
         src: usize,
     },
