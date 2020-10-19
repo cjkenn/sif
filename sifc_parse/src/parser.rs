@@ -898,6 +898,32 @@ impl<'l, 's> Parser<'l, 's> {
                     _ => (),
                 };
 
+                let ident_name = ident_tkn.clone().unwrap().get_name();
+                let maybe_ast = self.sym_tab.retrieve(&ident_name);
+                if maybe_ast.is_none() {
+                    let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
+                    self.consume();
+                    return Err(err);
+                }
+
+                let expected_param_len = match maybe_ast.unwrap() {
+                    AstNode::FnDecl {
+                        ident_tkn: _,
+                        fn_params,
+                        ..
+                    } => match *fn_params {
+                        AstNode::FnParams { params } => params.len(),
+                        _ => 0,
+                    },
+                    _ => 0,
+                };
+
+                if params.len() != expected_param_len {
+                    let err = self
+                        .add_error(ParseErrTy::WrongFnParmCnt(expected_param_len, params.len()));
+                    return Err(err);
+                }
+
                 return Ok(AstNode::FnCallExpr {
                     fn_ident_tkn: ident_tkn.unwrap(),
                     fn_params: params,

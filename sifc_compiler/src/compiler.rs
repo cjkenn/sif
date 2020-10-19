@@ -482,7 +482,6 @@ impl<'c> Compiler<'c> {
                     self.push_op(param_op)
                 }
 
-                println!("param len: {}", fn_params.len());
                 let op = Op::Call {
                     name: fn_ident_tkn.get_name(),
                     param_count: fn_params.len(), // TODO: might be wrong

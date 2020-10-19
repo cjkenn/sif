@@ -1,0 +1,7 @@
+# expect::fail::7::20
+
+fn double(x) {
+   return x * 2;
+}
+
+double(1, 2);

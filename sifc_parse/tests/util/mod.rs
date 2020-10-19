@@ -54,8 +54,16 @@ fn get_test_path(test_name: &str) -> &str {
         ("var_decl_invalid", "./tests/input/var_decl_invalid.sif"),
         ("fn_decl_valid", "./tests/input/fn_decl_valid.sif"),
         ("fn_decl_invalid", "./tests/input/fn_decl_invalid.sif"),
+        (
+            "fn_decl_wrong_params",
+            "./tests/input/fn_decl_wrong_params.sif",
+        ),
         ("fn_w_ret_stmt", "./tests/input/fn_w_ret_stmt.sif"),
         ("fn_call", "./tests/input/fn_call.sif"),
+        (
+            "fn_call_wrong_params",
+            "./tests/input/fn_call_wrong_params.sif",
+        ),
         ("exprs", "./tests/input/exprs.sif"),
         ("table_decl", "./tests/input/table_decl.sif"),
         ("record_decl", "./tests/input/record_decl.sif"),

@@ -83,6 +83,19 @@ fn fn_decl_invalid() {
 }
 
 #[test]
+fn fn_decl_wrong_params() {
+    let pctx = util::setup("fn_decl_wrong_params");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check(pctx, result);
+}
+
+#[test]
 fn fn_w_ret_stmt() {
     let pctx = util::setup("fn_w_ret_stmt");
 
@@ -98,6 +111,19 @@ fn fn_w_ret_stmt() {
 #[test]
 fn fn_call() {
     let pctx = util::setup("fn_call");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check(pctx, result);
+}
+
+#[test]
+fn fn_call_wrong_params() {
+    let pctx = util::setup("fn_call_wrong_params");
 
     let infile = File::open(&pctx.path).unwrap();
     let mut symtab = SymTab::new();
