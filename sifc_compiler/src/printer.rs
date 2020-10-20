@@ -90,9 +90,13 @@ fn dump(ir: Vec<Instr>, dble: &mut String) {
                 let line = format!("\t ldarrs {} {}\t ; {}\n", name, dstr, i.line);
                 dble.push_str(&line);
             }
-            Op::LoadArrv { name, idx, dest } => {
+            Op::LoadArrv {
+                name,
+                idx_reg,
+                dest,
+            } => {
                 let dstr = reg_str(dest);
-                let istr = reg_str(idx);
+                let istr = reg_str(idx_reg);
                 let line = format!("\t ldarrv {} {} {}\t ; {}\n", name, istr, dstr, i.line);
                 dble.push_str(&line);
             }

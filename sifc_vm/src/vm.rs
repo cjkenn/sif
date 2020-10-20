@@ -165,9 +165,13 @@ impl VM {
                     None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
                 };
             }
-            Op::LoadArrv { name, idx, dest } => {
+            Op::LoadArrv {
+                name,
+                idx_reg,
+                dest,
+            } => {
                 let reg = &self.dregs[*dest];
-                let idx_sv = &self.dregs[*idx].borrow().cont;
+                let idx_sv = &self.dregs[*idx_reg].borrow().cont;
                 if idx_sv.is_none() {
                     return Err(self.newerr(RuntimeErrTy::TyMismatch));
                 }

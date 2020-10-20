@@ -166,7 +166,7 @@ impl<'c> Compiler<'c> {
         let local_reg = self.nextreg();
         self.push_op(Op::LoadArrv {
             name: loop_var_name.clone(),
-            idx: idx_reg,
+            idx_reg: idx_reg,
             dest: local_reg,
         });
         self.push_op(Op::StoreR {

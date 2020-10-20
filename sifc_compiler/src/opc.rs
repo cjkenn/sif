@@ -104,7 +104,7 @@ pub enum Op {
     /// is expected to be a register.
     LoadArrv {
         name: String,
-        idx: usize,
+        idx_reg: usize,
         dest: usize,
     },
 

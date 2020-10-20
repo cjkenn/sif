@@ -148,9 +148,6 @@ impl<'c> Compiler<'c> {
                 in_expr_list,
                 stmts,
             } => self.forstmt(var_list, in_expr_list, stmts),
-            AstNode::Array {
-                ident_tkn, body, ..
-            } => self.arraydecl(ident_tkn, body),
             AstNode::FnDecl {
                 ident_tkn,
                 fn_params,
@@ -483,6 +480,10 @@ impl<'c> Compiler<'c> {
                     _ => {}
                 };
             }
+            AstNode::Array {
+                ident_tkn, body, ..
+            } => self.arraydecl(ident_tkn, body),
+            AstNode::ArrayAccess { array_tkn, index } => self.arrayaccess(array_tkn, index),
             AstNode::FnCallExpr {
                 fn_ident_tkn,
                 fn_params,

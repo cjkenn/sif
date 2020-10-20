@@ -31,6 +31,20 @@ impl<'c> Compiler<'c> {
         };
     }
 
+    /// Compiles instructions for AstNode::ArrayAccess types.
+    pub fn arrayaccess(&mut self, array_tkn: &Token, index_expr: &AstNode) {
+        let name = array_tkn.get_name();
+        self.expr(index_expr);
+
+        let op = Op::LoadArrv {
+            name: name,
+            idx_reg: self.prevreg(),
+            dest: self.nextreg(),
+        };
+
+        self.push_op(op);
+    }
+
     fn arrayitems(&mut self, ast: &AstNode) -> Vec<SifVal> {
         let mut vals = Vec::new();
 
