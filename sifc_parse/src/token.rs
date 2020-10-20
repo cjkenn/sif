@@ -32,6 +32,8 @@ pub enum TokenTy {
     BangEq,
     AmpAmp,
     PipePipe,
+    DoubleLeftBracket,
+    DoubleRightBracket,
 
     // Identifiers/literals
     Ident(String),
@@ -148,6 +150,8 @@ impl fmt::Display for TokenTy {
             TokenTy::PipePipe => "||".to_string(),
             TokenTy::Arrow => "->".to_string(),
             TokenTy::EqArrow => "=>".to_string(),
+            TokenTy::DoubleLeftBracket => "[[".to_string(),
+            TokenTy::DoubleRightBracket => "]]".to_string(),
 
             TokenTy::Ident(name) => format!("{}", name),
             TokenTy::Str(name) => format!("{}", name),

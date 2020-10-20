@@ -87,7 +87,7 @@ pub enum AstNode {
         index: Box<AstNode>,
     },
 
-    TableDecl {
+    Table {
         ident_tkn: Token,
         items: Box<AstNode>,
     },
@@ -97,7 +97,7 @@ pub enum AstNode {
         index: Box<AstNode>,
     },
 
-    ArrayDecl {
+    Array {
         ident_tkn: Token,
         body: Option<Box<AstNode>>,
         len: usize,

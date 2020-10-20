@@ -90,8 +90,28 @@ impl Lexer {
             ')' => self.consume(TokenTy::RightParen),
             '{' => self.consume(TokenTy::LeftBrace),
             '}' => self.consume(TokenTy::RightBrace),
-            '[' => self.consume(TokenTy::LeftBracket),
-            ']' => self.consume(TokenTy::RightBracket),
+            '[' => {
+                let nextch = self.peek_char();
+                match nextch {
+                    Some(ch) if ch == '[' => {
+                        let tkn = self.consume(TokenTy::DoubleLeftBracket);
+                        self.advance();
+                        tkn
+                    }
+                    _ => self.consume(TokenTy::LeftBracket),
+                }
+            }
+            ']' => {
+                let nextch = self.peek_char();
+                match nextch {
+                    Some(ch) if ch == ']' => {
+                        let tkn = self.consume(TokenTy::DoubleRightBracket);
+                        self.advance();
+                        tkn
+                    }
+                    _ => self.consume(TokenTy::RightBracket),
+                }
+            }
             ';' => self.consume(TokenTy::Semicolon),
             '.' => self.consume(TokenTy::Period),
             ',' => self.consume(TokenTy::Comma),
@@ -100,7 +120,7 @@ impl Lexer {
             '%' => self.consume(TokenTy::Percent),
             '"' => self.lex_str(),
             '-' => {
-                let nextch = self.peek();
+                let nextch = self.peek_char();
                 match nextch {
                     Some(ch) if ch == '>' => {
                         let tkn = self.consume(TokenTy::Arrow);
@@ -111,7 +131,7 @@ impl Lexer {
                 }
             }
             '/' => {
-                let nextch = self.peek();
+                let nextch = self.peek_char();
                 match nextch {
                     Some(ch) if ch == '/' => {
                         while self.curr.unwrap() != '\n' {
@@ -123,7 +143,7 @@ impl Lexer {
                 }
             }
             '=' => {
-                let nextch = self.peek();
+                let nextch = self.peek_char();
                 match nextch {
                     Some(ch) if ch == '=' => {
                         let tkn = self.consume(TokenTy::EqEq);
@@ -139,7 +159,7 @@ impl Lexer {
                 }
             }
             '<' => {
-                let nextch = self.peek();
+                let nextch = self.peek_char();
                 match nextch {
                     Some(ch) if ch == '=' => {
                         let tkn = self.consume(TokenTy::LtEq);
@@ -150,7 +170,7 @@ impl Lexer {
                 }
             }
             '>' => {
-                let nextch = self.peek();
+                let nextch = self.peek_char();
                 match nextch {
                     Some(ch) if ch == '=' => {
                         let tkn = self.consume(TokenTy::GtEq);
@@ -161,7 +181,7 @@ impl Lexer {
                 }
             }
             '!' => {
-                let nextch = self.peek();
+                let nextch = self.peek_char();
                 match nextch {
                     Some(ch) if ch == '=' => {
                         let tkn = self.consume(TokenTy::BangEq);
@@ -172,7 +192,7 @@ impl Lexer {
                 }
             }
             '&' => {
-                let nextch = self.peek();
+                let nextch = self.peek_char();
                 match nextch {
                     Some(ch) if ch == '&' => {
                         let tkn = self.consume(TokenTy::AmpAmp);
@@ -183,7 +203,7 @@ impl Lexer {
                 }
             }
             '|' => {
-                let nextch = self.peek();
+                let nextch = self.peek_char();
                 match nextch {
                     Some(ch) if ch == '|' => {
                         let tkn = self.consume(TokenTy::PipePipe);
@@ -204,7 +224,7 @@ impl Lexer {
 
     /// Look ahead to the next token, and then reset the buffer and rewind
     /// the reader for future calls to lex().
-    pub fn peek_tkn(&mut self) -> Token {
+    pub fn peek(&mut self) -> Token {
         // Copy the current state of the lexer
         let start_curr = self.curr;
         let start_pos = self.line_pos;
@@ -358,7 +378,7 @@ impl Lexer {
     }
 
     /// Return the next char in the buffer, if any.
-    fn peek(&mut self) -> Option<char> {
+    fn peek_char(&mut self) -> Option<char> {
         if self.line_pos >= self.buffer.len() - 1 {
             return None;
         }

@@ -1,6 +1,6 @@
 # expect::pass
 
-array q = [];
+var q = [];
 
 for idx, val in q {
   var y;

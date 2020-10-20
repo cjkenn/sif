@@ -1,9 +1,12 @@
 # expect::pass
 
-table x = {
+var x = [[
   y => "y",
   z => "z",
   q => 10,
-};
+]];
 
 var t = x.y;
+
+# without trailing comma
+var p = [[y => "y", x => "x"]];

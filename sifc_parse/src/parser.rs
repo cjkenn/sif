@@ -100,8 +100,6 @@ impl<'l, 's> Parser<'l, 's> {
             TokenTy::Var => self.var_decl(),
             TokenTy::Fn => self.fn_decl(),
             TokenTy::Record => self.record_decl(),
-            TokenTy::Table => self.table_decl(),
-            TokenTy::Array => self.array_decl(),
             _ => self.stmt(),
         }
     }
@@ -172,8 +170,16 @@ impl<'l, 's> Parser<'l, 's> {
         match self.curr_tkn.ty {
             TokenTy::Eq => {
                 self.expect(TokenTy::Eq)?;
-                let lhs = self.expr()?;
-                self.expect(TokenTy::Semicolon)?;
+
+                let lhs = match self.curr_tkn.ty {
+                    TokenTy::LeftBracket => self.array_decl(ident_tkn.clone())?,
+                    TokenTy::DoubleLeftBracket => self.table_decl(ident_tkn.clone())?,
+                    _ => {
+                        let res = self.expr()?;
+                        self.expect(TokenTy::Semicolon)?;
+                        res
+                    }
+                };
 
                 let node = AstNode::VarDecl {
                     ident_tkn: ident_tkn.clone(),
@@ -394,23 +400,12 @@ impl<'l, 's> Parser<'l, 's> {
         Ok(AstNode::ExprList { exprs: expr_list })
     }
 
-    fn table_decl(&mut self) -> Result<AstNode, ParseErr> {
-        self.expect(TokenTy::Table)?;
-
-        let maybe_ident_tkn = self.match_ident();
-        if maybe_ident_tkn.is_none() {
-            let ty_str = self.curr_tkn.ty.to_string();
-            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
-        }
-        let ident_tkn = maybe_ident_tkn.unwrap();
-
-        self.expect(TokenTy::Eq)?;
-
-        self.expect(TokenTy::LeftBrace)?;
+    fn table_decl(&mut self, ident_tkn: Token) -> Result<AstNode, ParseErr> {
+        self.expect(TokenTy::DoubleLeftBracket)?;
         let items = self.item_list()?;
-        self.expect(TokenTy::RightBrace)?;
+        self.expect(TokenTy::DoubleRightBracket)?;
 
-        let node = AstNode::TableDecl {
+        let node = AstNode::Table {
             ident_tkn: ident_tkn.clone(),
             items: Box::new(items),
         };
@@ -424,7 +419,7 @@ impl<'l, 's> Parser<'l, 's> {
     fn item_list(&mut self) -> Result<AstNode, ParseErr> {
         let mut items = HashMap::new();
 
-        while self.curr_tkn.ty != TokenTy::RightBrace {
+        while self.curr_tkn.ty != TokenTy::DoubleRightBracket {
             if self.curr_tkn.ty == TokenTy::Eof {
                 return Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
                     "unexpected end of file",
@@ -440,25 +435,21 @@ impl<'l, 's> Parser<'l, 's> {
             let ident_tkn = maybe_ident_tkn.unwrap();
             self.expect(TokenTy::EqArrow)?;
             let val = self.expr()?;
-            self.expect(TokenTy::Comma)?;
-
             items.insert(String::from(ident_tkn.get_name()), val);
+            println!("curr: {:#?}", self.curr_tkn);
+
+            match self.optional(TokenTy::Comma) {
+                false => {
+                    break;
+                }
+                _ => {}
+            };
         }
 
         Ok(AstNode::ItemList { items: items })
     }
 
-    fn array_decl(&mut self) -> Result<AstNode, ParseErr> {
-        self.expect(TokenTy::Array)?;
-
-        let maybe_ident_tkn = self.match_ident();
-        if maybe_ident_tkn.is_none() {
-            let ty_str = self.curr_tkn.ty.to_string();
-            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
-        }
-        let ident_tkn = maybe_ident_tkn.unwrap();
-
-        self.expect(TokenTy::Eq)?;
+    fn array_decl(&mut self, ident_tkn: Token) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::LeftBracket)?;
 
         let mut arr_items = Vec::new();
@@ -491,7 +482,7 @@ impl<'l, 's> Parser<'l, 's> {
             _ => Some(Box::new(AstNode::ArrayItems { items: arr_items })),
         };
 
-        let node = AstNode::ArrayDecl {
+        let node = AstNode::Array {
             ident_tkn: ident_tkn.clone(),
             body: box_body,
             len: len,

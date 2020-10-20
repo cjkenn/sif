@@ -148,7 +148,7 @@ impl<'c> Compiler<'c> {
                 in_expr_list,
                 stmts,
             } => self.forstmt(var_list, in_expr_list, stmts),
-            AstNode::ArrayDecl {
+            AstNode::Array {
                 ident_tkn, body, ..
             } => self.arraydecl(ident_tkn, body),
             AstNode::FnDecl {
