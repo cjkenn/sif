@@ -123,12 +123,6 @@ pub enum AstNode {
         rhs: Box<AstNode>,
     },
 
-    LogicalExpr {
-        op_tkn: Token,
-        lhs: Box<AstNode>,
-        rhs: Box<AstNode>,
-    },
-
     BinaryExpr {
         op_tkn: Token,
         lhs: Box<AstNode>,

@@ -288,17 +288,6 @@ impl<'c> Compiler<'c> {
                 TokenTy::BangEq => self.binop(BinOpKind::Lnot, lhs, rhs),
                 _ => (),
             },
-            AstNode::LogicalExpr { op_tkn, lhs, rhs } => match op_tkn.ty {
-                TokenTy::EqEq => self.binop(BinOpKind::Eq, lhs, rhs),
-                TokenTy::LtEq => self.binop(BinOpKind::LtEq, lhs, rhs),
-                TokenTy::Lt => self.binop(BinOpKind::Lt, lhs, rhs),
-                TokenTy::GtEq => self.binop(BinOpKind::GtEq, lhs, rhs),
-                TokenTy::Gt => self.binop(BinOpKind::Gt, lhs, rhs),
-                TokenTy::AmpAmp => self.binop(BinOpKind::Land, lhs, rhs),
-                TokenTy::PipePipe => self.binop(BinOpKind::Lor, lhs, rhs),
-                TokenTy::BangEq => self.binop(BinOpKind::Lnot, lhs, rhs),
-                _ => (),
-            },
             AstNode::UnaryExpr { op_tkn, rhs } => match op_tkn.ty {
                 TokenTy::Bang => self.unop(UnOpKind::Lneg, rhs),
                 TokenTy::Minus => self.unop(UnOpKind::Nneg, rhs),

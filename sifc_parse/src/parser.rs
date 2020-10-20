@@ -682,7 +682,7 @@ impl<'l, 's> Parser<'l, 's> {
 
                     let rhs = self.and_expr()?;
 
-                    ast = AstNode::LogicalExpr {
+                    ast = AstNode::BinaryExpr {
                         op_tkn: op,
                         lhs: Box::new(ast),
                         rhs: Box::new(rhs),
@@ -707,7 +707,7 @@ impl<'l, 's> Parser<'l, 's> {
 
                     let rhs = self.equality_expr()?;
 
-                    ast = AstNode::LogicalExpr {
+                    ast = AstNode::BinaryExpr {
                         op_tkn: op,
                         lhs: Box::new(ast),
                         rhs: Box::new(rhs),
