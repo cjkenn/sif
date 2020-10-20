@@ -309,6 +309,36 @@ impl VM {
                 let destreg = &self.dregs[*dest];
                 destreg.borrow_mut().cont = to_pop;
             }
+            Op::TblI { tabname, key, src } => {
+                let srcreg = &self.dregs[*src];
+                let to_insert = srcreg.borrow().cont.clone();
+
+                match self.heap.get(tabname) {
+                    Some(n) => match n {
+                        SifVal::Tab(hm) => {
+                            let mut map = hm.clone();
+                            map.insert(key.to_string(), to_insert.unwrap());
+                            self.heap.insert(tabname.to_string(), SifVal::Tab(map));
+                        }
+                        _ => {}
+                    },
+                    None => return Err(self.newerr(RuntimeErrTy::InvalidName(tabname.clone()))),
+                };
+            }
+            Op::TblG { tabname, key, dest } => {
+                let destreg = &self.dregs[*dest];
+
+                match self.heap.get(tabname) {
+                    Some(n) => match n {
+                        SifVal::Tab(hm) => {
+                            let val = hm.get(key).unwrap();
+                            destreg.borrow_mut().cont = Some(val.clone());
+                        }
+                        _ => {}
+                    },
+                    None => return Err(self.newerr(RuntimeErrTy::InvalidName(tabname.clone()))),
+                };
+            }
             Op::Nop => {}
             Op::Stop => {
                 eprintln!("sif: stop instruction found, halting execution");

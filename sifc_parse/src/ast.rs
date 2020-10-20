@@ -41,7 +41,7 @@ pub enum AstNode {
     VarDecl {
         ident_tkn: Token,
         is_global: bool,
-        lhs: Option<Box<AstNode>>,
+        rhs: Option<Box<AstNode>>,
     },
 
     FnDecl {
@@ -68,7 +68,7 @@ pub enum AstNode {
         val: Box<AstNode>,
     },
 
-    RecordDecl {
+    Record {
         ident_tkn: Token,
         items: Box<AstNode>,
     },

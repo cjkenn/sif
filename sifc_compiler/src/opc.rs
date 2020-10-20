@@ -187,6 +187,20 @@ pub enum Op {
         dest: usize,
     },
 
+    /// Insert a value from src register into a table.
+    TblI {
+        tabname: String,
+        key: String,
+        src: usize,
+    },
+
+    /// Retrieve a value from a table and place it into dest register.
+    TblG {
+        tabname: String,
+        key: String,
+        dest: usize,
+    },
+
     Nop,  // no-op
     Stop, // halt vm execution
 }

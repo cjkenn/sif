@@ -184,7 +184,7 @@ impl<'l, 's> Parser<'l, 's> {
                 let node = AstNode::VarDecl {
                     ident_tkn: ident_tkn.clone(),
                     is_global: self.sym_tab.is_global(),
-                    lhs: Some(Box::new(lhs)),
+                    rhs: Some(Box::new(lhs)),
                 };
 
                 self.sym_tab.store(&ident_tkn.get_name(), node.clone());
@@ -196,7 +196,7 @@ impl<'l, 's> Parser<'l, 's> {
                 let node = AstNode::VarDecl {
                     ident_tkn: ident_tkn.clone(),
                     is_global: self.sym_tab.is_global(),
-                    lhs: None,
+                    rhs: None,
                 };
 
                 self.sym_tab.store(&ident_tkn.get_name(), node.clone());
@@ -335,7 +335,7 @@ impl<'l, 's> Parser<'l, 's> {
         let items = self.var_list()?;
         self.expect(TokenTy::RightBrace)?;
 
-        let node = AstNode::RecordDecl {
+        let node = AstNode::Record {
             ident_tkn: ident_tkn.clone(),
             items: Box::new(items),
         };

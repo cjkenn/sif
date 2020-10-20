@@ -165,6 +165,16 @@ fn dump(ir: Vec<Instr>, dble: &mut String) {
                 let line = format!("\t fstpop {}\t ; {}\n", rstr, i.line);
                 dble.push_str(&line);
             }
+            Op::TblI { tabname, key, src } => {
+                let rstr = reg_str(src);
+                let line = format!("\t tbli {} {} {}\t ; {}\n", rstr, key, tabname, i.line);
+                dble.push_str(&line);
+            }
+            Op::TblG { tabname, key, dest } => {
+                let rstr = reg_str(dest);
+                let line = format!("\t tblg {} {} {}\t ; {}\n", tabname, key, rstr, i.line);
+                dble.push_str(&line);
+            }
             Op::Stop => {
                 let line = format!("\t{}\t\t ; {}\n", "stop", i.line);
                 dble.push_str(&line);
@@ -219,5 +229,6 @@ fn val_str(v: SifVal) -> String {
         SifVal::Bl(b) => b.to_string(),
         SifVal::Null => "null".to_string(),
         SifVal::Arr(a) => format!("{:?}", a),
+        SifVal::Tab(t) => format!("{:?}", t),
     }
 }

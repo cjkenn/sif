@@ -130,8 +130,8 @@ impl<'c> Compiler<'c> {
             AstNode::VarDecl {
                 ident_tkn,
                 is_global: _,
-                lhs,
-            } => self.vardecl(ident_tkn, lhs.clone()),
+                rhs,
+            } => self.vardecl(ident_tkn, rhs.clone()),
             AstNode::IfStmt {
                 cond_expr,
                 if_stmts,
@@ -160,6 +160,7 @@ impl<'c> Compiler<'c> {
             AstNode::ReturnStmt { ret_expr } => self.ret(ret_expr),
             _ => {
                 // generate nothing if we find some unknown block
+                // TODO: eventually error here
             }
         }
     }
@@ -470,6 +471,29 @@ impl<'c> Compiler<'c> {
                     _ => {}
                 };
             }
+            AstNode::Table {
+                ident_tkn: _,
+                items,
+            } => {
+                self.push_op(Op::StoreC {
+                    val: SifVal::Tab(HashMap::new()),
+                    name: st_name.clone(),
+                });
+                match &**items {
+                    AstNode::ItemList { items } => {
+                        for (k, v) in items.iter() {
+                            self.expr(v);
+                            let tabop = Op::TblI {
+                                tabname: st_name.clone(),
+                                key: k.clone(),
+                                src: self.prevreg(),
+                            };
+                            self.push_op(tabop);
+                        }
+                    }
+                    _ => {}
+                };
+            }
             AstNode::FnCallExpr {
                 fn_ident_tkn,
                 fn_params,
@@ -484,7 +508,7 @@ impl<'c> Compiler<'c> {
 
                 let op = Op::Call {
                     name: fn_ident_tkn.get_name(),
-                    param_count: fn_params.len(), // TODO: might be wrong
+                    param_count: fn_params.len(),
                 };
                 self.push_op(op);
                 let frrop = Op::MvFRR {
