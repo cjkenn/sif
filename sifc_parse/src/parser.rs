@@ -99,7 +99,6 @@ impl<'l, 's> Parser<'l, 's> {
         match self.curr_tkn.ty {
             TokenTy::Var => self.var_decl(),
             TokenTy::Fn => self.fn_decl(),
-            TokenTy::Record => self.record_decl(),
             _ => self.stmt(),
         }
     }
@@ -174,6 +173,7 @@ impl<'l, 's> Parser<'l, 's> {
                 let lhs = match self.curr_tkn.ty {
                     TokenTy::LeftBracket => self.array_decl(ident_tkn.clone())?,
                     TokenTy::DoubleLeftBracket => self.table_decl(ident_tkn.clone())?,
+                    TokenTy::LeftBrace => self.record_decl(ident_tkn.clone())?,
                     _ => {
                         let res = self.expr()?;
                         self.expect(TokenTy::Semicolon)?;
@@ -330,18 +330,7 @@ impl<'l, 's> Parser<'l, 's> {
         }
     }
 
-    fn record_decl(&mut self) -> Result<AstNode, ParseErr> {
-        self.expect(TokenTy::Record)?;
-
-        let maybe_ident_tkn = self.match_ident();
-        if maybe_ident_tkn.is_none() {
-            let ty_str = self.curr_tkn.ty.to_string();
-            return Err(self.add_error(ParseErrTy::ExpectedIdent(ty_str)));
-        }
-        let ident_tkn = maybe_ident_tkn.unwrap();
-
-        self.expect(TokenTy::Eq)?;
-
+    fn record_decl(&mut self, ident_tkn: Token) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::LeftBrace)?;
         let items = self.var_list()?;
         self.expect(TokenTy::RightBrace)?;
@@ -381,7 +370,7 @@ impl<'l, 's> Parser<'l, 's> {
                         val: Some(Box::new(val)),
                     })
                 }
-                TokenTy::Comma => Some(AstNode::RecordExpr {
+                TokenTy::Comma | TokenTy::RightBrace => Some(AstNode::RecordExpr {
                     ident_tkn: ident_tkn.clone(),
                     val: None,
                 }),
@@ -389,12 +378,19 @@ impl<'l, 's> Parser<'l, 's> {
             };
 
             if node.is_none() {
-                return Err(self.add_error(ParseErrTy::InvalidTkn(String::from("expected token"))));
+                return Err(self.add_error(ParseErrTy::InvalidRec(ident_tkn.get_name())));
             } else {
                 expr_list.push(node.unwrap());
             }
 
-            self.expect(TokenTy::Comma)?;
+            // If we have a comma here, consume and continue. If we don't
+            // have one, break the loop
+            match self.optional(TokenTy::Comma) {
+                false => {
+                    break;
+                }
+                _ => {}
+            };
         }
 
         Ok(AstNode::ExprList { exprs: expr_list })

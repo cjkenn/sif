@@ -1,8 +1,11 @@
 # expect::pass
 
-record x = {
+var x = {
   y = 10,
   q,
 };
 
 var t = x->y;
+
+# no trailing comma
+var g = { y = 10, q };

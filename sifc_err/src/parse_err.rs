@@ -13,6 +13,7 @@ pub enum ParseErrTy {
     UndeclSym(String),
     UnassignedVar(String),
     ExpectedIdent(String),
+    InvalidRec(String),
 }
 
 #[derive(Debug, Clone)]
@@ -88,6 +89,7 @@ impl SifErr for ParseErr {
                 "{} Identifier expected, found '{}'. Is this a reserved word?",
                 str_pos, found
             ),
+            ParseErrTy::InvalidRec(ref name) => format!("{} Record {} is invalid", str_pos, name),
         }
     }
 }

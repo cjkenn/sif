@@ -1,7 +1,6 @@
 prog       ::= { decl } ;
 decl       ::= vardecl    |
                funcdecl   |
-	       recorddecl |
 	       { stmt }   ;
 stmt       ::= ifstmt   |
                forstmt  |
@@ -15,11 +14,11 @@ varlist    ::= { IDENT [ "=" expr ] "," } ;
 itemlist   ::= { IDENT "=>" expr "," } ;
 paramlist  ::= [ { IDENT [ "," ] } ] ;
 
-vardecl    ::= "var" IDENT [ "=" expr | arraydecl | tabledecl ] ";" ;
+vardecl    ::= "var" IDENT [ "=" expr | arraydecl | tabledecl | recorddecl ] ";" ;
 funcdecl   ::= "fn" IDENT "(" [ paramlist ] ")" block ;
-tabledecl  ::= "[[" [ itemlist ] "]]" ";" ;
-arraydecl  ::= "[" { expr "," } "]" ";" ;
-recorddecl ::= "record" IDENT "=" "{" [ varlist ] "}" ";" ;
+tabledecl  ::= "[[" [ itemlist ] "]]" ;
+arraydecl  ::= "[" { expr "," } "]" ;
+recorddecl ::= {" [ varlist ] "}" ;
 
 ifstmt     ::= "if" expr block { "elif" expr block } [ "else" block ] ;
 forstmt    ::= "for" identpair "in" expr block ;
