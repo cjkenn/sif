@@ -517,6 +517,11 @@ impl<'c> Compiler<'c> {
                     dest: self.nextreg(),
                 };
                 self.push_op(frrop);
+                let strop = Op::StoreR {
+                    src: self.prevreg(),
+                    name: st_name.clone(),
+                };
+                self.push_op(strop);
             }
             _ => {
                 // We assume that if we aren't assigning a declaration to a constant, we are using an
