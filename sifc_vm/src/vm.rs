@@ -219,7 +219,7 @@ impl VM {
             Op::JumpA { lbl: _, lblidx } => {
                 let codeidx = self.jumptab.get(lblidx);
                 match codeidx {
-                    Some(i) => self.ip = *i,
+                    Some(i) => self.ip = *i - 1,
                     None => return Err(self.newerr(RuntimeErrTy::InvalidJump)),
                 };
             }
@@ -242,7 +242,9 @@ impl VM {
                                 if b {
                                     let codeidx = self.jumptab.get(lblidx);
                                     match codeidx {
-                                        Some(i) => self.ip = *i,
+                                        // jump to codeidx - 1 as it will be incremented at the end of
+                                        // the execution loop
+                                        Some(i) => self.ip = *i - 1,
                                         None => return Err(self.newerr(RuntimeErrTy::InvalidJump)),
                                     };
                                 }
@@ -251,7 +253,9 @@ impl VM {
                                 if !b {
                                     let codeidx = self.jumptab.get(lblidx);
                                     match codeidx {
-                                        Some(i) => self.ip = *i,
+                                        // jump to codeidx - 1 as it will be incremented at the end of
+                                        // the execution loop
+                                        Some(i) => self.ip = *i - 1,
                                         None => return Err(self.newerr(RuntimeErrTy::InvalidJump)),
                                     };
                                 }
