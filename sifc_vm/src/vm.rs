@@ -86,6 +86,7 @@ impl VM {
     pub fn new(
         i: Vec<Instr>,
         d: Vec<Instr>,
+        p: Vec<Instr>,
         jt: HashMap<usize, usize>,
         ft: HashMap<String, usize>,
         tr: bool,
@@ -97,15 +98,12 @@ impl VM {
             regs.push(Rc::new(RefCell::new(reg)));
         }
 
-        // Decls MUST come first to match table indices
         let code_start = d.len();
-        let mut prog_vec = d.clone();
-        prog_vec.extend(i.iter().cloned());
 
         VM {
             code: i,
             decls: d,
-            prog: prog_vec,
+            prog: p,
             fntab: ft,
             jumptab: jt,
             dregs: regs,

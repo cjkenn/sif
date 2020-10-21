@@ -102,6 +102,7 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
 
     let code = comp_result.code;
     let decls = comp_result.decls;
+    let program = comp_result.program;
     let jumptab = comp_result.jumptab;
     let fntab = comp_result.fntab;
 
@@ -116,7 +117,8 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
         println!("sif: tracing vm execution!\n");
     }
 
-    let mut vm = VM::new(code, decls, jumptab, fntab, opts.trace);
+    // TODO: just pass compileresult to vm?
+    let mut vm = VM::new(code, decls, program, jumptab, fntab, opts.trace);
     vm.run();
 }
 

@@ -27,6 +27,12 @@ pub struct CompileResult {
     /// not in the order code appears.
     pub decls: Vec<Instr>,
 
+    /// Combination of code and decl section. To build this, we append all the code
+    /// instruction at the end of the decl vector. Note that this should be built and
+    /// passed in to the jump/fn tables computation to keep the instruction indices
+    /// the same.
+    pub program: Vec<Instr>,
+
     /// Jump table that maps label indices to code indices. When you look
     /// up a label index, this returns the index of the first instruction
     /// under than label. Both indices being at 0. For example:
@@ -106,11 +112,15 @@ impl<'c> Compiler<'c> {
             _ => currerr = Some(CompileErr::new(CompileErrTy::InvalidAst)),
         };
 
-        let (jumptab, fntab) = crate::tables::compute(&self.ops, &self.decls);
+        let mut prog_vec = self.decls.clone();
+        prog_vec.extend(self.ops.iter().cloned());
+
+        let (jumptab, fntab) = crate::tables::compute(&prog_vec);
 
         CompileResult {
             code: self.ops.to_vec(),
             decls: self.decls.to_vec(),
+            program: prog_vec,
             jumptab: jumptab,
             fntab: fntab,
             err: currerr,
@@ -220,8 +230,10 @@ impl<'c> Compiler<'c> {
             self.push_op(op);
         }
 
+        self.newlbl();
         // TODO: param scoping - need to be able to access names in vm using the stack
         self.block(fn_body);
+        self.newlbl();
 
         // go back to code section.
         self.decl_scope = false;
