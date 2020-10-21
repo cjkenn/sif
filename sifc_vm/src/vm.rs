@@ -59,7 +59,7 @@ pub struct VM {
     /// a function returns.
     cdr: usize,
 
-    /// Heap section. This contains arrays, tables, records, and globals. We use the
+    /// Heap section. This contains arrays, tables, and globals. We use the
     /// name of the data as a key to retrieve and store information in the heap.
     /// This is likely not memory efficient and a more sophisticated structure + allocating
     /// space before vm startup could be more performant.

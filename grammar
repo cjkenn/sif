@@ -10,15 +10,13 @@ stmt       ::= ifstmt   |
 block      ::= "{" { decl } "}" ;
 
 identpair  ::= IDENT "," IDENT ;
-varlist    ::= { IDENT [ "=" expr ] "," } ;
 itemlist   ::= { IDENT "=>" expr "," } ;
 paramlist  ::= [ { IDENT [ "," ] } ] ;
 
-vardecl    ::= "var" IDENT [ "=" expr | arraydecl | tabledecl | recorddecl ] ";" ;
+vardecl    ::= "var" IDENT [ "=" expr | arraydecl | tabledecl ] ";" ;
 funcdecl   ::= "fn" IDENT "(" [ paramlist ] ")" block ;
 tabledecl  ::= "[[" [ itemlist ] "]]" ;
 arraydecl  ::= "[" { expr "," } "]" ;
-recorddecl ::= {" [ varlist ] "}" ;
 
 ifstmt     ::= "if" expr block { "elif" expr block } [ "else" block ] ;
 forstmt    ::= "for" identpair "in" expr block ;
@@ -43,7 +41,6 @@ primary      ::= NUMBER |
 	         groupexpr ;
 groupexpr    ::= "(" expr ")" ;
 
-funccall     ::= primary "(" [ paramlist ] ")" | tableaccess | recordaccess | arrayaccess ;
+funccall     ::= primary "(" [ paramlist ] ")" | tableaccess | arrayaccess ;
 tableaccess  ::= primary "." primary ;
 arrayaccess  ::= primary "[" expr "]" ;
-recordaccess ::= primary "->" primary ";" ;

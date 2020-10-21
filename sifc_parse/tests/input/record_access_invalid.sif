@@ -1,9 +1,0 @@
-# expect::fail::7::12
-
-var rec = {
-  z => 1,
-  x => 2
-};
-
-# should be using '->', not '.'
-var t = rec.z;

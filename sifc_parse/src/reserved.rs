@@ -7,7 +7,6 @@ pub fn get_reserved_words() -> HashMap<String, TokenTy> {
         (String::from("var"), TokenTy::Var),
         (String::from("fn"), TokenTy::Fn),
         (String::from("return"), TokenTy::Return),
-        (String::from("record"), TokenTy::Record),
         (String::from("table"), TokenTy::Table),
         (String::from("array"), TokenTy::Array),
         (String::from("if"), TokenTy::If),

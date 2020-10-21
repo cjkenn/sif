@@ -119,17 +119,7 @@ impl Lexer {
             '*' => self.consume(TokenTy::Star),
             '%' => self.consume(TokenTy::Percent),
             '"' => self.lex_str(),
-            '-' => {
-                let nextch = self.peek_char();
-                match nextch {
-                    Some(ch) if ch == '>' => {
-                        let tkn = self.consume(TokenTy::Arrow);
-                        self.advance();
-                        tkn
-                    }
-                    _ => self.consume(TokenTy::Minus),
-                }
-            }
+            '-' => self.consume(TokenTy::Minus),
             '/' => {
                 let nextch = self.peek_char();
                 match nextch {

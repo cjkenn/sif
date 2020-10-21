@@ -68,25 +68,6 @@ pub enum AstNode {
         val: Box<AstNode>,
     },
 
-    Record {
-        ident_tkn: Token,
-        items: Box<AstNode>,
-    },
-
-    ExprList {
-        exprs: Vec<AstNode>,
-    },
-
-    RecordExpr {
-        ident_tkn: Token,
-        val: Option<Box<AstNode>>,
-    },
-
-    RecordAccess {
-        record_tkn: Token,
-        index: Box<AstNode>,
-    },
-
     Table {
         ident_tkn: Token,
         items: Box<AstNode>,
