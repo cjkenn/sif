@@ -18,7 +18,11 @@ use sifc_parse::{
 
 use sifc_vm::vm::VM;
 
-use std::{fs::File, io};
+use std::{
+    fs::File,
+    io,
+    time::{Duration, Instant},
+};
 
 #[derive(Clap)]
 #[clap(version = "1.0")]
@@ -26,9 +30,11 @@ pub struct SifOpts {
     #[clap(long)]
     filename: Option<String>,
     #[clap(long)]
-    dump_ast: bool,
+    print_ast: bool,
     #[clap(long)]
-    dump_ir: bool,
+    print_ir: bool,
+    #[clap(long)]
+    trace: bool,
 }
 
 fn main() {
@@ -41,6 +47,8 @@ fn main() {
 }
 
 fn from_file(opts: SifOpts) {
+    let exec_start = Instant::now();
+
     let mut symtab = SymTab::new();
     let path = opts.filename.clone().unwrap();
     let parse_result = parse(&path, &mut symtab);
@@ -54,11 +62,12 @@ fn from_file(opts: SifOpts) {
 
     let ast = parse_result.ast.unwrap();
 
-    if opts.dump_ast {
+    if opts.print_ast {
         println!("{:#?}", ast);
     }
 
     compile_and_run(opts, &ast);
+    println!("sif: execution completed in {:#?}", exec_start.elapsed());
 }
 
 /// Opens the file from the filename provided, creates a lexer for that file
@@ -73,12 +82,14 @@ fn parse(filename: &str, symtab: &mut SymTab) -> ParserResult {
         }
     };
 
+    println!("sif: parsing file {}...", filename);
     let mut lexer = Lexer::new(infile);
     let mut parser = Parser::new(&mut lexer, symtab);
     parser.parse()
 }
 
 fn compile_and_run(opts: SifOpts, ast: &AstNode) {
+    println!("sif: compiling...");
     let mut comp = Compiler::new(ast);
     let comp_result = comp.compile();
 
@@ -95,12 +106,17 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
     let fntab = comp_result.fntab;
 
     // TODO: add option to write to file and not run vm?
-    if opts.dump_ir {
+    if opts.print_ir {
         printer::dump_decls(decls.clone());
         printer::dump_code(code.clone());
     }
 
-    let mut vm = VM::new(code, decls, jumptab, fntab);
+    println!("sif: starting vm...");
+    if opts.trace {
+        println!("sif: tracing vm execution!\n");
+    }
+
+    let mut vm = VM::new(code, decls, jumptab, fntab, opts.trace);
     vm.run();
 }
 

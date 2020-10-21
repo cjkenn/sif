@@ -76,6 +76,10 @@ pub struct VM {
     /// Current instruction being executed. This is an index into the program vector,
     /// initially set to the start of the code vector.
     ip: usize,
+
+    /// Whether or not to trace execution of the vm. This is dependent on flags passed in
+    /// from the driver.
+    trace: bool,
 }
 
 impl VM {
@@ -84,6 +88,7 @@ impl VM {
         d: Vec<Instr>,
         jt: HashMap<usize, usize>,
         ft: HashMap<String, usize>,
+        tr: bool,
     ) -> VM {
         // Init data register array
         let mut regs = Vec::with_capacity(DREG_MAX_LEN);
@@ -110,6 +115,7 @@ impl VM {
             fnst: Vec::new(),
             csi: code_start,
             ip: code_start,
+            trace: tr,
         }
     }
 
@@ -123,15 +129,18 @@ impl VM {
                     return;
                 }
             };
-
             self.ip = self.ip + 1;
         }
     }
 
     fn execute(&mut self) -> Result<(), RuntimeErr> {
         let idx = self.ip;
-        let curr = &self.prog[idx].op;
 
+        if self.trace {
+            self.trace_instr(&self.prog[idx]);
+        }
+
+        let curr = &self.prog[idx].op;
         match curr {
             Op::LoadC { dest, val } => {
                 let reg = &self.dregs[*dest];
@@ -533,5 +542,9 @@ impl VM {
 
     fn newerr(&self, ty: RuntimeErrTy) -> RuntimeErr {
         RuntimeErr::new(ty, self.ip + 1) // use ip+1 because linenums are 1-indexed
+    }
+
+    fn trace_instr(&self, instr: &Instr) {
+        println!("EXEC [code.{}]\t {:#}", instr.line, instr);
     }
 }

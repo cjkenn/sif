@@ -10,7 +10,7 @@ pub fn dump_decls(decls: Vec<Instr>) {
         return;
     }
 
-    let mut dble = String::from("SECTION_ decls\n");
+    let mut dble = String::from("SECTION_ decls.\n");
 
     dump(decls, &mut dble)
 }
@@ -21,7 +21,7 @@ pub fn dump_code(code: Vec<Instr>) {
         return;
     }
 
-    let mut dble = String::from("SECTION_ code\n");
+    let mut dble = String::from("SECTION_ code.\n");
     let currlbl = code[0].lbl.clone();
     dble.push_str(&format!("{}:\n", currlbl));
 
