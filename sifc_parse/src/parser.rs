@@ -918,6 +918,12 @@ impl<'l, 's> Parser<'l, 's> {
             }
             TokenTy::Period => {
                 self.expect(TokenTy::Period)?;
+                if !self.check_access_ty(TokenTy::Period, &ident_tkn.clone().unwrap()) {
+                    let err = self.add_error(ParseErrTy::InvalidAccess);
+                    self.consume();
+                    return Err(err);
+                }
+                self.check_access_ty(TokenTy::Period, &ident_tkn.clone().unwrap());
                 self.should_check_sym_tab = false;
                 let val = self.expr()?;
                 self.should_check_sym_tab = true;
@@ -937,9 +943,16 @@ impl<'l, 's> Parser<'l, 's> {
             }
             TokenTy::Arrow => {
                 self.expect(TokenTy::Arrow)?;
+                if !self.check_access_ty(TokenTy::Arrow, &ident_tkn.clone().unwrap()) {
+                    let err = self.add_error(ParseErrTy::InvalidAccess);
+                    self.consume();
+                    return Err(err);
+                }
+
                 self.should_check_sym_tab = false;
                 let rec_access = self.expr()?;
                 self.should_check_sym_tab = true;
+
                 return Ok(AstNode::RecordAccess {
                     record_tkn: ident_tkn.unwrap(),
                     index: Box::new(rec_access),
@@ -949,6 +962,44 @@ impl<'l, 's> Parser<'l, 's> {
         };
 
         Ok(ast)
+    }
+
+    // Check if we are using the correct access operator when we index into records or tables.
+    // This ensures that we don't successfully parse arrow access for tables and period access for
+    // records. While not necessary, this is a bit better than kicking the error up to runtime.
+    fn check_access_ty(&mut self, tkn_ty: TokenTy, ident_tkn: &Token) -> bool {
+        let ident_name = ident_tkn.get_name();
+        let maybe_ast = self.sym_tab.retrieve(&ident_name);
+        if maybe_ast.is_none() {
+            let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
+            self.consume();
+            return false;
+        }
+
+        let sym = match maybe_ast.unwrap() {
+            AstNode::VarDecl {
+                ident_tkn: _,
+                is_global: _,
+                rhs,
+            } => rhs.clone(),
+            _ => None,
+        };
+
+        if sym.is_none() {
+            return false;
+        }
+
+        match tkn_ty {
+            TokenTy::Period => match *sym.unwrap() {
+                AstNode::Table { .. } => true,
+                _ => false,
+            },
+            TokenTy::Arrow => match *sym.unwrap() {
+                AstNode::Record { .. } => true,
+                _ => false,
+            },
+            _ => false,
+        }
     }
 
     fn primary_expr(&mut self) -> Result<AstNode, ParseErr> {

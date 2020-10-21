@@ -185,3 +185,29 @@ fn array_decl() {
     let result = parser.parse();
     util::check(pctx, result);
 }
+
+#[test]
+fn table_access_invalid() {
+    let pctx = util::setup("table_access_invalid");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check(pctx, result);
+}
+
+#[test]
+fn record_access_invalid() {
+    let pctx = util::setup("record_access_invalid");
+
+    let infile = File::open(&pctx.path).unwrap();
+    let mut symtab = SymTab::new();
+    let mut lex = Lexer::new(infile);
+    let mut parser = Parser::new(&mut lex, &mut symtab);
+
+    let result = parser.parse();
+    util::check(pctx, result);
+}

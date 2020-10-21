@@ -68,6 +68,14 @@ fn get_test_path(test_name: &str) -> &str {
         ("table_decl", "./tests/input/table_decl.sif"),
         ("record_decl", "./tests/input/record_decl.sif"),
         ("array_decl", "./tests/input/array_decl.sif"),
+        (
+            "table_access_invalid",
+            "./tests/input/table_access_invalid.sif",
+        ),
+        (
+            "record_access_invalid",
+            "./tests/input/record_access_invalid.sif",
+        ),
     ]
     .iter()
     .cloned()

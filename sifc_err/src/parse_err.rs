@@ -14,6 +14,7 @@ pub enum ParseErrTy {
     UnassignedVar(String),
     ExpectedIdent(String),
     InvalidRec(String),
+    InvalidAccess,
 }
 
 #[derive(Debug, Clone)]
@@ -90,6 +91,10 @@ impl SifErr for ParseErr {
                 str_pos, found
             ),
             ParseErrTy::InvalidRec(ref name) => format!("{} Record {} is invalid", str_pos, name),
+            ParseErrTy::InvalidAccess => format!(
+                "{} Invalid access operator! Use '->' for records and '.' for tables",
+                str_pos
+            ),
         }
     }
 }
