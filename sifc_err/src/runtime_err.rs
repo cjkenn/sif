@@ -9,6 +9,7 @@ pub enum RuntimeErrTy {
     InvalidDecrTy,
     InvalidOp,
     InvalidJump,
+    RegNoContents(String),
     TyMismatch,
     NotAnArray(String),
     InvalidFnSym(String),
@@ -49,6 +50,9 @@ impl SifErr for RuntimeErr {
             RuntimeErrTy::InvalidOp => String::from("invalid or unknown instruction found"),
             RuntimeErrTy::InvalidJump => {
                 String::from("could not compute jump index from instruction")
+            }
+            RuntimeErrTy::RegNoContents(regname) => {
+                format!("cannot access '{}', register has no contents!", regname)
             }
             RuntimeErrTy::TyMismatch => {
                 String::from("operator cannot be applied to value in desired register")

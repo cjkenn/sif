@@ -1,8 +1,4 @@
-use crate::{
-    instr::Instr,
-    opc::{BinOpKind, JmpOpKind, Op, UnOpKind},
-    sifv::SifVal,
-};
+use crate::instr::Instr;
 
 /// Prints the declaration section to stdout.
 pub fn dump_decls(decls: Vec<Instr>) {
@@ -29,10 +25,7 @@ pub fn dump_code(code: Vec<Instr>) {
 }
 
 /// dump will parse the vector of instrs and transform it into typical
-/// asm-looking strings for printing. We choose not to override the Debug
-/// and Display traits as they can still be useful for pretty printing
-/// the actual structs and vectors at other times, as this method
-/// does not contain all the information held in those structs.
+/// asm-looking strings for printing.
 fn dump(ir: Vec<Instr>, dble: &mut String) {
     let mut currlbl = ir[0].lbl.clone();
     for i in ir {

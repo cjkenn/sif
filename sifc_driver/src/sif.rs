@@ -18,11 +18,7 @@ use sifc_parse::{
 
 use sifc_vm::vm::VM;
 
-use std::{
-    fs::File,
-    io,
-    time::{Duration, Instant},
-};
+use std::{fs::File, io, time::Instant};
 
 #[derive(Clap)]
 #[clap(version = "1.0")]

@@ -408,8 +408,12 @@ impl VM {
         let mb_contents1 = src1reg.borrow().cont.clone();
         let mb_contents2 = src2reg.borrow().cont.clone();
 
-        if mb_contents1.is_none() || mb_contents2.is_none() {
-            return Err(self.newerr(RuntimeErrTy::TyMismatch));
+        if mb_contents1.is_none() {
+            return Err(self.newerr(RuntimeErrTy::RegNoContents(self.reg_str(src1))));
+        }
+
+        if mb_contents2.is_none() {
+            return Err(self.newerr(RuntimeErrTy::RegNoContents(self.reg_str(src2))));
         }
 
         let contents1 = mb_contents1.unwrap();
@@ -539,10 +543,15 @@ impl VM {
     }
 
     fn newerr(&self, ty: RuntimeErrTy) -> RuntimeErr {
-        RuntimeErr::new(ty, self.ip + 1) // use ip+1 because linenums are 1-indexed
+        // TODO: instruction count doesnt work sometimes if error is in decl section
+        RuntimeErr::new(ty, self.ip + 1 - self.csi)
     }
 
     fn trace_instr(&self, instr: &Instr) {
         println!("EXEC [code.{}]\t {:#}", instr.line, instr);
+    }
+
+    fn reg_str(&self, reg: usize) -> String {
+        format!("r{}", reg)
     }
 }
