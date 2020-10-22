@@ -125,6 +125,15 @@ impl VM {
         Ok(())
     }
 
+    pub fn inspect_dreg(&self, idx: usize) -> Option<SifVal> {
+        let reg = &self.dregs[idx];
+        reg.borrow().cont.clone()
+    }
+
+    pub fn inspect_heap(&self, name: String) -> Option<&SifVal> {
+        self.heap.get(&name)
+    }
+
     fn execute(&mut self) -> Result<(), RuntimeErr> {
         let idx = self.ip;
 
@@ -134,62 +143,16 @@ impl VM {
 
         let curr = &self.prog[idx].op;
         match curr {
-            Op::LoadC { dest, val } => {
-                let reg = &self.dregs[*dest];
-                reg.borrow_mut().cont = Some(val.clone());
-            }
-            Op::LoadN { dest, name } => {
-                let reg = &self.dregs[*dest];
-                match self.heap.get(name) {
-                    Some(n) => reg.borrow_mut().cont = Some(n.clone()),
-                    None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
-                };
-            }
-            Op::MvFRR { dest } => {
-                let reg = &self.dregs[*dest];
-                let contents = &self.frr.borrow().cont;
-                reg.borrow_mut().cont = contents.clone();
-            }
-            Op::Mv { src, dest } => {
-                let srcreg = &self.dregs[*src];
-                let destreg = &self.dregs[*dest];
-                let to_move = &srcreg.borrow().cont;
-                destreg.borrow_mut().cont = to_move.clone();
-            }
-            Op::LoadArrs { name, dest } => {
-                let reg = &self.dregs[*dest];
-                match self.heap.get(name) {
-                    Some(n) => match n {
-                        SifVal::Arr(v) => reg.borrow_mut().cont = Some(SifVal::Num(v.len() as f64)),
-                        _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
-                    },
-                    None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
-                };
-            }
+            Op::LoadC { dest, val } => self.loadc(*dest, val)?,
+            Op::LoadN { dest, name } => self.loadn(*dest, name)?,
+            Op::MvFRR { dest } => self.mvfrr(*dest)?,
+            Op::Mv { src, dest } => self.mv(*src, *dest)?,
+            Op::LoadArrs { name, dest } => self.loadarrs(name, *dest)?,
             Op::LoadArrv {
                 name,
                 idx_reg,
                 dest,
-            } => {
-                let reg = &self.dregs[*dest];
-                let idx_sv = &self.dregs[*idx_reg].borrow().cont;
-                if idx_sv.is_none() {
-                    return Err(self.newerr(RuntimeErrTy::TyMismatch));
-                }
-
-                let to_idx = match &idx_sv.as_ref().unwrap() {
-                    SifVal::Num(f) => *f as usize,
-                    _ => panic!("invalid array index"),
-                };
-
-                match self.heap.get(name) {
-                    Some(n) => match n {
-                        SifVal::Arr(v) => reg.borrow_mut().cont = Some(v[to_idx].clone()),
-                        _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
-                    },
-                    None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
-                };
-            }
+            } => self.loadarrv(name, *idx_reg, *dest)?,
             Op::StoreC { name, val } => {
                 self.heap.insert(name.to_string(), val.clone());
             }
@@ -348,11 +311,82 @@ impl VM {
                     None => return Err(self.newerr(RuntimeErrTy::InvalidName(tabname.clone()))),
                 };
             }
-            Op::Nop => {}
             Op::Stop => {
                 eprintln!("sif: stop instruction found, halting execution");
                 return Ok(());
             }
+            Op::Nop => {}
+        };
+
+        Ok(())
+    }
+
+    fn loadc(&self, dest: usize, val: &SifVal) -> Result<(), RuntimeErr> {
+        let reg = &self.dregs[dest];
+        reg.borrow_mut().cont = Some(val.clone());
+        Ok(())
+    }
+
+    fn loadn(&self, dest: usize, name: &String) -> Result<(), RuntimeErr> {
+        let reg = &self.dregs[dest];
+        match self.heap.get(name) {
+            Some(n) => reg.borrow_mut().cont = Some(n.clone()),
+            None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
+        };
+        Ok(())
+    }
+
+    fn mvfrr(&self, dest: usize) -> Result<(), RuntimeErr> {
+        let reg = &self.dregs[dest];
+        let contents = &self.frr.borrow().cont;
+        reg.borrow_mut().cont = contents.clone();
+        Ok(())
+    }
+
+    fn mv(&self, src: usize, dest: usize) -> Result<(), RuntimeErr> {
+        let srcreg = &self.dregs[src];
+        let destreg = &self.dregs[dest];
+        let to_move = &srcreg.borrow().cont;
+        destreg.borrow_mut().cont = to_move.clone();
+        Ok(())
+    }
+
+    fn loadarrs(&self, name: &String, dest: usize) -> Result<(), RuntimeErr> {
+        let reg = &self.dregs[dest];
+        match self.heap.get(name) {
+            Some(n) => match n {
+                SifVal::Arr(v) => reg.borrow_mut().cont = Some(SifVal::Num(v.len() as f64)),
+                _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
+            },
+            None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
+        };
+        Ok(())
+    }
+
+    fn loadarrv(&self, name: &String, idx_reg: usize, dest: usize) -> Result<(), RuntimeErr> {
+        let reg = &self.dregs[dest];
+        let idx_sv = &self.dregs[idx_reg].borrow().cont;
+        if idx_sv.is_none() {
+            return Err(self.newerr(RuntimeErrTy::TyMismatch));
+        }
+
+        let maybe_to_idx = match &idx_sv.as_ref().unwrap() {
+            SifVal::Num(f) => Some(*f as usize),
+            _ => None,
+        };
+
+        if maybe_to_idx.is_none() {
+            return Err(self.newerr(RuntimeErrTy::TyMismatch));
+        }
+
+        let to_idx = maybe_to_idx.unwrap();
+
+        match self.heap.get(name) {
+            Some(n) => match n {
+                SifVal::Arr(v) => reg.borrow_mut().cont = Some(v[to_idx].clone()),
+                _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
+            },
+            None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
         };
 
         Ok(())
