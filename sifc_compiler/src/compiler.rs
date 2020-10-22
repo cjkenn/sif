@@ -172,73 +172,6 @@ impl<'c> Compiler<'c> {
         }
     }
 
-    fn ret(&mut self, ret_expr: &Option<Box<AstNode>>) {
-        match ret_expr {
-            Some(exp) => {
-                self.expr(exp);
-                // return moves the value from last reg into the frr register
-                let op = Op::FnRetR {
-                    src: self.prevreg(),
-                };
-                self.push_op(op);
-            }
-            None => self.push_op(Op::FnRet),
-        };
-    }
-
-    fn fndecl(&mut self, ident_tkn: &Token, fn_params: &AstNode, fn_body: &AstNode) {
-        let fn_name = ident_tkn.get_name();
-        let mut param_names = Vec::new();
-        let mut stkops = Vec::new();
-
-        match fn_params {
-            AstNode::FnParams { params } => {
-                for p in params {
-                    match p {
-                        AstNode::PrimaryExpr { tkn } => {
-                            // TODO: probably don't need to pop and then store params
-                            // here for subsequent loads. We should just refer to the proper
-                            // reg instead (this could be done in an optimizer)
-                            param_names.push(tkn.get_name());
-                            let stkop = Op::FnStackPop {
-                                dest: self.nextreg(),
-                            };
-                            stkops.push(stkop);
-                            let strop = Op::StoreR {
-                                src: self.prevreg(),
-                                name: tkn.get_name(),
-                            };
-                            stkops.push(strop);
-                        }
-                        _ => {}
-                    }
-                }
-            }
-            _ => {}
-        };
-
-        // set our section to the decl section for function declaration instructions.
-        self.decl_scope = true;
-
-        self.push_op(Op::Fn {
-            name: fn_name,
-            params: param_names,
-        });
-
-        // Add the stack pop operations for param handling.
-        for op in stkops {
-            self.push_op(op);
-        }
-
-        self.newlbl();
-        // TODO: param scoping - need to be able to access names in vm using the stack
-        self.block(fn_body);
-        self.newlbl();
-
-        // go back to code section.
-        self.decl_scope = false;
-    }
-
     pub fn lblcnt(&self) -> usize {
         self.lblcnt
     }
@@ -424,6 +357,73 @@ impl<'c> Compiler<'c> {
         self.ri - 1
     }
 
+    fn ret(&mut self, ret_expr: &Option<Box<AstNode>>) {
+        match ret_expr {
+            Some(exp) => {
+                self.expr(exp);
+                // return moves the value from last reg into the frr register
+                let op = Op::FnRetR {
+                    src: self.prevreg(),
+                };
+                self.push_op(op);
+            }
+            None => self.push_op(Op::FnRet),
+        };
+    }
+
+    fn fndecl(&mut self, ident_tkn: &Token, fn_params: &AstNode, fn_body: &AstNode) {
+        let fn_name = ident_tkn.get_name();
+        let mut param_names = Vec::new();
+        let mut stkops = Vec::new();
+
+        match fn_params {
+            AstNode::FnParams { params } => {
+                for p in params {
+                    match p {
+                        AstNode::PrimaryExpr { tkn } => {
+                            // TODO: probably don't need to pop and then store params
+                            // here for subsequent loads. We should just refer to the proper
+                            // reg instead (this could be done in an optimizer)
+                            param_names.push(tkn.get_name());
+                            let stkop = Op::FnStackPop {
+                                dest: self.nextreg(),
+                            };
+                            stkops.push(stkop);
+                            let strop = Op::StoreR {
+                                src: self.prevreg(),
+                                name: tkn.get_name(),
+                            };
+                            stkops.push(strop);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        };
+
+        // set our section to the decl section for function declaration instructions.
+        self.decl_scope = true;
+
+        self.push_op(Op::Fn {
+            name: fn_name,
+            params: param_names,
+        });
+
+        // Add the stack pop operations for param handling.
+        for op in stkops {
+            self.push_op(op);
+        }
+
+        self.newlbl();
+        // TODO: param scoping - need to be able to access names in vm using the stack
+        self.block(fn_body);
+        self.newlbl();
+
+        // go back to code section.
+        self.decl_scope = false;
+    }
+
     fn vardecl(&mut self, tkn: &Token, rhs: Option<Box<AstNode>>) {
         let st_name = tkn.get_name();
         if rhs.is_none() {
@@ -443,55 +443,11 @@ impl<'c> Compiler<'c> {
 
     pub fn assign(&mut self, st_name: String, rhs: &AstNode) {
         match rhs {
-            AstNode::PrimaryExpr { tkn } => {
-                match &tkn.ty {
-                    TokenTy::Val(v) => {
-                        let op = Op::StoreC {
-                            val: SifVal::Num(*v),
-                            name: st_name,
-                        };
-                        self.push_op(op);
-                    }
-                    TokenTy::Str(s) => {
-                        let op = Op::StoreC {
-                            val: SifVal::Str(s.clone()),
-                            name: st_name,
-                        };
-                        self.push_op(op);
-                    }
-                    TokenTy::Ident(i) => {
-                        let op = Op::StoreN {
-                            srcname: i.clone(),
-                            destname: st_name,
-                        };
-                        self.push_op(op);
-                    }
-                    _ => {}
-                };
-            }
+            AstNode::PrimaryExpr { tkn } => self.match_primary_assign(&st_name, &tkn),
             AstNode::Table {
                 ident_tkn: _,
                 items,
-            } => {
-                self.push_op(Op::StoreC {
-                    val: SifVal::Tab(HashMap::new()),
-                    name: st_name.clone(),
-                });
-                match &**items {
-                    AstNode::ItemList { items } => {
-                        for (k, v) in items.iter() {
-                            self.expr(v);
-                            let tabop = Op::TblI {
-                                tabname: st_name.clone(),
-                                key: k.clone(),
-                                src: self.prevreg(),
-                            };
-                            self.push_op(tabop);
-                        }
-                    }
-                    _ => {}
-                };
-            }
+            } => self.match_table_assign(&st_name, items),
             AstNode::Array {
                 ident_tkn, body, ..
             } => self.arraydecl(ident_tkn, body),
@@ -499,30 +455,7 @@ impl<'c> Compiler<'c> {
             AstNode::FnCallExpr {
                 fn_ident_tkn,
                 fn_params,
-            } => {
-                for param in fn_params {
-                    self.expr(param);
-                    let param_op = Op::FnStackPush {
-                        src: self.prevreg(),
-                    };
-                    self.push_op(param_op)
-                }
-
-                let op = Op::Call {
-                    name: fn_ident_tkn.get_name(),
-                    param_count: fn_params.len(),
-                };
-                self.push_op(op);
-                let frrop = Op::MvFRR {
-                    dest: self.nextreg(),
-                };
-                self.push_op(frrop);
-                let strop = Op::StoreR {
-                    src: self.prevreg(),
-                    name: st_name.clone(),
-                };
-                self.push_op(strop);
-            }
+            } => self.fn_call_assign(&st_name, &fn_ident_tkn, fn_params),
             _ => {
                 // We assume that if we aren't assigning a declaration to a constant, we are using an
                 // expression. We store based on the correct register from the expression.
@@ -534,5 +467,83 @@ impl<'c> Compiler<'c> {
                 self.push_op(op);
             }
         };
+    }
+
+    fn match_primary_assign(&mut self, st_name: &String, tkn: &Token) {
+        match &tkn.ty {
+            TokenTy::Val(v) => {
+                self.push_op(Op::StoreC {
+                    val: SifVal::Num(*v),
+                    name: st_name.clone(),
+                });
+            }
+            TokenTy::Str(s) => {
+                self.push_op(Op::StoreC {
+                    val: SifVal::Str(s.clone()),
+                    name: st_name.clone(),
+                });
+            }
+            TokenTy::Ident(i) => {
+                self.push_op(Op::StoreN {
+                    srcname: i.clone(),
+                    destname: st_name.clone(),
+                });
+            }
+            _ => {}
+        };
+    }
+
+    fn match_table_assign(&mut self, st_name: &String, items: &AstNode) {
+        self.push_op(Op::StoreC {
+            val: SifVal::Tab(HashMap::new()),
+            name: st_name.clone(),
+        });
+
+        match items {
+            AstNode::ItemList { items } => {
+                for (k, v) in items.iter() {
+                    self.expr(v);
+                    let tabop = Op::TblI {
+                        tabname: st_name.clone(),
+                        key: k.clone(),
+                        src: self.prevreg(),
+                    };
+                    self.push_op(tabop);
+                }
+            }
+            _ => {}
+        };
+    }
+
+    fn fn_call_assign(&mut self, st_name: &String, fn_ident_tkn: &Token, fn_params: &Vec<AstNode>) {
+        // Generate instructions for pushing params on to the stack, which the function
+        // call will expect.
+        for param in fn_params {
+            self.expr(param);
+            let param_op = Op::FnStackPush {
+                src: self.prevreg(),
+            };
+            self.push_op(param_op)
+        }
+
+        // Push thbe actual call instruction.
+        self.push_op(Op::Call {
+            name: fn_ident_tkn.get_name(),
+            param_count: fn_params.len(),
+        });
+
+        // After the call returns, move the frr register to the next
+        // available reg, and then store that register in the variable
+        // being assigned to.
+        let frrop = Op::MvFRR {
+            dest: self.nextreg(),
+        };
+
+        self.push_op(frrop);
+        let strop = Op::StoreR {
+            src: self.prevreg(),
+            name: st_name.clone(),
+        };
+        self.push_op(strop);
     }
 }

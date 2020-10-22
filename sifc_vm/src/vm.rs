@@ -6,10 +6,7 @@ use sifc_compiler::{
     sifv::SifVal,
 };
 
-use sifc_err::{
-    err::SifErr,
-    runtime_err::{RuntimeErr, RuntimeErrTy},
-};
+use sifc_err::runtime_err::{RuntimeErr, RuntimeErrTy};
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
