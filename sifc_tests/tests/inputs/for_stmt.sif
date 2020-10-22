@@ -1,0 +1,6 @@
+var q = [1,2,3];
+
+for idx, val in q {
+  var y;
+  var x = idx + 1;
+}

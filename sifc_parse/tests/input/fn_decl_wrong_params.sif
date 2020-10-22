@@ -1,4 +1,4 @@
-# expect::fail::7::20
+# expect::fail
 
 fn times(x, y) {
    return x * y;

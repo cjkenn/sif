@@ -14,12 +14,4 @@ impl DReg {
             cont: None,
         }
     }
-
-    pub fn from_cont(n: String, c: Option<SifVal>) -> DReg {
-        DReg { name: n, cont: c }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.cont.is_none()
-    }
 }

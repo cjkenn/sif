@@ -1,6 +1,6 @@
 use crate::sifv::SifVal;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BinOpKind {
     Add,
     Sub,
@@ -18,13 +18,13 @@ pub enum BinOpKind {
     Lor,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum UnOpKind {
     Lneg,
     Nneg,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum JmpOpKind {
     Jmpt,
     Jmpf,
@@ -53,7 +53,7 @@ pub enum JmpOpKind {
 ///
 /// str r2 y
 /// stores the value located in r2 into the address for "y"
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Op {
     /// Binary operator with 2 register sources
     Binary {

@@ -1,4 +1,4 @@
-# expect::fail::7::20
+# expect::fail
 
 fn double(x) {
    return x * 2;

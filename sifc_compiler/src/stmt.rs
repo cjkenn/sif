@@ -84,8 +84,8 @@ impl<'c> Compiler<'c> {
         if else_stmts.len() != 0 {
             self.newlbl();
             self.blocks(else_stmts);
+            self.newlbl();
         }
-        self.newlbl();
     }
 
     /// Generates instructions for an elif node. This takes in two jump label indices:

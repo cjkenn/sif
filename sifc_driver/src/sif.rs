@@ -115,7 +115,15 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
 
     // TODO: just pass compileresult to vm?
     let mut vm = VM::new(code, decls, program, jumptab, fntab, opts.trace);
-    vm.run();
+    let vm_result = vm.run();
+    match vm_result {
+        Ok(()) => {}
+        Err(e) => {
+            e.emit();
+            eprintln!("sif: exiting due to errors");
+            return;
+        }
+    }
 }
 
 fn repl() {

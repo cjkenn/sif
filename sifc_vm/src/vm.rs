@@ -117,18 +117,12 @@ impl VM {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> Result<(), RuntimeErr> {
         while self.ip < self.prog.len() {
-            match self.execute() {
-                Ok(()) => {}
-                Err(e) => {
-                    e.emit();
-                    eprintln!("sif: exiting due to errors");
-                    return;
-                }
-            };
+            self.execute()?;
             self.ip = self.ip + 1;
         }
+        Ok(())
     }
 
     fn execute(&mut self) -> Result<(), RuntimeErr> {

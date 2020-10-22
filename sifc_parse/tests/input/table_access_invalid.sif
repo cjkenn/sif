@@ -1,4 +1,4 @@
-# expect::fail::7::12
+# expect::fail
 
 var tab = [[
   z => 1,

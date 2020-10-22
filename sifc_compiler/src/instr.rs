@@ -4,7 +4,7 @@ use crate::{
 };
 use std::fmt;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Instr {
     pub lbl: String,
     pub lblidx: usize,

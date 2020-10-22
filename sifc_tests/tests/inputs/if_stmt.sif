@@ -1,0 +1,31 @@
+if true && false {
+  var x = 1;
+} else {
+  var x = 2;
+}
+
+if 1 < 2 {
+  var x = 1;
+} elif 2 < 3 {
+  var x = 2;
+} else {
+  var x = 3;
+}
+
+var y = 3;
+
+if y > 10 {
+  var q = 1;
+} else {
+  var z = 1;
+}
+
+var z = 2;
+
+if z >= y {
+  var g = 1;
+} elif z < y {
+  var g = 2;
+} elif z == y {
+  var g = 3;
+}

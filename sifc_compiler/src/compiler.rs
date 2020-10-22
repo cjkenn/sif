@@ -324,7 +324,7 @@ impl<'c> Compiler<'c> {
 
                 let op = Op::Call {
                     name: fn_ident_tkn.get_name(),
-                    param_count: fn_params.len(), // TODO: might be wrong
+                    param_count: fn_params.len(),
                 };
                 self.push_op(op);
                 let frrop = Op::MvFRR {
