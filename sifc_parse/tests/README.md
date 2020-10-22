@@ -11,7 +11,7 @@ whether the parser should pass or fail. The syntax of the expectations string is
 # expect::pass | fail
 ```
 
-The `setiup` method opens the input file at the path provided, parses the expectations and returns
+The `setup` method opens the input file at the path provided, parses the expectations and returns
 a `ParseTestCtx` struct to set up the test.
 
 ## Adding a new test
