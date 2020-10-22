@@ -4,5 +4,6 @@ members = [
   "sifc_compiler",
   "sifc_vm",
   "sifc_driver",
-  "sifc_err"
+  "sifc_err",
+  "sifc_tests",
 ]

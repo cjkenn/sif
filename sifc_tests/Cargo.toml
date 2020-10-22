@@ -1,15 +1,15 @@
 [package]
-name = "sifc_driver"
+name = "sifc_tests"
 version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-clap = "3.0.0-beta.1"
+sifc_compiler = { path = "../sifc_compiler" }
 sifc_err = { path = "../sifc_err" }
 sifc_parse = { path = "../sifc_parse" }
-sifc_compiler = { path = "../sifc_compiler" }
 sifc_vm = { path = "../sifc_vm" }
 
-[[bin]]
-name = "sif"
-path = "./src/sif.rs"
+[[test]]
+name = "integration_tests"
+path = "tests/lib.rs"
+harness = true
