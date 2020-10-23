@@ -10,8 +10,6 @@ use sifc_err::{
     parse_err::{ParseErr, ParseErrTy},
 };
 
-use sifc_std;
-
 use std::collections::HashMap;
 
 const FN_PARAM_MAX_LEN: usize = 64;
@@ -822,7 +820,7 @@ impl<'l, 's> Parser<'l, 's> {
 
                 let ident_name = ident_tkn.clone().unwrap().get_name();
                 let maybe_ast = self.sym_tab.retrieve(&ident_name);
-                let is_std = sifc_std::is_std(&ident_name);
+                let is_std = crate::reserved::is_std_lib_fn(&ident_name);
                 if maybe_ast.is_none() {
                     if !is_std {
                         let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
@@ -899,7 +897,7 @@ impl<'l, 's> Parser<'l, 's> {
                 if self.should_check_sym_tab {
                     let maybe_ast = self.sym_tab.retrieve(ident_name);
                     if maybe_ast.is_none() {
-                        if !sifc_std::is_std(ident_name) {
+                        if !crate::reserved::is_std_lib_fn(ident_name) {
                             let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
                             self.consume();
                             return Err(err);

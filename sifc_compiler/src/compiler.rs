@@ -543,7 +543,7 @@ impl<'c> Compiler<'c> {
             self.push_op(param_op)
         }
 
-        // Push thbe actual call instruction.
+        // Push the actual call instruction.
         self.push_op(Op::Call {
             name: fn_ident_tkn.get_name(),
             param_count: fn_params.len(),
