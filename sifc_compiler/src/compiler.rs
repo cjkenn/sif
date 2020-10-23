@@ -246,6 +246,7 @@ impl<'c> Compiler<'c> {
             AstNode::FnCallExpr {
                 fn_ident_tkn,
                 fn_params,
+                is_std,
             } => {
                 for param in fn_params {
                     self.expr(param);
@@ -254,12 +255,21 @@ impl<'c> Compiler<'c> {
                     };
                     self.push_op(param_op)
                 }
-
-                let op = Op::Call {
-                    name: fn_ident_tkn.get_name(),
-                    param_count: fn_params.len(),
+                match is_std {
+                    true => {
+                        self.push_op(Op::StdCall {
+                            name: fn_ident_tkn.get_name(),
+                            param_count: fn_params.len(),
+                        });
+                    }
+                    false => {
+                        self.push_op(Op::Call {
+                            name: fn_ident_tkn.get_name(),
+                            param_count: fn_params.len(),
+                        });
+                    }
                 };
-                self.push_op(op);
+
                 let frrop = Op::MvFRR {
                     dest: self.nextreg(),
                 };
@@ -455,7 +465,8 @@ impl<'c> Compiler<'c> {
             AstNode::FnCallExpr {
                 fn_ident_tkn,
                 fn_params,
-            } => self.fn_call_assign(&st_name, &fn_ident_tkn, fn_params),
+                is_std,
+            } => self.fn_call_assign(&st_name, &fn_ident_tkn, fn_params, *is_std),
             _ => {
                 // We assume that if we aren't assigning a declaration to a constant, we are using an
                 // expression. We store based on the correct register from the expression.
@@ -515,7 +526,13 @@ impl<'c> Compiler<'c> {
         };
     }
 
-    fn fn_call_assign(&mut self, st_name: &String, fn_ident_tkn: &Token, fn_params: &Vec<AstNode>) {
+    fn fn_call_assign(
+        &mut self,
+        st_name: &String,
+        fn_ident_tkn: &Token,
+        fn_params: &Vec<AstNode>,
+        is_std: bool,
+    ) {
         // Generate instructions for pushing params on to the stack, which the function
         // call will expect.
         for param in fn_params {

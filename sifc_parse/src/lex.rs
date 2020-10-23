@@ -120,6 +120,7 @@ impl Lexer {
             '%' => self.consume(TokenTy::Percent),
             '"' => self.lex_str(),
             '-' => self.consume(TokenTy::Minus),
+            '@' => self.consume(TokenTy::At),
             '/' => {
                 let nextch = self.peek_char();
                 match nextch {

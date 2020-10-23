@@ -96,6 +96,7 @@ pub enum AstNode {
     FnCallExpr {
         fn_ident_tkn: Token,
         fn_params: Vec<AstNode>,
+        is_std: bool,
     },
 
     VarAssignExpr {
@@ -133,6 +134,7 @@ impl AstNode {
             AstNode::FnCallExpr {
                 fn_ident_tkn: _,
                 fn_params,
+                ..
             } => fn_params.clone(),
             _ => Vec::new(),
         }

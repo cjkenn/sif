@@ -173,6 +173,12 @@ pub enum Op {
         param_count: usize,
     },
 
+    /// Std lib function call
+    StdCall {
+        name: String,
+        param_count: usize,
+    },
+
     /// When we have no expression to return, we simply jump to the appropriate
     /// code location.
     FnRet,

@@ -145,6 +145,10 @@ impl fmt::Display for Instr {
                 let line = format!("call {} ", name);
                 initial.push_str(&line);
             }
+            Op::StdCall { name, .. } => {
+                let line = format!("stdcall {} ", name);
+                initial.push_str(&line);
+            }
             Op::FnStackPush { src } => {
                 let rstr = reg_str(src);
                 let line = format!("fstpush {} ", rstr);
@@ -315,6 +319,10 @@ impl fmt::Debug for Instr {
             }
             Op::Call { name, .. } => {
                 let line = format!("\t call {}\t ; {}, {}\n", name, self.line, self.lbl);
+                initial.push_str(&line);
+            }
+            Op::StdCall { name, .. } => {
+                let line = format!("\t stdcall {}\t ; {}, {}\n", name, self.line, self.lbl);
                 initial.push_str(&line);
             }
             Op::FnStackPush { src } => {

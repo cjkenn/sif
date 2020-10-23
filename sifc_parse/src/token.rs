@@ -22,6 +22,7 @@ pub enum TokenTy {
     Percent,
     Amp,
     Pipe,
+    At,
 
     // Multi character tokens
     EqEq,
@@ -52,6 +53,7 @@ pub enum TokenTy {
     In,
     True,
     False,
+    Std,
 
     // Special type indicating unexpected EOF during lexing/parsing
     Eof,
@@ -139,6 +141,7 @@ impl fmt::Display for TokenTy {
             TokenTy::Percent => "%".to_string(),
             TokenTy::Amp => "&".to_string(),
             TokenTy::Pipe => "|".to_string(),
+            TokenTy::At => "@".to_string(),
 
             TokenTy::EqEq => "==".to_string(),
             TokenTy::LtEq => "<=".to_string(),
@@ -166,6 +169,7 @@ impl fmt::Display for TokenTy {
             TokenTy::In => "in".to_string(),
             TokenTy::True => "true".to_string(),
             TokenTy::False => "false".to_string(),
+            TokenTy::Std => "std".to_string(),
 
             TokenTy::Eof => "EOF".to_string(),
         };

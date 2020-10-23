@@ -5,3 +5,4 @@ edition = "2018"
 
 [dependencies]
 sifc_err = { path = "../sifc_err" }
+sifc_std = { path = "../sifc_std" }

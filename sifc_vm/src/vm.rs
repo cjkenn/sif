@@ -268,6 +268,14 @@ impl VM {
                 self.cdr = self.ip;
                 self.ip = *loc;
             }
+            Op::StdCall {
+                name,
+                param_count: _,
+            } => {
+                // pop sifvals off stack up to param count - store in vector?
+                // look up fn name in lib table and run function with params
+                unimplemented!("need to implement std lib fn pointers!");
+            }
             Op::FnStackPush { src } => {
                 let srcreg = &self.dregs[*src];
                 let to_push = srcreg.borrow().cont.clone();

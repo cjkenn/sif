@@ -10,6 +10,8 @@ use sifc_err::{
     parse_err::{ParseErr, ParseErrTy},
 };
 
+use sifc_std;
+
 use std::collections::HashMap;
 
 const FN_PARAM_MAX_LEN: usize = 64;
@@ -820,33 +822,41 @@ impl<'l, 's> Parser<'l, 's> {
 
                 let ident_name = ident_tkn.clone().unwrap().get_name();
                 let maybe_ast = self.sym_tab.retrieve(&ident_name);
+                let is_std = sifc_std::is_std(&ident_name);
                 if maybe_ast.is_none() {
-                    let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
-                    self.consume();
-                    return Err(err);
+                    if !is_std {
+                        let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
+                        self.consume();
+                        return Err(err);
+                    }
                 }
 
-                let expected_param_len = match maybe_ast.unwrap() {
-                    AstNode::FnDecl {
-                        ident_tkn: _,
-                        fn_params,
-                        ..
-                    } => match *fn_params {
-                        AstNode::FnParams { params } => params.len(),
+                if !is_std {
+                    let expected_param_len = match maybe_ast.unwrap() {
+                        AstNode::FnDecl {
+                            ident_tkn: _,
+                            fn_params,
+                            ..
+                        } => match *fn_params {
+                            AstNode::FnParams { params } => params.len(),
+                            _ => 0,
+                        },
                         _ => 0,
-                    },
-                    _ => 0,
-                };
+                    };
 
-                if params.len() != expected_param_len {
-                    let err = self
-                        .add_error(ParseErrTy::WrongFnParmCnt(expected_param_len, params.len()));
-                    return Err(err);
+                    if params.len() != expected_param_len {
+                        let err = self.add_error(ParseErrTy::WrongFnParmCnt(
+                            expected_param_len,
+                            params.len(),
+                        ));
+                        return Err(err);
+                    }
                 }
 
                 return Ok(AstNode::FnCallExpr {
                     fn_ident_tkn: ident_tkn.unwrap(),
                     fn_params: params,
+                    is_std: is_std,
                 });
             }
             TokenTy::Period => {
@@ -889,19 +899,25 @@ impl<'l, 's> Parser<'l, 's> {
                 if self.should_check_sym_tab {
                     let maybe_ast = self.sym_tab.retrieve(ident_name);
                     if maybe_ast.is_none() {
-                        let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
-                        self.consume();
-                        return Err(err);
+                        if !sifc_std::is_std(ident_name) {
+                            let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
+                            self.consume();
+                            return Err(err);
+                        }
                     }
                 }
 
-                let ast = Ok(AstNode::PrimaryExpr { tkn: ident_tkn });
+                let ast = Ok(AstNode::PrimaryExpr {
+                    tkn: ident_tkn.clone(),
+                });
 
                 self.consume();
                 ast
             }
-            TokenTy::LeftParen => {
-                return self.group_expr();
+            TokenTy::LeftParen => self.group_expr(),
+            TokenTy::At => {
+                self.expect(TokenTy::At)?;
+                return self.fn_call_expr();
             }
             _ => {
                 let ty_str = self.curr_tkn.ty.to_string();
