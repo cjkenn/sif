@@ -28,15 +28,11 @@ fn load<'a>() -> HashMap<String, &'a fn(Vec<SifVal>)> {
     std_map
 }
 
+/// Implements the print function inside the std lib. This uses the
+/// fmt::Display formatter implemented by SifVal.
+/// @print(value)
 fn std_print(params: Vec<SifVal>) {
     assert!(params.len() == 1);
     let val = &params[0];
-    match val {
-        SifVal::Num(f) => println!("{}", f),
-        SifVal::Str(s) => println!("{}", s),
-        SifVal::Bl(b) => println!("{}", b),
-        SifVal::Arr(a) => println!("{:?}", a),
-        SifVal::Tab(hm) => println!("{:?}", hm),
-        SifVal::Null => println!("null"),
-    };
+    println!("{:#}", val);
 }
