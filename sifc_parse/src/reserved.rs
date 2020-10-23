@@ -16,7 +16,6 @@ pub fn get_reserved_words() -> HashMap<String, TokenTy> {
         (String::from("in"), TokenTy::In),
         (String::from("true"), TokenTy::True),
         (String::from("false"), TokenTy::False),
-        (String::from("std"), TokenTy::Std),
     ]
     .iter()
     .cloned()

@@ -15,7 +15,7 @@ pub struct ParseTestCtx {
 }
 
 fn setup(test_name: &str) -> ParseTestCtx {
-    let path = format!("./tests/input/{}.sif", test_name);
+    let path = format!("./tests/parse_input/{}.sif", test_name);
     let expfile = File::open(&path).unwrap();
     let exp = BufReader::new(expfile).lines().next().unwrap().unwrap();
 
@@ -78,7 +78,7 @@ fn check(pctx: ParseTestCtx, result: ParserResult) {
     }
 }
 
-macro_rules! test_parse {
+macro_rules! parser_test {
     ($test_name:ident, $file_name:expr) => {
         #[test]
         fn $test_name() {
@@ -95,17 +95,17 @@ macro_rules! test_parse {
     };
 }
 
-test_parse!(if_stmt, "if_stmt");
-test_parse!(for_stmt, "for_stmt");
-test_parse!(var_decl, "var_decl");
-test_parse!(var_decl_invalid, "var_decl_invalid");
-test_parse!(fn_decl_valid, "fn_decl_valid");
-test_parse!(fn_decl_invalid, "fn_decl_invalid");
-test_parse!(fn_decl_wrong_params, "fn_decl_wrong_params");
-test_parse!(fn_w_ret_stmt, "fn_w_ret_stmt");
-test_parse!(fn_call, "fn_call");
-test_parse!(fn_call_wrong_params, "fn_call_wrong_params");
-test_parse!(exprs, "exprs");
-test_parse!(table_decl, "table_decl");
-test_parse!(array_decl, "array_decl");
-test_parse!(table_access_invalid, "table_access_invalid");
+parser_test!(if_stmt, "if_stmt");
+parser_test!(for_stmt, "for_stmt");
+parser_test!(var_decl, "var_decl");
+parser_test!(var_decl_invalid, "var_decl_invalid");
+parser_test!(fn_decl_valid, "fn_decl_valid");
+parser_test!(fn_decl_invalid, "fn_decl_invalid");
+parser_test!(fn_decl_wrong_params, "fn_decl_wrong_params");
+parser_test!(fn_w_ret_stmt, "fn_w_ret_stmt");
+parser_test!(fn_call, "fn_call");
+parser_test!(fn_call_wrong_params, "fn_call_wrong_params");
+parser_test!(exprs, "exprs");
+parser_test!(table_decl, "table_decl");
+parser_test!(array_decl, "array_decl");
+parser_test!(table_access_invalid, "table_access_invalid");
