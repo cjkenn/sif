@@ -6,6 +6,8 @@ use sifc_compiler::{
     sifv::SifVal,
 };
 
+use sifc_std::Std;
+
 use sifc_err::runtime_err::{RuntimeErr, RuntimeErrTy};
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
@@ -17,7 +19,7 @@ type DataRegisterVec = Vec<Rc<RefCell<DReg>>>;
 // can grow beyond this value.
 const DREG_MAX_LEN: usize = 1024;
 
-pub struct VM {
+pub struct VM<'v> {
     /// Code section. This contains the instructions compiled from
     /// the ast from the compiler and is assumed to be valid.
     code: Vec<Instr>,
@@ -62,6 +64,9 @@ pub struct VM {
     /// space before vm startup could be more performant.
     heap: HashMap<String, SifVal>,
 
+    /// Standard libary function mappings
+    stdlib: Std<'v>,
+
     /// Stack for storing function params. Note that we do not use this for function return
     /// values, which are placed into frr.
     fnst: Vec<SifVal>,
@@ -79,7 +84,7 @@ pub struct VM {
     trace: bool,
 }
 
-impl VM {
+impl<'v> VM<'v> {
     pub fn new(
         i: Vec<Instr>,
         d: Vec<Instr>,
@@ -87,7 +92,7 @@ impl VM {
         jt: HashMap<usize, usize>,
         ft: HashMap<String, usize>,
         tr: bool,
-    ) -> VM {
+    ) -> VM<'v> {
         // Init data register array
         let mut regs = Vec::with_capacity(DREG_MAX_LEN);
         for i in 0..DREG_MAX_LEN - 1 {
@@ -107,6 +112,7 @@ impl VM {
             frr: Rc::new(RefCell::new(DReg::new(String::from("frr")))),
             cdr: 0,
             heap: HashMap::new(),
+            stdlib: Std::new(),
             fnst: Vec::new(),
             csi: code_start,
             ip: code_start,
@@ -268,13 +274,17 @@ impl VM {
                 self.cdr = self.ip;
                 self.ip = *loc;
             }
-            Op::StdCall {
-                name,
-                param_count: _,
-            } => {
-                // pop sifvals off stack up to param count - store in vector?
+            Op::StdCall { name, param_count } => {
+                // pop sifvals off stack up to param count, then
                 // look up fn name in lib table and run function with params
-                unimplemented!("need to implement std lib fn pointers!");
+                let mut params = Vec::new();
+                let mut i = 0;
+                while i < *param_count {
+                    let v = self.fnst.pop();
+                    params.push(v.unwrap());
+                    i += 1;
+                }
+                self.stdlib.call(name, params);
             }
             Op::FnStackPush { src } => {
                 let srcreg = &self.dregs[*src];
