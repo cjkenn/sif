@@ -1,0 +1,8 @@
+var x = 10;
+@print(x);
+
+var y = [1,2,3];
+@print(y);
+
+var z = [[r => "x", t => 4,]];
+@print(z);
