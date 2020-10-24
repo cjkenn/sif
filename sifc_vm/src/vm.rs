@@ -1,4 +1,4 @@
-use crate::dreg::DReg;
+use crate::dreg::{DReg, DataRegisterVec};
 
 use sifc_compiler::{
     instr::Instr,
@@ -11,13 +11,6 @@ use sifc_std::Std;
 use sifc_err::runtime_err::{RuntimeErr, RuntimeErrTy};
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
-
-type DataRegisterVec = Vec<Rc<RefCell<DReg>>>;
-
-// Max size of data register vec. Or rather, right now this
-// represents the initial size of the vec, but technically it
-// can grow beyond this value.
-const DREG_MAX_LEN: usize = 1024;
 
 pub struct VM<'v> {
     /// Contains all required sections and relevant instructions in one vector. This
@@ -90,18 +83,11 @@ impl<'v> VM<'v> {
         ft: HashMap<String, usize>,
         is_trace: bool,
     ) -> VM<'v> {
-        // Init data register array
-        let mut regs = Vec::with_capacity(DREG_MAX_LEN);
-        for i in 0..DREG_MAX_LEN - 1 {
-            let reg = DReg::new(format!("r{}", i));
-            regs.push(Rc::new(RefCell::new(reg)));
-        }
-
         VM {
             prog: full_prog,
             fntab: ft,
             jumptab: jt,
-            dregs: regs,
+            dregs: crate::dreg::init(),
             frr: Rc::new(RefCell::new(DReg::new(String::from("frr")))),
             cdr: 0,
             heap: HashMap::new(),
