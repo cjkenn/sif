@@ -20,17 +20,15 @@ type DataRegisterVec = Vec<Rc<RefCell<DReg>>>;
 const DREG_MAX_LEN: usize = 1024;
 
 pub struct VM<'v> {
-    /// Code section. This contains the instructions compiled from
-    /// the ast from the compiler and is assumed to be valid.
-    code: Vec<Instr>,
-
-    /// Declaration section. This contains function declarations that we
-    /// jump to from the code section, and then return back to the code section
-    /// when completed.
-    decls: Vec<Instr>,
-
     /// Contains all required sections and relevant instructions in one vector. This
     /// is usually built from extending vectors containing other sections.
+    /// Sif bytecode currently contains two sections:
+    /// 1. The Decl section contains the function declarations contained within the translation
+    ///    unit. These are where we jump to from the code section during call instructions,
+    ///    and then return back to the code section when completed.
+    /// 2. The code section This contains the instructions compiled from
+    ///    the ast from the compiler and is assumed to be valid. The start of the code
+    ///    section is where program execution begins.
     prog: Vec<Instr>,
 
     /// Jump table, containing the label indices as keys and the code vector
@@ -86,12 +84,11 @@ pub struct VM<'v> {
 
 impl<'v> VM<'v> {
     pub fn new(
-        i: Vec<Instr>,
-        d: Vec<Instr>,
-        p: Vec<Instr>,
+        full_prog: Vec<Instr>,
+        code_start: usize,
         jt: HashMap<usize, usize>,
         ft: HashMap<String, usize>,
-        tr: bool,
+        is_trace: bool,
     ) -> VM<'v> {
         // Init data register array
         let mut regs = Vec::with_capacity(DREG_MAX_LEN);
@@ -100,12 +97,8 @@ impl<'v> VM<'v> {
             regs.push(Rc::new(RefCell::new(reg)));
         }
 
-        let code_start = d.len();
-
         VM {
-            code: i,
-            decls: d,
-            prog: p,
+            prog: full_prog,
             fntab: ft,
             jumptab: jt,
             dregs: regs,
@@ -116,7 +109,7 @@ impl<'v> VM<'v> {
             fnst: Vec::new(),
             csi: code_start,
             ip: code_start,
-            trace: tr,
+            trace: is_trace,
         }
     }
 

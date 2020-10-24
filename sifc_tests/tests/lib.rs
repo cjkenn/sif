@@ -33,9 +33,8 @@ macro_rules! integ_test {
 
             // Execute bytecode, ensuring no panics/runtime errors.
             let mut vm = VM::new(
-                compile_result.code,
-                compile_result.decls,
                 compile_result.program,
+                compile_result.code_start,
                 compile_result.jumptab,
                 compile_result.fntab,
                 false,

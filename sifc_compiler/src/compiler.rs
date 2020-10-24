@@ -55,6 +55,10 @@ pub struct CompileResult {
     /// being called and find the index to the correct instruction to jump to.
     pub fntab: HashMap<String, usize>,
 
+    /// The index into the program vector indicating the start of the code section. This
+    /// can be used by a vm to determine where to start program execution.
+    pub code_start: usize,
+
     /// Any errors that were encountered during compilation. The compiler does not
     /// attempt to continue on any error, it should exit immediately upon error.
     pub err: Option<CompileErr>,
@@ -123,6 +127,7 @@ impl<'c> Compiler<'c> {
             program: prog_vec,
             jumptab: jumptab,
             fntab: fntab,
+            code_start: self.decls.len(),
             err: currerr,
         }
     }
@@ -247,34 +252,7 @@ impl<'c> Compiler<'c> {
                 fn_ident_tkn,
                 fn_params,
                 is_std,
-            } => {
-                for param in fn_params {
-                    self.expr(param);
-                    let param_op = Op::FnStackPush {
-                        src: self.prevreg(),
-                    };
-                    self.push_op(param_op)
-                }
-                match is_std {
-                    true => {
-                        self.push_op(Op::StdCall {
-                            name: fn_ident_tkn.get_name(),
-                            param_count: fn_params.len(),
-                        });
-                    }
-                    false => {
-                        self.push_op(Op::Call {
-                            name: fn_ident_tkn.get_name(),
-                            param_count: fn_params.len(),
-                        });
-                    }
-                };
-
-                let frrop = Op::MvFRR {
-                    dest: self.nextreg(),
-                };
-                self.push_op(frrop);
-            }
+            } => self.fncallexpr(fn_ident_tkn, fn_params, *is_std),
             AstNode::PrimaryExpr { tkn } => {
                 match &tkn.ty {
                     TokenTy::Val(v) => {
@@ -533,8 +511,19 @@ impl<'c> Compiler<'c> {
         fn_params: &Vec<AstNode>,
         is_std: bool,
     ) {
-        // Generate instructions for pushing params on to the stack, which the function
-        // call will expect.
+        self.fncallexpr(fn_ident_tkn, fn_params, is_std);
+
+        // After the call returns, move the frr register to the next
+        // available reg, and then store that register in the variable
+        // being assigned to.
+        let strop = Op::StoreR {
+            src: self.prevreg(),
+            name: st_name.clone(),
+        };
+        self.push_op(strop);
+    }
+
+    fn fncallexpr(&mut self, fn_ident_tkn: &Token, fn_params: &Vec<AstNode>, is_std: bool) {
         for param in fn_params {
             self.expr(param);
             let param_op = Op::FnStackPush {
@@ -543,11 +532,20 @@ impl<'c> Compiler<'c> {
             self.push_op(param_op)
         }
 
-        // Push the actual call instruction.
-        self.push_op(Op::Call {
-            name: fn_ident_tkn.get_name(),
-            param_count: fn_params.len(),
-        });
+        match is_std {
+            true => {
+                self.push_op(Op::StdCall {
+                    name: fn_ident_tkn.get_name(),
+                    param_count: fn_params.len(),
+                });
+            }
+            false => {
+                self.push_op(Op::Call {
+                    name: fn_ident_tkn.get_name(),
+                    param_count: fn_params.len(),
+                });
+            }
+        };
 
         // After the call returns, move the frr register to the next
         // available reg, and then store that register in the variable
@@ -555,12 +553,6 @@ impl<'c> Compiler<'c> {
         let frrop = Op::MvFRR {
             dest: self.nextreg(),
         };
-
         self.push_op(frrop);
-        let strop = Op::StoreR {
-            src: self.prevreg(),
-            name: st_name.clone(),
-        };
-        self.push_op(strop);
     }
 }

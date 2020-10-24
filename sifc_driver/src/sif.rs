@@ -96,16 +96,15 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
         return;
     }
 
-    let code = comp_result.code;
-    let decls = comp_result.decls;
     let program = comp_result.program;
+    let code_start = comp_result.code_start;
     let jumptab = comp_result.jumptab;
     let fntab = comp_result.fntab;
 
     // TODO: add option to write to file and not run vm?
     if opts.print_ir {
-        printer::dump_decls(decls.clone());
-        printer::dump_code(code.clone());
+        printer::dump_decls(comp_result.decls.clone());
+        printer::dump_code(comp_result.code.clone());
     }
 
     println!("sif: starting vm...");
@@ -113,8 +112,8 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
         println!("sif: tracing vm execution!\n");
     }
 
-    // TODO: just pass compileresult to vm?
-    let mut vm = VM::new(code, decls, program, jumptab, fntab, opts.trace);
+    // TODO: use a param struct for this?
+    let mut vm = VM::new(program, code_start, jumptab, fntab, opts.trace);
     let vm_result = vm.run();
     match vm_result {
         Ok(()) => {}
