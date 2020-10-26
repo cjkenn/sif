@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-clap = "3.0.0-beta.1"
+clap = "3.0.0-beta.2"
 sifc_err = { path = "../sifc_err" }
 sifc_parse = { path = "../sifc_parse" }
 sifc_compiler = { path = "../sifc_compiler" }

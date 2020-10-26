@@ -365,7 +365,6 @@ impl<'l, 's> Parser<'l, 's> {
             self.expect(TokenTy::EqArrow)?;
             let val = self.expr()?;
             items.insert(String::from(ident_tkn.get_name()), val);
-            println!("curr: {:#?}", self.curr_tkn);
 
             match self.optional(TokenTy::Comma) {
                 false => {
