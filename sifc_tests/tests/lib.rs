@@ -5,7 +5,7 @@ extern crate sifc_vm;
 
 use sifc_compiler::compiler::Compiler;
 use sifc_parse::{lex::Lexer, parser::Parser, symtab::SymTab};
-use sifc_vm::vm::VM;
+use sifc_vm::{config::VMConfig, vm::VM};
 
 use std::fs::File;
 
@@ -32,12 +32,17 @@ macro_rules! integ_test {
             assert!(compile_result.err.is_none());
 
             // Execute bytecode, ensuring no panics/runtime errors.
+            let conf = VMConfig {
+                trace: false,
+                initial_heap_size: 10,
+                initial_dreg_count: 32,
+            };
             let mut vm = VM::init(
                 compile_result.program,
                 compile_result.code_start,
                 compile_result.jumptab,
                 compile_result.fntab,
-                false,
+                conf,
             );
             let vm_result = vm.run();
             assert!(vm_result.is_ok());

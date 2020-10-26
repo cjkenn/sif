@@ -1,25 +1,17 @@
 use crate::{
+    config::VMConfig,
     dreg::{DReg, DataRegisterList},
-    heap::Heap,
 };
-
 use sifc_compiler::{
     instr::Instr,
     opc::{BinOpKind, JmpOpKind, Op, UnOpKind},
     sifv::SifVal,
 };
-
-use sifc_std::Std;
-
 use sifc_err::runtime_err::{RuntimeErr, RuntimeErrTy};
-
+use sifc_std::Std;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-// Initial size of heap, in number of items, NOT bytes.
-const HEAP_INIT_ITEMS: usize = 100;
-// Initial size of data register vec. If we exceeed this len,
-// we can increase the size of the vec.
-const DREG_INITIAL_LEN: usize = 64;
+const FRR_NAME: &'static str = "frr";
 
 pub struct VM<'v> {
     /// Contains all required sections and relevant instructions in one vector. This
@@ -80,9 +72,10 @@ pub struct VM<'v> {
     /// initially set to the start of the code vector.
     ip: usize,
 
-    /// Whether or not to trace execution of the vm. This is dependent on flags passed in
-    /// from the driver.
-    trace: bool,
+    /// Struct containing configuration options for this VM. Options should generally be
+    /// passed in from command line flags, and documentation for them should be in the
+    /// command line usage/help.
+    config: VMConfig,
 }
 
 impl<'v> VM<'v> {
@@ -91,24 +84,24 @@ impl<'v> VM<'v> {
         code_start: usize,
         jt: HashMap<usize, usize>,
         ft: HashMap<String, usize>,
-        is_trace: bool,
+        conf: VMConfig,
     ) -> VM<'v> {
-        let mut heap = HashMap::with_capacity(HEAP_INIT_ITEMS);
-        let reglist = DataRegisterList::init(DREG_INITIAL_LEN);
+        let heap = HashMap::with_capacity(conf.initial_heap_size);
+        let reglist = DataRegisterList::init(conf.initial_dreg_count);
 
         VM {
             prog: full_prog,
             fntab: ft,
             jumptab: jt,
             dregs: reglist,
-            frr: Rc::new(RefCell::new(DReg::new(String::from("frr")))),
+            frr: Rc::new(RefCell::new(DReg::new(FRR_NAME.to_string()))),
             heap: heap,
             stdlib: Std::new(),
             fnst: Vec::new(),
             cdr: 0,
             csi: code_start,
             ip: code_start,
-            trace: is_trace,
+            config: conf,
         }
     }
 
@@ -133,7 +126,7 @@ impl<'v> VM<'v> {
     fn execute(&mut self) -> Result<(), RuntimeErr> {
         let idx = self.ip;
 
-        if self.trace {
+        if self.config.trace {
             self.trace_instr(&self.prog[idx]);
         }
 

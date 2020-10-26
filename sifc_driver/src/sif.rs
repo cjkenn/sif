@@ -4,21 +4,23 @@ extern crate sifc_parse;
 extern crate sifc_vm;
 
 use clap::Clap;
-
 use sifc_compiler::{compiler::Compiler, printer};
-
 use sifc_err::err::SifErr;
-
 use sifc_parse::{
     ast::AstNode,
     lex::Lexer,
     parser::{Parser, ParserResult},
     symtab::SymTab,
 };
-
-use sifc_vm::vm::VM;
-
+use sifc_vm::{config::VMConfig, vm::VM};
 use std::{fs::File, io, time::Instant};
+
+// Default size of heap, in number of items, NOT bytes.
+const HEAP_INIT_ITEMS: usize = 100;
+
+// Default size of data register vec. If we exceeed this len,
+// we can increase the size of the vec.
+const DREG_INITIAL_LEN: usize = 64;
 
 #[derive(Clap)]
 #[clap(version = "1.0")]
@@ -112,8 +114,14 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
         println!("sif: tracing vm execution!\n");
     }
 
-    // TODO: use a param struct for this?
-    let mut vm = VM::init(program, code_start, jumptab, fntab, opts.trace);
+    let conf = VMConfig {
+        trace: opts.trace,
+        initial_heap_size: HEAP_INIT_ITEMS,
+        initial_dreg_count: DREG_INITIAL_LEN,
+    };
+
+    // TODO: use a param struct for this? A builder?
+    let mut vm = VM::init(program, code_start, jumptab, fntab, conf);
     let vm_result = vm.run();
     match vm_result {
         Ok(()) => {}
