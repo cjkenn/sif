@@ -1,4 +1,7 @@
-use crate::dreg::{DReg, DataRegisterList};
+use crate::{
+    dreg::{DReg, DataRegisterList},
+    heap::Heap,
+};
 
 use sifc_compiler::{
     instr::Instr,
