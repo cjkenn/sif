@@ -113,7 +113,7 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
     }
 
     // TODO: use a param struct for this?
-    let mut vm = VM::new(program, code_start, jumptab, fntab, opts.trace);
+    let mut vm = VM::init(program, code_start, jumptab, fntab, opts.trace);
     let vm_result = vm.run();
     match vm_result {
         Ok(()) => {}

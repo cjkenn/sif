@@ -32,7 +32,7 @@ macro_rules! integ_test {
             assert!(compile_result.err.is_none());
 
             // Execute bytecode, ensuring no panics/runtime errors.
-            let mut vm = VM::new(
+            let mut vm = VM::init(
                 compile_result.program,
                 compile_result.code_start,
                 compile_result.jumptab,

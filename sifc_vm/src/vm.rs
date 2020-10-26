@@ -1,4 +1,4 @@
-use crate::dreg::{DReg, DataRegisterVec};
+use crate::dreg::{DReg, DataRegisterList};
 
 use sifc_compiler::{
     instr::Instr,
@@ -12,7 +12,11 @@ use sifc_err::runtime_err::{RuntimeErr, RuntimeErrTy};
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+// Initial size of heap, in number of items, NOT bytes.
 const HEAP_INIT_ITEMS: usize = 100;
+// Initial size of data register vec. If we exceeed this len,
+// we can increase the size of the vec.
+const DREG_INITIAL_LEN: usize = 64;
 
 pub struct VM<'v> {
     /// Contains all required sections and relevant instructions in one vector. This
@@ -39,8 +43,9 @@ pub struct VM<'v> {
     /// until it has been declared and the declaration must appear before the call in the code
     fntab: HashMap<String, usize>,
 
-    /// Data register vector.
-    dregs: DataRegisterVec,
+    /// Data registers. This is managed by the DataRegisterList struct, which handles getting
+    /// references to registers and growing the list when we want more registers.
+    dregs: DataRegisterList,
 
     /// Special data register that holds values from function returns. This register
     /// is used to place return value before jumping out of a function body, and to
@@ -78,7 +83,7 @@ pub struct VM<'v> {
 }
 
 impl<'v> VM<'v> {
-    pub fn new(
+    pub fn init(
         full_prog: Vec<Instr>,
         code_start: usize,
         jt: HashMap<usize, usize>,
@@ -89,11 +94,13 @@ impl<'v> VM<'v> {
         let mut heap = HashMap::new();
         heap.reserve(HEAP_INIT_ITEMS);
 
+        let reglist = DataRegisterList::init(DREG_INITIAL_LEN);
+
         VM {
             prog: full_prog,
             fntab: ft,
             jumptab: jt,
-            dregs: crate::dreg::init(),
+            dregs: reglist,
             frr: Rc::new(RefCell::new(DReg::new(String::from("frr")))),
             cdr: 0,
             heap: heap,
@@ -113,9 +120,10 @@ impl<'v> VM<'v> {
         Ok(())
     }
 
-    pub fn inspect_dreg(&self, idx: usize) -> Option<SifVal> {
-        let reg = &self.dregs[idx];
-        reg.borrow().cont.clone()
+    pub fn inspect_dreg(&mut self, idx: usize) -> Option<SifVal> {
+        let reg = self.dregs.get(idx);
+        let contents = reg.borrow().cont.clone();
+        contents
     }
 
     pub fn inspect_heap(&self, name: String) -> Option<&SifVal> {
@@ -129,23 +137,23 @@ impl<'v> VM<'v> {
             self.trace_instr(&self.prog[idx]);
         }
 
-        let curr = &self.prog[idx].op;
+        let curr = self.prog[idx].op.clone();
         match curr {
-            Op::LoadC { dest, val } => self.loadc(*dest, val)?,
-            Op::LoadN { dest, name } => self.loadn(*dest, name)?,
-            Op::MvFRR { dest } => self.mvfrr(*dest)?,
-            Op::Mv { src, dest } => self.mv(*src, *dest)?,
-            Op::LoadArrs { name, dest } => self.loadarrs(name, *dest)?,
+            Op::LoadC { dest, val } => self.loadc(dest, val)?,
+            Op::LoadN { dest, name } => self.loadn(dest, name)?,
+            Op::MvFRR { dest } => self.mvfrr(dest)?,
+            Op::Mv { src, dest } => self.mv(src, dest)?,
+            Op::LoadArrs { name, dest } => self.loadarrs(name, dest)?,
             Op::LoadArrv {
                 name,
                 idx_reg,
                 dest,
-            } => self.loadarrv(name, *idx_reg, *dest)?,
+            } => self.loadarrv(name, idx_reg, dest)?,
             Op::StoreC { name, val } => {
                 self.heap.insert(name.to_string(), val.clone());
             }
             Op::StoreR { name, src } => {
-                let reg = &self.dregs[*src];
+                let reg = self.dregs.get(src);
                 let to_store = &reg.borrow().cont;
                 match to_store {
                     Some(v) => self.heap.insert(name.to_string(), v.clone()),
@@ -153,7 +161,7 @@ impl<'v> VM<'v> {
                 };
             }
             Op::StoreN { srcname, destname } => {
-                match self.heap.get(srcname) {
+                match self.heap.get(&srcname) {
                     Some(v) => {
                         let to_insert = v.clone();
                         self.heap.insert(destname.to_string(), to_insert)
@@ -169,7 +177,7 @@ impl<'v> VM<'v> {
                 };
             }
             Op::JumpA { lbl: _, lblidx } => {
-                let codeidx = self.jumptab.get(lblidx);
+                let codeidx = self.jumptab.get(&lblidx);
                 match codeidx {
                     Some(i) => self.ip = *i - 1,
                     None => return Err(self.newerr(RuntimeErrTy::InvalidJump)),
@@ -181,7 +189,7 @@ impl<'v> VM<'v> {
                 lbl: _,
                 lblidx,
             } => {
-                let reg = &self.dregs[*src];
+                let reg = self.dregs.get(src);
                 let contents = reg.borrow().cont.clone();
                 if contents.is_none() {
                     return Err(self.newerr(RuntimeErrTy::TyMismatch));
@@ -189,10 +197,10 @@ impl<'v> VM<'v> {
 
                 match contents.unwrap() {
                     SifVal::Bl(b) => {
-                        match *kind {
+                        match kind {
                             JmpOpKind::Jmpt => {
                                 if b {
-                                    let codeidx = self.jumptab.get(lblidx);
+                                    let codeidx = self.jumptab.get(&lblidx);
                                     match codeidx {
                                         // jump to codeidx - 1 as it will be incremented at the end of
                                         // the execution loop
@@ -203,7 +211,7 @@ impl<'v> VM<'v> {
                             }
                             JmpOpKind::Jmpf => {
                                 if !b {
-                                    let codeidx = self.jumptab.get(lblidx);
+                                    let codeidx = self.jumptab.get(&lblidx);
                                     match codeidx {
                                         // jump to codeidx - 1 as it will be incremented at the end of
                                         // the execution loop
@@ -217,21 +225,21 @@ impl<'v> VM<'v> {
                     _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
                 };
             }
-            Op::Unary { kind, src1, dest } => self.unop(kind.clone(), *src1, *dest)?,
+            Op::Unary { kind, src1, dest } => self.unop(kind.clone(), src1, dest)?,
             Op::Binary {
                 kind,
                 src1,
                 src2,
                 dest,
-            } => self.binop(kind.clone(), *src1, *src2, *dest)?,
-            Op::Incrr { src } => self.incrr(*src)?,
-            Op::Decrr { src } => self.decrr(*src)?,
+            } => self.binop(kind.clone(), src1, src2, dest)?,
+            Op::Incrr { src } => self.incrr(src)?,
+            Op::Decrr { src } => self.decrr(src)?,
             Op::Fn { name, params: _ } => {
                 self.fntab.insert(name.clone(), self.ip);
             }
             Op::FnRetR { src } => {
                 // Set the frr to the correct return value
-                let srcreg = &self.dregs[*src];
+                let srcreg = self.dregs.get(src);
                 let src_contents = srcreg.borrow().cont.clone();
                 self.frr.borrow_mut().cont = src_contents;
 
@@ -247,7 +255,7 @@ impl<'v> VM<'v> {
                 name,
                 param_count: _,
             } => {
-                let maybe_loc = self.fntab.get(name);
+                let maybe_loc = self.fntab.get(&name);
                 if maybe_loc.is_none() {
                     return Err(self.newerr(RuntimeErrTy::InvalidFnSym(name.to_string())));
                 }
@@ -264,28 +272,28 @@ impl<'v> VM<'v> {
                 // look up fn name in lib table and run function with params
                 let mut params = Vec::new();
                 let mut i = 0;
-                while i < *param_count {
+                while i < param_count {
                     let v = self.fnst.pop();
                     params.push(v.unwrap());
                     i += 1;
                 }
-                self.stdlib.call(name, params);
+                self.stdlib.call(&name, params);
             }
             Op::FnStackPush { src } => {
-                let srcreg = &self.dregs[*src];
+                let srcreg = self.dregs.get(src);
                 let to_push = srcreg.borrow().cont.clone();
                 self.fnst.push(to_push.unwrap());
             }
             Op::FnStackPop { dest } => {
                 let to_pop = self.fnst.pop();
-                let destreg = &self.dregs[*dest];
+                let destreg = self.dregs.get(dest);
                 destreg.borrow_mut().cont = to_pop;
             }
             Op::TblI { tabname, key, src } => {
-                let srcreg = &self.dregs[*src];
+                let srcreg = self.dregs.get(src);
                 let to_insert = srcreg.borrow().cont.clone();
 
-                match self.heap.get(tabname) {
+                match self.heap.get(&tabname) {
                     Some(n) => match n {
                         SifVal::Tab(hm) => {
                             let mut map = hm.clone();
@@ -298,12 +306,12 @@ impl<'v> VM<'v> {
                 };
             }
             Op::TblG { tabname, key, dest } => {
-                let destreg = &self.dregs[*dest];
+                let destreg = self.dregs.get(dest);
 
-                match self.heap.get(tabname) {
+                match self.heap.get(&tabname) {
                     Some(n) => match n {
                         SifVal::Tab(hm) => {
-                            let val = hm.get(key).unwrap();
+                            let val = hm.get(&key).unwrap();
                             destreg.borrow_mut().cont = Some(val.clone());
                         }
                         _ => {}
@@ -321,39 +329,40 @@ impl<'v> VM<'v> {
         Ok(())
     }
 
-    fn loadc(&self, dest: usize, val: &SifVal) -> Result<(), RuntimeErr> {
-        let reg = &self.dregs[dest];
+    fn loadc(&mut self, dest: usize, val: SifVal) -> Result<(), RuntimeErr> {
+        //self.dregs.set_contents(dest, Some(val.clone()));
+        let reg = self.dregs.get(dest);
         reg.borrow_mut().cont = Some(val.clone());
         Ok(())
     }
 
-    fn loadn(&self, dest: usize, name: &String) -> Result<(), RuntimeErr> {
-        let reg = &self.dregs[dest];
-        match self.heap.get(name) {
+    fn loadn(&mut self, dest: usize, name: String) -> Result<(), RuntimeErr> {
+        let reg = self.dregs.get(dest);
+        match self.heap.get(&name) {
             Some(n) => reg.borrow_mut().cont = Some(n.clone()),
             None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
         };
         Ok(())
     }
 
-    fn mvfrr(&self, dest: usize) -> Result<(), RuntimeErr> {
-        let reg = &self.dregs[dest];
+    fn mvfrr(&mut self, dest: usize) -> Result<(), RuntimeErr> {
+        let reg = self.dregs.get(dest);
         let contents = &self.frr.borrow().cont;
         reg.borrow_mut().cont = contents.clone();
         Ok(())
     }
 
-    fn mv(&self, src: usize, dest: usize) -> Result<(), RuntimeErr> {
-        let srcreg = &self.dregs[src];
-        let destreg = &self.dregs[dest];
+    fn mv(&mut self, src: usize, dest: usize) -> Result<(), RuntimeErr> {
+        let srcreg = self.dregs.get(src);
+        let destreg = self.dregs.get(dest);
         let to_move = &srcreg.borrow().cont;
         destreg.borrow_mut().cont = to_move.clone();
         Ok(())
     }
 
-    fn loadarrs(&self, name: &String, dest: usize) -> Result<(), RuntimeErr> {
-        let reg = &self.dregs[dest];
-        match self.heap.get(name) {
+    fn loadarrs(&mut self, name: String, dest: usize) -> Result<(), RuntimeErr> {
+        let reg = self.dregs.get(dest);
+        match self.heap.get(&name) {
             Some(n) => match n {
                 SifVal::Arr(v) => reg.borrow_mut().cont = Some(SifVal::Num(v.len() as f64)),
                 _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
@@ -363,9 +372,10 @@ impl<'v> VM<'v> {
         Ok(())
     }
 
-    fn loadarrv(&self, name: &String, idx_reg: usize, dest: usize) -> Result<(), RuntimeErr> {
-        let reg = &self.dregs[dest];
-        let idx_sv = &self.dregs[idx_reg].borrow().cont;
+    fn loadarrv(&mut self, name: String, idx_reg: usize, dest: usize) -> Result<(), RuntimeErr> {
+        let reg = self.dregs.get(dest);
+        let idx_reg = self.dregs.get(idx_reg);
+        let idx_sv = &idx_reg.borrow().cont;
         if idx_sv.is_none() {
             return Err(self.newerr(RuntimeErrTy::TyMismatch));
         }
@@ -381,7 +391,7 @@ impl<'v> VM<'v> {
 
         let to_idx = maybe_to_idx.unwrap();
 
-        match self.heap.get(name) {
+        match self.heap.get(&name) {
             Some(n) => match n {
                 SifVal::Arr(v) => reg.borrow_mut().cont = Some(v[to_idx].clone()),
                 _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
@@ -392,9 +402,9 @@ impl<'v> VM<'v> {
         Ok(())
     }
 
-    fn unop(&self, kind: UnOpKind, src1: usize, dest: usize) -> Result<(), RuntimeErr> {
-        let srcreg = &self.dregs[src1];
-        let destreg = &self.dregs[dest];
+    fn unop(&mut self, kind: UnOpKind, src1: usize, dest: usize) -> Result<(), RuntimeErr> {
+        let srcreg = self.dregs.get(src1);
+        let destreg = self.dregs.get(dest);
         let mb_contents = srcreg.borrow().cont.clone();
 
         if mb_contents.is_none() {
@@ -422,15 +432,15 @@ impl<'v> VM<'v> {
     }
 
     fn binop(
-        &self,
+        &mut self,
         kind: BinOpKind,
         src1: usize,
         src2: usize,
         dest: usize,
     ) -> Result<(), RuntimeErr> {
-        let src1reg = &self.dregs[src1];
-        let src2reg = &self.dregs[src2];
-        let destreg = &self.dregs[dest];
+        let src1reg = self.dregs.get(src1);
+        let src2reg = self.dregs.get(src2);
+        let destreg = self.dregs.get(dest);
 
         // TODO: what if src1 and src2 are the same reg? Can we still borrow?
         let mb_contents1 = src1reg.borrow().cont.clone();
@@ -537,8 +547,8 @@ impl<'v> VM<'v> {
         Ok(())
     }
 
-    fn incrr(&self, src: usize) -> Result<(), RuntimeErr> {
-        let reg = &self.dregs[src];
+    fn incrr(&mut self, src: usize) -> Result<(), RuntimeErr> {
+        let reg = self.dregs.get(src);
         let contents = reg.borrow().cont.clone();
 
         // If contents are None, we have nothing to increment so we set a runtime err.
@@ -556,8 +566,8 @@ impl<'v> VM<'v> {
         Ok(())
     }
 
-    fn decrr(&self, src: usize) -> Result<(), RuntimeErr> {
-        let reg = &self.dregs[src];
+    fn decrr(&mut self, src: usize) -> Result<(), RuntimeErr> {
+        let reg = self.dregs.get(src);
         let contents = reg.borrow().cont.clone();
         match contents {
             Some(v) => match v {
