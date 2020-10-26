@@ -3,7 +3,7 @@ extern crate sifc_compiler;
 extern crate sifc_parse;
 extern crate sifc_vm;
 
-use clap::Clap;
+use clap::{App, Arg, ArgMatches};
 use sifc_compiler::{compiler::Compiler, printer};
 use sifc_err::err::SifErr;
 use sifc_parse::{
@@ -13,42 +13,73 @@ use sifc_parse::{
     symtab::SymTab,
 };
 use sifc_vm::{config::VMConfig, vm::VM};
-use std::{fs::File, io, time::Instant};
+use std::{fs::File, time::Instant};
 
 // Default size of heap, in number of items, NOT bytes.
-const HEAP_INIT_ITEMS: usize = 100;
+const DEFAULT_HEAP: &str = "100";
 
 // Default size of data register vec. If we exceeed this len,
 // we can increase the size of the vec.
-const DREG_INITIAL_LEN: usize = 64;
+const DEFAULT_DREG: &str = "64";
 
-#[derive(Clap)]
-#[clap(version = "1.0")]
-pub struct SifOpts {
-    #[clap(long)]
-    filename: Option<String>,
-    #[clap(long)]
-    print_ast: bool,
-    #[clap(long)]
-    print_ir: bool,
-    #[clap(long)]
-    trace: bool,
-}
+const ARG_FILENAME: &str = "filename";
+const ARG_EMIT_AST: &str = "emit-ast";
+const ARG_EMIT_IR: &str = "emit-ir";
+const ARG_TRACE_EXEC: &str = "trace-exec";
+const ARG_HEAP_SIZE: &str = "heap-size";
+const ARG_REG_COUNT: &str = "reg-count";
 
 fn main() {
-    let opts: SifOpts = SifOpts::parse();
+    let matches = App::new("sif")
+        .version("0.1")
+        .author("cjkenn")
+        .about("sif interpreter and vm")
+        .arg(
+            Arg::new(ARG_FILENAME)
+                .about("sif file to parse and run")
+                .required(true)
+                .index(1),
+        )
+        .arg(
+            Arg::new(ARG_EMIT_AST)
+                .long(ARG_EMIT_AST)
+                .about("Prints the syntax tree to stdout"),
+        )
+        .arg(
+            Arg::new(ARG_EMIT_IR)
+                .long(ARG_EMIT_IR)
+                .about("Prints sif bytecode to stdout"),
+        )
+        .arg(
+            Arg::new(ARG_TRACE_EXEC)
+                .short('t')
+                .long(ARG_TRACE_EXEC)
+                .about("Traces VM execution by printing running instructions to stdout"),
+        )
+        .arg(
+            Arg::new(ARG_HEAP_SIZE)
+                .short('H')
+                .long(ARG_HEAP_SIZE)
+                .default_value(DEFAULT_HEAP)
+                .about("Sets initial heap size"),
+        )
+        .arg(
+            Arg::new(ARG_REG_COUNT)
+                .short('R')
+                .long(ARG_REG_COUNT)
+                .default_value(DEFAULT_DREG)
+                .about("Sets the default virtual register count"),
+        )
+        .get_matches();
 
-    match &opts.filename {
-        Some(_) => from_file(opts),
-        None => repl(),
-    };
+    from_file(matches);
 }
 
-fn from_file(opts: SifOpts) {
+fn from_file(opts: ArgMatches) {
     let exec_start = Instant::now();
 
     let mut symtab = SymTab::new();
-    let path = opts.filename.clone().unwrap();
+    let path = opts.value_of(ARG_FILENAME).unwrap();
     let parse_result = parse(&path, &mut symtab);
 
     // Any errors should already have been emitted by the
@@ -60,7 +91,7 @@ fn from_file(opts: SifOpts) {
 
     let ast = parse_result.ast.unwrap();
 
-    if opts.print_ast {
+    if opts.is_present(ARG_EMIT_AST) {
         println!("{:#?}", ast);
     }
 
@@ -81,13 +112,15 @@ fn parse(filename: &str, symtab: &mut SymTab) -> ParserResult {
     };
 
     println!("sif: parsing file {}...", filename);
+
     let mut lexer = Lexer::new(infile);
     let mut parser = Parser::new(&mut lexer, symtab);
     parser.parse()
 }
 
-fn compile_and_run(opts: SifOpts, ast: &AstNode) {
+fn compile_and_run(opts: ArgMatches, ast: &AstNode) {
     println!("sif: compiling...");
+
     let mut comp = Compiler::new(ast);
     let comp_result = comp.compile();
 
@@ -103,21 +136,23 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
     let jumptab = comp_result.jumptab;
     let fntab = comp_result.fntab;
 
-    // TODO: add option to write to file and not run vm?
-    if opts.print_ir {
+    if opts.is_present(ARG_EMIT_IR) {
         printer::dump_decls(comp_result.decls.clone());
         printer::dump_code(comp_result.code.clone());
     }
 
     println!("sif: starting vm...");
-    if opts.trace {
+    if opts.is_present(ARG_TRACE_EXEC) {
         println!("sif: tracing vm execution!\n");
     }
 
+    let heap_size: usize = opts.value_of(ARG_HEAP_SIZE).unwrap().parse().unwrap();
+    let dreg_count: usize = opts.value_of(ARG_REG_COUNT).unwrap().parse().unwrap();
+
     let conf = VMConfig {
-        trace: opts.trace,
-        initial_heap_size: HEAP_INIT_ITEMS,
-        initial_dreg_count: DREG_INITIAL_LEN,
+        trace: opts.is_present(ARG_TRACE_EXEC),
+        initial_heap_size: heap_size,
+        initial_dreg_count: dreg_count,
     };
 
     // TODO: use a param struct for this? A builder?
@@ -131,17 +166,4 @@ fn compile_and_run(opts: SifOpts, ast: &AstNode) {
             return;
         }
     }
-}
-
-fn repl() {
-    let mut _symtab = SymTab::new();
-    let mut input = String::new();
-
-    // TODO: how do we lex from a stdin input string here?
-    println!("Welcome to sif!");
-    print!(">");
-    match io::stdin().read_line(&mut input) {
-        Ok(_) => println!("{:#?}", input),
-        Err(e) => panic!(e),
-    };
 }
