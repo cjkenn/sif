@@ -12,6 +12,8 @@ use sifc_err::runtime_err::{RuntimeErr, RuntimeErrTy};
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+const HEAP_INIT_ITEMS: usize = 100;
+
 pub struct VM<'v> {
     /// Contains all required sections and relevant instructions in one vector. This
     /// is usually built from extending vectors containing other sections.
@@ -83,6 +85,10 @@ impl<'v> VM<'v> {
         ft: HashMap<String, usize>,
         is_trace: bool,
     ) -> VM<'v> {
+        // Allocate for heap
+        let mut heap = HashMap::new();
+        heap.reserve(HEAP_INIT_ITEMS);
+
         VM {
             prog: full_prog,
             fntab: ft,
@@ -90,7 +96,7 @@ impl<'v> VM<'v> {
             dregs: crate::dreg::init(),
             frr: Rc::new(RefCell::new(DReg::new(String::from("frr")))),
             cdr: 0,
-            heap: HashMap::new(),
+            heap: heap,
             stdlib: Std::new(),
             fnst: Vec::new(),
             csi: code_start,
