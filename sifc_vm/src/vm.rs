@@ -286,8 +286,7 @@ impl<'v> VM<'v> {
             }
             Op::FnStackPop { dest } => {
                 let to_pop = self.fnst.pop();
-                let destreg = self.dregs.get(dest);
-                destreg.borrow_mut().cont = to_pop;
+                self.dregs.set_contents(dest, to_pop);
             }
             Op::TblI { tabname, key, src } => {
                 let srcreg = self.dregs.get(src);
@@ -306,13 +305,11 @@ impl<'v> VM<'v> {
                 };
             }
             Op::TblG { tabname, key, dest } => {
-                let destreg = self.dregs.get(dest);
-
                 match self.heap.get(&tabname) {
                     Some(n) => match n {
                         SifVal::Tab(hm) => {
                             let val = hm.get(&key).unwrap();
-                            destreg.borrow_mut().cont = Some(val.clone());
+                            self.dregs.set_contents(dest, Some(val.clone()));
                         }
                         _ => {}
                     },
@@ -330,41 +327,37 @@ impl<'v> VM<'v> {
     }
 
     fn loadc(&mut self, dest: usize, val: SifVal) -> Result<(), RuntimeErr> {
-        //self.dregs.set_contents(dest, Some(val.clone()));
-        let reg = self.dregs.get(dest);
-        reg.borrow_mut().cont = Some(val.clone());
+        self.dregs.set_contents(dest, Some(val.clone()));
         Ok(())
     }
 
     fn loadn(&mut self, dest: usize, name: String) -> Result<(), RuntimeErr> {
-        let reg = self.dregs.get(dest);
         match self.heap.get(&name) {
-            Some(n) => reg.borrow_mut().cont = Some(n.clone()),
+            Some(n) => self.dregs.set_contents(dest, Some(n.clone())),
             None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
         };
         Ok(())
     }
 
     fn mvfrr(&mut self, dest: usize) -> Result<(), RuntimeErr> {
-        let reg = self.dregs.get(dest);
         let contents = &self.frr.borrow().cont;
-        reg.borrow_mut().cont = contents.clone();
+        self.dregs.set_contents(dest, contents.clone());
         Ok(())
     }
 
     fn mv(&mut self, src: usize, dest: usize) -> Result<(), RuntimeErr> {
         let srcreg = self.dregs.get(src);
-        let destreg = self.dregs.get(dest);
         let to_move = &srcreg.borrow().cont;
-        destreg.borrow_mut().cont = to_move.clone();
+        self.dregs.set_contents(dest, to_move.clone());
         Ok(())
     }
 
     fn loadarrs(&mut self, name: String, dest: usize) -> Result<(), RuntimeErr> {
-        let reg = self.dregs.get(dest);
         match self.heap.get(&name) {
             Some(n) => match n {
-                SifVal::Arr(v) => reg.borrow_mut().cont = Some(SifVal::Num(v.len() as f64)),
+                SifVal::Arr(v) => self
+                    .dregs
+                    .set_contents(dest, Some(SifVal::Num(v.len() as f64))),
                 _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
             },
             None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
@@ -373,7 +366,6 @@ impl<'v> VM<'v> {
     }
 
     fn loadarrv(&mut self, name: String, idx_reg: usize, dest: usize) -> Result<(), RuntimeErr> {
-        let reg = self.dregs.get(dest);
         let idx_reg = self.dregs.get(idx_reg);
         let idx_sv = &idx_reg.borrow().cont;
         if idx_sv.is_none() {
@@ -393,7 +385,7 @@ impl<'v> VM<'v> {
 
         match self.heap.get(&name) {
             Some(n) => match n {
-                SifVal::Arr(v) => reg.borrow_mut().cont = Some(v[to_idx].clone()),
+                SifVal::Arr(v) => self.dregs.set_contents(dest, Some(v[to_idx].clone())),
                 _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
             },
             None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
@@ -404,7 +396,6 @@ impl<'v> VM<'v> {
 
     fn unop(&mut self, kind: UnOpKind, src1: usize, dest: usize) -> Result<(), RuntimeErr> {
         let srcreg = self.dregs.get(src1);
-        let destreg = self.dregs.get(dest);
         let mb_contents = srcreg.borrow().cont.clone();
 
         if mb_contents.is_none() {
@@ -416,13 +407,13 @@ impl<'v> VM<'v> {
         match kind {
             UnOpKind::Lneg => {
                 match contents {
-                    SifVal::Bl(bl) => destreg.borrow_mut().cont = Some(SifVal::Bl(!bl)),
+                    SifVal::Bl(bl) => self.dregs.set_contents(dest, Some(SifVal::Bl(!bl))),
                     _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
                 };
             }
             UnOpKind::Nneg => {
                 match contents {
-                    SifVal::Num(num) => destreg.borrow_mut().cont = Some(SifVal::Num(-num)),
+                    SifVal::Num(num) => self.dregs.set_contents(dest, Some(SifVal::Num(-num))),
                     _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
                 };
             }
@@ -440,7 +431,6 @@ impl<'v> VM<'v> {
     ) -> Result<(), RuntimeErr> {
         let src1reg = self.dregs.get(src1);
         let src2reg = self.dregs.get(src2);
-        let destreg = self.dregs.get(dest);
 
         // TODO: what if src1 and src2 are the same reg? Can we still borrow?
         let mb_contents1 = src1reg.borrow().cont.clone();
@@ -460,85 +450,85 @@ impl<'v> VM<'v> {
         match kind {
             BinOpKind::Add => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 + n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Num(n1 + n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Sub => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 - n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Num(n1 - n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Mul => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 * n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Num(n1 * n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Div => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 / n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Num(n1 / n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Modu => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Num(n1 % n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Num(n1 % n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Eq => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 == n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Bl(n1 == n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Neq => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 != n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Bl(n1 != n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::LtEq => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 <= n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Bl(n1 <= n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Lt => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 < n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Bl(n1 < n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::GtEq => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 >= n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Bl(n1 >= n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Gt => match (contents1, contents2) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Bl(n1 > n2));
+                    self.dregs.set_contents(dest, Some(SifVal::Bl(n1 > n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Land => match (contents1, contents2) {
                 (SifVal::Bl(b1), SifVal::Bl(b2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Bl(b1 && b2));
+                    self.dregs.set_contents(dest, Some(SifVal::Bl(b1 && b2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Lnot => match (contents1, contents2) {
                 (SifVal::Bl(b1), SifVal::Bl(b2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Bl(b1 != b2));
+                    self.dregs.set_contents(dest, Some(SifVal::Bl(b1 != b2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
             BinOpKind::Lor => match (contents1, contents2) {
                 (SifVal::Bl(b1), SifVal::Bl(b2)) => {
-                    destreg.borrow_mut().cont = Some(SifVal::Bl(b1 || b2));
+                    self.dregs.set_contents(dest, Some(SifVal::Bl(b1 || b2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
@@ -557,7 +547,7 @@ impl<'v> VM<'v> {
         // replace the value with an incremented one.
         match contents {
             Some(v) => match v {
-                SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n + 1.0)),
+                SifVal::Num(n) => self.dregs.set_contents(src, Some(SifVal::Num(n + 1.0))),
                 _ => return Err(self.newerr(RuntimeErrTy::InvalidIncrTy)),
             },
             None => return Err(self.newerr(RuntimeErrTy::InvalidIncr)),
@@ -571,7 +561,7 @@ impl<'v> VM<'v> {
         let contents = reg.borrow().cont.clone();
         match contents {
             Some(v) => match v {
-                SifVal::Num(n) => reg.borrow_mut().cont = Some(SifVal::Num(n - 1.0)),
+                SifVal::Num(n) => self.dregs.set_contents(src, Some(SifVal::Num(n - 1.0))),
                 _ => return Err(self.newerr(RuntimeErrTy::InvalidDecrTy)),
             },
             None => return Err(self.newerr(RuntimeErrTy::InvalidDecr)),

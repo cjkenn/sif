@@ -49,7 +49,10 @@ impl DataRegisterList {
         Rc::clone(&self.dregs[index])
     }
 
-    pub fn set_contents(&self, index: usize, val: Option<SifVal>) {
+    pub fn set_contents(&mut self, index: usize, val: Option<SifVal>) {
+        if index >= self.dregs.len() {
+            self.expand();
+        }
         self.dregs[index].borrow_mut().cont = val;
     }
 
