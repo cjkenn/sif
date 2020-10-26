@@ -55,10 +55,6 @@ pub struct VM<'v> {
     /// read from in following code after the function has returned.
     frr: Rc<RefCell<DReg>>,
 
-    /// Special control value which holds the instruction number to jump to when
-    /// a function returns.
-    cdr: usize,
-
     /// Heap section. This contains arrays, tables, and globals. We use the
     /// name of the data as a key to retrieve and store information in the heap.
     /// This is likely not memory efficient and a more sophisticated structure + allocating
@@ -71,6 +67,10 @@ pub struct VM<'v> {
     /// Stack for storing function params. Note that we do not use this for function return
     /// values, which are placed into frr.
     fnst: Vec<SifVal>,
+
+    /// Special control value which holds the instruction number to jump to when
+    /// a function returns.
+    cdr: usize,
 
     /// Index of the start of the code vector. The IP initially points to this
     /// instruction, as this is where execution would normally begin.
@@ -93,10 +93,7 @@ impl<'v> VM<'v> {
         ft: HashMap<String, usize>,
         is_trace: bool,
     ) -> VM<'v> {
-        // Allocate for heap
-        let mut heap = HashMap::new();
-        heap.reserve(HEAP_INIT_ITEMS);
-
+        let mut heap = HashMap::with_capacity(HEAP_INIT_ITEMS);
         let reglist = DataRegisterList::init(DREG_INITIAL_LEN);
 
         VM {
@@ -105,10 +102,10 @@ impl<'v> VM<'v> {
             jumptab: jt,
             dregs: reglist,
             frr: Rc::new(RefCell::new(DReg::new(String::from("frr")))),
-            cdr: 0,
             heap: heap,
             stdlib: Std::new(),
             fnst: Vec::new(),
+            cdr: 0,
             csi: code_start,
             ip: code_start,
             trace: is_trace,
