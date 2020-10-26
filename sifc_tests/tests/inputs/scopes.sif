@@ -1,0 +1,17 @@
+var x = 0;
+
+fn arrayof5() {
+   var x = [1,2,3,4,5];
+   var y;
+   y = x;
+   return y;
+}
+
+fn y() {}
+
+x = 1;
+var y = arrayof5();
+
+for i, v in y {
+  var x = v;
+}

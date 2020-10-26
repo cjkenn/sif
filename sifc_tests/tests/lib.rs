@@ -55,3 +55,4 @@ integ_test!(for_stmt_integ, "for_stmt");
 integ_test!(if_stmt_integ, "if_stmt");
 integ_test!(table_decl_integ, "table_decl");
 integ_test!(std_lib_calls_integ, "std_lib_calls");
+integ_test!(scopes, "scopes");
