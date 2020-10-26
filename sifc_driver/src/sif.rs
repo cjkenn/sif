@@ -28,6 +28,7 @@ const ARG_EMIT_IR: &str = "emit-ir";
 const ARG_TRACE_EXEC: &str = "trace-exec";
 const ARG_HEAP_SIZE: &str = "heap-size";
 const ARG_REG_COUNT: &str = "reg-count";
+const ARG_BENCH: &str = "bench";
 
 fn main() {
     let matches = App::new("sif")
@@ -70,6 +71,12 @@ fn main() {
                 .default_value(DEFAULT_DREG)
                 .about("Sets the default virtual register count"),
         )
+        .arg(
+            Arg::new(ARG_BENCH)
+                .short('b')
+                .long(ARG_BENCH)
+                .about("Display basic benchmarks for phases of sif"),
+        )
         .get_matches();
 
     from_file(matches);
@@ -77,10 +84,18 @@ fn main() {
 
 fn from_file(opts: ArgMatches) {
     let exec_start = Instant::now();
+    let is_bench = opts.is_present(ARG_BENCH);
 
     let mut symtab = SymTab::new();
     let path = opts.value_of(ARG_FILENAME).unwrap();
     let parse_result = parse(&path, &mut symtab);
+    if is_bench {
+        println!(
+            "sif: parsing of '{}' completed in {:#?}",
+            path,
+            exec_start.elapsed()
+        );
+    }
 
     // Any errors should already have been emitted by the
     // parser, whether or not they are continuable.
@@ -96,7 +111,13 @@ fn from_file(opts: ArgMatches) {
     }
 
     compile_and_run(opts, &ast);
-    println!("sif: execution completed in {:#?}", exec_start.elapsed());
+
+    if is_bench {
+        println!(
+            "\nsif: total execution completed in {:#?}",
+            exec_start.elapsed()
+        );
+    }
 }
 
 /// Opens the file from the filename provided, creates a lexer for that file
@@ -104,6 +125,8 @@ fn from_file(opts: ArgMatches) {
 /// the result from the parser. This result will contain any errors, as well
 /// as the AST from parsing (which will be None if there are errors).
 fn parse(filename: &str, symtab: &mut SymTab) -> ParserResult {
+    let parse_start = Instant::now();
+
     let infile = match File::open(filename) {
         Ok(file) => file,
         Err(e) => {
@@ -111,15 +134,13 @@ fn parse(filename: &str, symtab: &mut SymTab) -> ParserResult {
         }
     };
 
-    println!("sif: parsing file {}...", filename);
-
     let mut lexer = Lexer::new(infile);
     let mut parser = Parser::new(&mut lexer, symtab);
     parser.parse()
 }
 
 fn compile_and_run(opts: ArgMatches, ast: &AstNode) {
-    println!("sif: compiling...");
+    let compile_start = Instant::now();
 
     let mut comp = Compiler::new(ast);
     let comp_result = comp.compile();
@@ -141,9 +162,13 @@ fn compile_and_run(opts: ArgMatches, ast: &AstNode) {
         printer::dump_code(comp_result.code.clone());
     }
 
-    println!("sif: starting vm...");
-    if opts.is_present(ARG_TRACE_EXEC) {
-        println!("sif: tracing vm execution!\n");
+    let is_bench = opts.is_present(ARG_BENCH);
+
+    if is_bench {
+        println!(
+            "sif: bytecode compilation completed in {:#?}",
+            compile_start.elapsed()
+        );
     }
 
     let heap_size: usize = opts.value_of(ARG_HEAP_SIZE).unwrap().parse().unwrap();
@@ -155,9 +180,16 @@ fn compile_and_run(opts: ArgMatches, ast: &AstNode) {
         initial_dreg_count: dreg_count,
     };
 
+    let vm_start = Instant::now();
+
     // TODO: use a param struct for this? A builder?
     let mut vm = VM::init(program, code_start, jumptab, fntab, conf);
     let vm_result = vm.run();
+
+    if is_bench {
+        println!("sif: vm execution finished in {:#?}", vm_start.elapsed());
+    }
+
     match vm_result {
         Ok(()) => {}
         Err(e) => {
