@@ -1,0 +1,3 @@
+# name of declared function is not an ident
+
+fn 1(x, y) {}

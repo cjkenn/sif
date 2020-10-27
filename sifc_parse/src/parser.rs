@@ -301,7 +301,7 @@ impl<'l, 's> Parser<'l, 's> {
                 let mut param_list = Vec::new();
 
                 while self.curr_tkn.ty != TokenTy::RightParen {
-                    if param_list.len() > FN_PARAM_MAX_LEN {
+                    if param_list.len() >= FN_PARAM_MAX_LEN {
                         return Err(self.add_error(ParseErrTy::FnParmCntExceeded(FN_PARAM_MAX_LEN)));
                     }
 

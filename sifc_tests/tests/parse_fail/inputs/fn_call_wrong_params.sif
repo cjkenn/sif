@@ -1,7 +1,6 @@
-# expect::fail
-
 fn double(x) {
    return x * 2;
 }
 
+# expect only 1 param
 double(1, 2);

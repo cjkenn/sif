@@ -1,0 +1,2 @@
+# 0 is not a valid identifier in a param list
+fn g(y, 0) {}

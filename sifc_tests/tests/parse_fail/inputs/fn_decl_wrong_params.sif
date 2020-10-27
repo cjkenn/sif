@@ -1,7 +1,6 @@
-# expect::fail
-
 fn times(x, y) {
    return x * y;
 }
 
+# expected 2 params
 double(1);

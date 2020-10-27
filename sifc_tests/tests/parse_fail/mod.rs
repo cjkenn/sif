@@ -24,5 +24,15 @@ macro_rules! parse_fail_test {
 parse_fail_test!(fn_call_wrong_params, "fn_call_wrong_params");
 parse_fail_test!(fn_decl_invalid, "fn_decl_invalid");
 parse_fail_test!(fn_decl_wrong_params, "fn_decl_wrong_params");
-parse_fail_test!(table_access_invalid, "table_access_invalid");
 parse_fail_test!(var_decl_invalid, "var_decl_invalid");
+parse_fail_test!(undecl_sym_assign, "undecl_sym_assign");
+parse_fail_test!(undecl_fn_call, "undecl_fn_call");
+parse_fail_test!(undecl_fn, "undecl_fn");
+parse_fail_test!(assign_decl, "assign_decl");
+parse_fail_test!(invalid_param_ident, "invalid_param_ident");
+parse_fail_test!(fn_decl_unclosed_paren, "fn_decl_unclosed_paren");
+parse_fail_test!(fn_decl_eof, "fn_decl_eof");
+parse_fail_test!(fn_param_count_exceeded, "fn_param_count_exceeded");
+parse_fail_test!(fn_decl_no_ident, "fn_decl_no_ident");
+parse_fail_test!(var_decl_not_ident, "var_decl_not_ident");
+

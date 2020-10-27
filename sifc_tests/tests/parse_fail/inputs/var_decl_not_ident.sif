@@ -1,0 +1,2 @@
+# declared var name is not an identifier
+var 90 = "invalid";
