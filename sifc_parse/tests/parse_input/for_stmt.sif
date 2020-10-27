@@ -1,8 +1,0 @@
-# expect::pass
-
-var q = [];
-
-for idx, val in q {
-  var y;
-  var x = idx + 1;
-}

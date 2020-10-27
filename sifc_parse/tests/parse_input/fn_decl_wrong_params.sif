@@ -1,7 +1,0 @@
-# expect::fail
-
-fn times(x, y) {
-   return x * y;
-}
-
-double(1);
