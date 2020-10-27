@@ -133,6 +133,11 @@ impl<'c> Compiler<'c> {
     }
 
     pub fn blocks(&mut self, blocks: Vec<AstNode>) {
+        if blocks.len() == 0 {
+            self.push_op(Op::Nop);
+            return;
+        }
+
         for block in blocks {
             self.block(&block);
         }
@@ -205,6 +210,10 @@ impl<'c> Compiler<'c> {
         }
 
         self.ri - 1
+    }
+
+    pub fn decl_scope(&self) -> bool {
+        self.decl_scope
     }
 
     pub fn push_op(&mut self, op: Op) {

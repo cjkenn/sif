@@ -86,6 +86,14 @@ impl<'c> Compiler<'c> {
             self.blocks(else_stmts);
             self.newlbl();
         }
+
+        // We may need a spare nop instruction to close out the block at the end of
+        // generation if we are inside a function. This allows proper jump indexing
+        // out of the statement, and ensures we don't run into other decl instructions.
+        if self.decl_scope() {
+            self.newlbl();
+            self.push_op(Op::Nop);
+        }
     }
 
     /// Generates instructions for an elif node. This takes in two jump label indices:
