@@ -1,0 +1,8 @@
+var x = [6,
+"7",
+];
+
+var y = x[0];
+
+# without trailing comma
+var w = [1, 2, 3];

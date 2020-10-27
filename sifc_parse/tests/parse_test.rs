@@ -3,7 +3,6 @@ use sifc_parse::{
     parser::{Parser, ParserResult},
     symtab::SymTab,
 };
-
 use std::{
     fs::File,
     io::{BufRead, BufReader},

@@ -1,0 +1,9 @@
+# expect::fail
+
+var tab = [[
+  z => 1,
+  x => 2
+]];
+
+# should be using '.', not '->'
+var t = tab->z;

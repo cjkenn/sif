@@ -1,0 +1,10 @@
+var x;
+var y = 10;
+x = 11;
+
+var q = "hello";
+q = "goodbye";
+
+var h = false;
+h = true;
+h = 20;
