@@ -53,16 +53,18 @@ pub struct VM<'v> {
     /// space before vm startup could be more performant.
     heap: HashMap<String, SifVal>,
 
-    /// Standard libary function mappings
+    /// Standard libary function mappings.
     stdlib: Std<'v>,
 
     /// Stack for storing function params. Note that we do not use this for function return
     /// values, which are placed into frr.
-    fnst: Vec<SifVal>,
+    fn_param_stack: Vec<SifVal>,
 
-    /// Special control value which holds the instruction number to jump to when
-    /// a function returns.
-    cdr: usize,
+    /// Stack that stores jump locations for calling functions and returning from them. Like a normal
+    /// calls stack, when a function is called we push the location to return to on to the stack. Once the
+    /// function has finished executing, we pop the location off the call stack and set ip to that
+    /// value.
+    call_stack: Vec<usize>,
 
     /// Index of the start of the code vector. The IP initially points to this
     /// instruction, as this is where execution would normally begin.
@@ -97,8 +99,8 @@ impl<'v> VM<'v> {
             frr: Rc::new(RefCell::new(DReg::new(FRR_NAME.to_string()))),
             heap: heap,
             stdlib: Std::new(),
-            fnst: Vec::new(),
-            cdr: 0,
+            fn_param_stack: Vec::new(),
+            call_stack: Vec::new(),
             csi: code_start,
             ip: code_start,
             config: conf,
@@ -238,11 +240,18 @@ impl<'v> VM<'v> {
 
                 // Jump back to the value in cdr, which should be set before
                 // the function call executes.
-                self.ip = self.cdr;
+                let ret_loc = self.call_stack.pop();
+                if ret_loc.is_none() {
+                    return Err(self.newerr(RuntimeErrTy::EmptyCallStack));
+                }
+                self.ip = ret_loc.unwrap();
             }
             Op::FnRet => {
-                // Nothing to return here, so we just jump back to regular execution.
-                self.ip = self.cdr;
+                let ret_loc = self.call_stack.pop();
+                if ret_loc.is_none() {
+                    return Err(self.newerr(RuntimeErrTy::EmptyCallStack));
+                }
+                self.ip = ret_loc.unwrap();
             }
             Op::Call {
                 name,
@@ -257,7 +266,7 @@ impl<'v> VM<'v> {
                 // the call to return to our correct spot when completed. Then, jump to
                 // the location by setting ip to it.
                 let loc = maybe_loc.unwrap();
-                self.cdr = self.ip;
+                self.call_stack.push(self.ip);
                 self.ip = *loc;
             }
             Op::StdCall { name, param_count } => {
@@ -266,7 +275,7 @@ impl<'v> VM<'v> {
                 let mut params = Vec::new();
                 let mut i = 0;
                 while i < param_count {
-                    let v = self.fnst.pop();
+                    let v = self.fn_param_stack.pop();
                     params.push(v.unwrap());
                     i += 1;
                 }
@@ -275,10 +284,10 @@ impl<'v> VM<'v> {
             Op::FnStackPush { src } => {
                 let srcreg = self.dregs.get(src);
                 let to_push = srcreg.borrow().cont.clone();
-                self.fnst.push(to_push.unwrap());
+                self.fn_param_stack.push(to_push.unwrap());
             }
             Op::FnStackPop { dest } => {
-                let to_pop = self.fnst.pop();
+                let to_pop = self.fn_param_stack.pop();
                 self.dregs.set_contents(dest, to_pop);
             }
             Op::TblI { tabname, key, src } => {

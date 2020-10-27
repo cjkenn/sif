@@ -1,8 +1,12 @@
 use crate::ast::AstNode;
-
 use std::collections::HashMap;
 
-/// Scope is a map of ident names to their AST definitions.
+pub enum SymTy {
+    Fn,
+    Var,
+}
+
+/// Scope is a map of ident names to their declaration AST.
 type Scope = HashMap<String, AstNode>;
 
 #[derive(Debug)]
@@ -55,7 +59,8 @@ impl SymTab {
     }
 
     /// Get a symbol from the table. We check the current scope and
-    /// all parent scopes for the symbol.
+    /// all parent scopes for the symbol. Returns None if the symbol
+    /// doesn't exist.
     pub fn retrieve(&self, key: &str) -> Option<AstNode> {
         let mut curr = self.curr_lvl;
 
@@ -73,5 +78,9 @@ impl SymTab {
         }
 
         None
+    }
+
+    pub fn contains(&self, key: &str) -> bool {
+        self.retrieve(key).is_some()
     }
 }

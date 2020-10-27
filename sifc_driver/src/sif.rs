@@ -125,8 +125,6 @@ fn from_file(opts: ArgMatches) {
 /// the result from the parser. This result will contain any errors, as well
 /// as the AST from parsing (which will be None if there are errors).
 fn parse(filename: &str, symtab: &mut SymTab) -> ParserResult {
-    let parse_start = Instant::now();
-
     let infile = match File::open(filename) {
         Ok(file) => file,
         Err(e) => {

@@ -217,10 +217,15 @@ impl<'l, 's> Parser<'l, 's> {
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
+        // Insert a placeholder so recursive calls pass. We store the actual
+        // node later on by calling this function again.
+        self.sym_tab.store(&ident_tkn.get_name(), AstNode::Null);
+
         self.expect(TokenTy::LeftParen)?;
         let params = self.param_list(false)?;
         self.expect(TokenTy::RightParen)?;
 
+        // Insert function params into symtab for block parsing.
         let bindings = match &params {
             AstNode::FnParams { ref params } => {
                 if params.len() > 0 {
@@ -237,6 +242,7 @@ impl<'l, 's> Parser<'l, 's> {
         // We don't need to write a return statement in every function, but we need
         // to insert the return ast if we don't have one so we can generate the right code
         // and jumps later when we compile.
+        // TODO: we could do this in the compiler though...
         let body_w_ret = match body {
             AstNode::Block { ref decls, scope } => match decls.len() {
                 0 => {
@@ -820,6 +826,9 @@ impl<'l, 's> Parser<'l, 's> {
                 let ident_name = ident_tkn.clone().unwrap().get_name();
                 let maybe_ast = self.sym_tab.retrieve(&ident_name);
                 let is_std = crate::reserved::is_std_lib_fn(&ident_name);
+
+                // If we can't find the function name in the ast, we assume it's undeclared,
+                // GIVEN that the symbol is not a standard lib function.
                 if maybe_ast.is_none() {
                     if !is_std {
                         let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
@@ -828,7 +837,19 @@ impl<'l, 's> Parser<'l, 's> {
                     }
                 }
 
-                if !is_std {
+                // Used to check if this may be a recursive call. If it is, we skip some
+                // further checks and assume the function will be defined properly in
+                // the symbol table after further parsing. If there are any errors they will get
+                // raised at runtime or possibly compile time.
+                let is_null = (!is_std)
+                    && match maybe_ast.clone().unwrap() {
+                        AstNode::Null => true,
+                        _ => false,
+                    };
+
+                // HACK: if not standard, we match the params and error on the wrong param
+                // count. If it is standard lib, just skip for now
+                if !is_std && !is_null {
                     let expected_param_len = match maybe_ast.unwrap() {
                         AstNode::FnDecl {
                             ident_tkn: _,
@@ -894,8 +915,7 @@ impl<'l, 's> Parser<'l, 's> {
                 let ident_tkn = self.curr_tkn.clone();
 
                 if self.should_check_sym_tab {
-                    let maybe_ast = self.sym_tab.retrieve(ident_name);
-                    if maybe_ast.is_none() {
+                    if !self.sym_exists(ident_name) {
                         if !crate::reserved::is_std_lib_fn(ident_name) {
                             let err = self.add_error(ParseErrTy::UndeclSym(ident_name.to_string()));
                             self.consume();
@@ -990,5 +1010,9 @@ impl<'l, 's> Parser<'l, 's> {
         let err = ParseErr::new(line, pos, ty);
         self.errors.push(err.clone());
         err
+    }
+
+    fn sym_exists(&self, key: &str) -> bool {
+        self.sym_tab.contains(key)
     }
 }

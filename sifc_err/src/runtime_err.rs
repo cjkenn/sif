@@ -13,6 +13,7 @@ pub enum RuntimeErrTy {
     TyMismatch,
     NotAnArray(String),
     InvalidFnSym(String),
+    EmptyCallStack,
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +63,9 @@ impl SifErr for RuntimeErr {
             }
             RuntimeErrTy::InvalidFnSym(s) => {
                 format!("Cannot call function {}, declaration not found", s)
+            }
+            RuntimeErrTy::EmptyCallStack => {
+                String::from("invalid function call access: no return address specified")
             }
         }
     }

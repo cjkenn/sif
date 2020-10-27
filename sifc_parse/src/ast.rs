@@ -119,6 +119,8 @@ pub enum AstNode {
     PrimaryExpr {
         tkn: Token,
     },
+
+    Null,
 }
 
 impl AstNode {
