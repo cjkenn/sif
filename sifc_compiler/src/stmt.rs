@@ -40,6 +40,10 @@ impl<'c> Compiler<'c> {
         // This initial conditional jump instruction appears after the conditional has
         // been evaluated above. If the conditional is false, we jump to the else block, or,
         // if the else block doesn't exist, to the end of the if statement.
+        
+        // TODO: this isn't correct: we should actually jump to the first elif if the conditional
+        // is false. We might have to compute other things first and then insert this instruction
+        // after we know more about labels?
         let jmp_op = Op::JumpCnd {
             kind: JmpOpKind::Jmpf,
             src: self.prevreg(),
@@ -84,7 +88,6 @@ impl<'c> Compiler<'c> {
         if else_stmts.len() != 0 {
             self.newlbl();
             self.blocks(else_stmts);
-            self.newlbl();
         }
 
         // We may need a spare nop instruction to close out the block at the end of
