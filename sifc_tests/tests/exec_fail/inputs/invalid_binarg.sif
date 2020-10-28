@@ -1,0 +1,3 @@
+var y;
+# y is null
+var x = 10 + y;

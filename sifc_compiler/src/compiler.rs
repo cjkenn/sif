@@ -345,6 +345,12 @@ impl<'c> Compiler<'c> {
                     };
                     self.push_op(op);
                 }
+                TokenTy::Str(s) => {
+                    let sifv = SifVal::Str(s.clone());
+                    let d = self.nextreg();
+                    let op = Op::LoadC { dest: d, val: sifv };
+                    self.push_op(op);
+                }
                 _ => {}
             },
             _ => {
