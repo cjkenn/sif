@@ -162,21 +162,12 @@ mod tests {
             Op::JumpCnd {
                 kind: JmpOpKind::Jmpf,
                 src: 2,
-                lbl: "lbl2".to_string(),
                 lblidx: 2,
             },
             4,
         ));
 
-        code.push(Instr::new(
-            1,
-            Op::JumpA {
-                lbl: "lbl2".to_string(),
-                lblidx: 2,
-            },
-            5,
-        ));
-
+        code.push(Instr::new(1, Op::JumpA { lblidx: 2 }, 5));
         code.push(Instr::new(2, Op::Nop, 6));
 
         code

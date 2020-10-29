@@ -104,13 +104,15 @@ impl fmt::Display for Instr {
                 let line = format!("strfrr {}", name);
                 initial.push_str(&line);
             }
-            Op::JumpCnd { kind, src, lbl, .. } => {
+            Op::JumpCnd { kind, src, lblidx } => {
                 let op_str = jmp_kind_str(kind);
+                let lbl = lbl_str(lblidx);
                 let rstr = reg_str(src);
                 let line = format!("{} {} {}", op_str, rstr, lbl);
                 initial.push_str(&line);
             }
-            Op::JumpA { lbl, .. } => {
+            Op::JumpA { lblidx } => {
+                let lbl = lbl_str(lblidx);
                 let line = format!("jmpa {}", lbl);
                 initial.push_str(&line);
             }
@@ -277,16 +279,18 @@ impl fmt::Debug for Instr {
                 let line = format!("\t strfrr {}\t ; {}, {}\n", name, self.line, self.lbl);
                 initial.push_str(&line);
             }
-            Op::JumpCnd { kind, src, lbl, .. } => {
+            Op::JumpCnd { kind, src, lblidx } => {
                 let op_str = jmp_kind_str(kind);
                 let rstr = reg_str(src);
+                let lbl = lbl_str(lblidx);
                 let line = format!(
                     "\t {} {} {}\t ; {}, {}\n",
                     op_str, rstr, lbl, self.line, self.lbl
                 );
                 initial.push_str(&line);
             }
-            Op::JumpA { lbl, .. } => {
+            Op::JumpA { lblidx } => {
+                let lbl = lbl_str(lblidx);
                 let line = format!("\t jmpa {}\t ; {}, {}\n", lbl, self.line, self.lbl);
                 initial.push_str(&line);
             }
@@ -407,4 +411,8 @@ fn val_str(v: SifVal) -> String {
         SifVal::Arr(a) => format!("{:?}", a),
         SifVal::Tab(t) => format!("{:?}", t),
     }
+}
+
+fn lbl_str(v: usize) -> String {
+    format!("lbl{}", v)
 }

@@ -171,19 +171,14 @@ impl<'v> VM<'v> {
                     None => self.heap.insert(name.to_string(), SifVal::Null),
                 };
             }
-            Op::JumpA { lbl: _, lblidx } => {
+            Op::JumpA { lblidx } => {
                 let codeidx = self.jumptab.get(&lblidx);
                 match codeidx {
                     Some(i) => self.ip = *i - 1,
                     None => return Err(self.newerr(RuntimeErrTy::InvalidJump)),
                 };
             }
-            Op::JumpCnd {
-                kind,
-                src,
-                lbl: _,
-                lblidx,
-            } => {
+            Op::JumpCnd { kind, src, lblidx } => {
                 let reg = self.dregs.get(src);
                 let contents = reg.borrow().cont.clone();
                 if contents.is_none() {

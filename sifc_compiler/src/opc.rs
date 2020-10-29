@@ -135,13 +135,11 @@ pub enum Op {
     JumpCnd {
         kind: JmpOpKind,
         src: usize,
-        lbl: String,
         lblidx: usize,
     },
 
-    /// Always jump to given lbl
+    /// Always jump to given lbl index
     JumpA {
-        lbl: String,
         lblidx: usize,
     },
 

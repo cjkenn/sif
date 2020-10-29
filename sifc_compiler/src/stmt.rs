@@ -37,31 +37,25 @@ impl<'c> Compiler<'c> {
             el_jmp_idx = el_jmp_idx - 1;
         }
 
-        // This initial conditional jump instruction appears after the conditional has
-        // been evaluated above. If the conditional is false, we jump to the else block, or,
-        // if the else block doesn't exist, to the end of the if statement.
-        
-        // TODO: this isn't correct: we should actually jump to the first elif if the conditional
-        // is false. We might have to compute other things first and then insert this instruction
-        // after we know more about labels?
-        let jmp_op = Op::JumpCnd {
+        let jmpcnd_idx = self.ops.len();
+        let jmpcnd_reg = self.prevreg();
+
+        let jmp_op_placeholder = Op::JumpCnd {
             kind: JmpOpKind::Jmpf,
-            src: self.prevreg(),
-            lbl: self.buildlbl(el_jmp_idx),
-            lblidx: el_jmp_idx,
+            src: usize::MAX,
+            lblidx: usize::MAX,
         };
-        self.push_op(jmp_op);
+        self.push_op(jmp_op_placeholder);
         self.newlbl();
 
         // Generate statements for when the condition expression is true. Afterwards,
         // we jump always to the end of the if statement, so we do not run the instructions
         // contained in the else block.
         self.block(if_stmts);
-        let jmpa_op = Op::JumpA {
-            lbl: self.buildlbl(final_jmp_idx),
-            lblidx: final_jmp_idx,
-        };
-        self.push_op(jmpa_op);
+
+        let jmpa_idx = self.ops.len();
+        let jmpa_op_placeholder = Op::JumpA { lblidx: usize::MAX };
+        self.push_op(jmpa_op_placeholder);
 
         // Generate statements for elif nodes, if any. More label calculations are done here:
         // each false elif condition should jump to the next possible elif, if it exists. If
@@ -70,6 +64,8 @@ impl<'c> Compiler<'c> {
         // The label initially points to the else block index. However, if we have additional
         // elif blocks to generate for, we alter the label so we jump to those conditionals
         // by reducing the label count by 2 to accomodate for the 2 labels needed by the elif.
+        let has_elifs = elif_exprs.len() != 0;
+        let mut jmpcnd_lbl = self.lblcnt() + 1;
         for (i, ee) in elif_exprs.iter().enumerate() {
             self.newlbl();
 
@@ -85,8 +81,10 @@ impl<'c> Compiler<'c> {
 
         // Generate statements for else nodes. No additional labeling is needed here,
         // as the else will fall through to subsequent instructions after being evaluated.
-        if else_stmts.len() != 0 {
+        let has_else = else_stmts.len() != 0;
+        if has_else {
             self.newlbl();
+            jmpcnd_lbl = self.lblcnt();
             self.blocks(else_stmts);
         }
 
@@ -97,6 +95,30 @@ impl<'c> Compiler<'c> {
             self.newlbl();
             self.push_op(Op::Nop);
         }
+
+        self.newlbl();
+
+        // Updating the first conditional jump as follows:
+        // 1. No else or elifs: jump to end of block
+        // 2. Else, no elif: jump to start of else
+        // 3. Elif, no else: jump to first elif
+        // 4. Elif, else: jump to first elif
+        if !has_else && !has_elifs {
+            jmpcnd_lbl = self.lblcnt();
+        }
+        let jmp_op_real = Op::JumpCnd {
+            kind: JmpOpKind::Jmpf,
+            src: jmpcnd_reg,
+            lblidx: jmpcnd_lbl,
+        };
+        self.update_op_at(jmpcnd_idx, jmp_op_real);
+
+        // Update the always executed jump to go to the last label
+        let jmpa_op_real = Op::JumpA {
+            lblidx: self.lblcnt(),
+        };
+        self.update_op_at(jmpa_idx, jmpa_op_real);
+        self.push_op(Op::Nop);
     }
 
     /// Generates instructions for an elif node. This takes in two jump label indices:
@@ -113,7 +135,6 @@ impl<'c> Compiler<'c> {
                 let jmp_op = Op::JumpCnd {
                     kind: JmpOpKind::Jmpf,
                     src: self.prevreg(),
-                    lbl: self.buildlbl(next_elif_jmp_idx),
                     lblidx: next_elif_jmp_idx,
                 };
                 self.push_op(jmp_op);
@@ -123,7 +144,6 @@ impl<'c> Compiler<'c> {
                 // if statement, skipping the else block if it exists.
                 self.block(stmts);
                 let jmpa_op = Op::JumpA {
-                    lbl: self.buildlbl(final_jmp_idx),
                     lblidx: final_jmp_idx,
                 };
                 self.push_op(jmpa_op);
@@ -210,7 +230,6 @@ impl<'c> Compiler<'c> {
         let idx_jmp = Op::JumpCnd {
             kind: JmpOpKind::Jmpt,
             src: self.prevreg(),
-            lbl: self.currlbl(),
             lblidx: loop_lbl,
         };
         self.push_op(idx_jmp);

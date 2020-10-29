@@ -71,7 +71,7 @@ pub struct Compiler<'c> {
     /// Vector of instructions which the compiler will prepare and fill.
     /// This refers to the code section of the vm layout. It's size should be
     /// known before interpreting begins.
-    ops: Vec<Instr>,
+    pub ops: Vec<Instr>,
 
     /// Vector of instructions which the compiler will fill with declarations,
     /// particularly function bodies.
@@ -81,7 +81,7 @@ pub struct Compiler<'c> {
     lblcnt: usize,
 
     /// Current available register
-    ri: usize,
+    pub ri: usize,
 
     /// If true, we write to decl section. If false, write to code section.
     // This is really more of a hack, we should process things without having to
@@ -110,8 +110,8 @@ impl<'c> Compiler<'c> {
 
                 // TODO: we need this for labeling purposes right now, but
                 // could probably remove it later
-                self.newlbl();
-                self.push_op(Op::Nop);
+                //self.newlbl();
+                //self.push_op(Op::Nop);
             }
             _ => currerr = Some(CompileErr::new(CompileErrTy::InvalidAst)),
         };
@@ -223,6 +223,14 @@ impl<'c> Compiler<'c> {
         } else {
             let i = Instr::new(self.lblcnt, op, self.ops.len() + 1);
             self.ops.push(i);
+        }
+    }
+
+    pub fn update_op_at(&mut self, idx: usize, op: Op) {
+        if self.decl_scope {
+            self.decls[idx].op = op;
+        } else {
+            self.ops[idx].op = op;
         }
     }
 
