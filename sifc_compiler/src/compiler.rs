@@ -81,7 +81,7 @@ pub struct Compiler<'c> {
     lblcnt: usize,
 
     /// Current available register
-    pub ri: usize,
+    ri: usize,
 
     /// If true, we write to decl section. If false, write to code section.
     // This is really more of a hack, we should process things without having to
@@ -107,11 +107,6 @@ impl<'c> Compiler<'c> {
         match self.ast {
             AstNode::Program { blocks } => {
                 self.blocks(blocks.to_vec());
-
-                // TODO: we need this for labeling purposes right now, but
-                // could probably remove it later
-                //self.newlbl();
-                //self.push_op(Op::Nop);
             }
             _ => currerr = Some(CompileErr::new(CompileErrTy::InvalidAst)),
         };

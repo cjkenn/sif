@@ -19,64 +19,42 @@ impl<'c> Compiler<'c> {
         // Generate condition expression
         self.expr(cond_expr);
 
-        // The jmp labels for if statements are calculated as follows:
-        // 1. The initial if condition and statements take two labels
-        // 2. Each elif takes two labels, one for the condition and one for the
-        //    statements. This means we jump past them all from the initial
-        //    if statements: (# elifs * 2)
-        // 3. An else block takes 1 label, because there is no condition.
-        //
-        // We define two indices for this purpose:
-        // First, final_jmp_idx represents the label after the entire if block
-        // is completed.
-        // Second, el_jmp_idx represents the label of the optional else statement, which
-        // we must jump to from failed condition expressions if it exists.
-        let final_jmp_idx = (self.lblcnt() + 2) + (elif_exprs.len() * 2) + else_stmts.len();
-        let mut el_jmp_idx = final_jmp_idx;
-        if else_stmts.len() > 0 {
-            el_jmp_idx = el_jmp_idx - 1;
-        }
-
+        // Insert a placeholder for the conditional jump. This well be updated later
+        // when we have more label information and can compute the proper jump index.
+        // We store the register and the idx for later, when the udpate is performed.
         let jmpcnd_idx = self.ops.len();
         let jmpcnd_reg = self.prevreg();
-
-        let jmp_op_placeholder = Op::JumpCnd {
+        let jmpcnd_op_placeholder = Op::JumpCnd {
             kind: JmpOpKind::Jmpf,
             src: usize::MAX,
             lblidx: usize::MAX,
         };
-        self.push_op(jmp_op_placeholder);
-        self.newlbl();
+        self.push_op(jmpcnd_op_placeholder);
 
-        // Generate statements for when the condition expression is true. Afterwards,
-        // we jump always to the end of the if statement, so we do not run the instructions
-        // contained in the else block.
+        // Generate statements for when the condition expression is true.
+        self.newlbl();
         self.block(if_stmts);
 
+        // Like the conditional jump, we store a palceholder for the unconditional
+        // jump instruction. We need to update this later when we know the exact
+        // position to jump to.
         let jmpa_idx = self.ops.len();
         let jmpa_op_placeholder = Op::JumpA { lblidx: usize::MAX };
         self.push_op(jmpa_op_placeholder);
 
-        // Generate statements for elif nodes, if any. More label calculations are done here:
-        // each false elif condition should jump to the next possible elif, if it exists. If
-        // it does not, it should jump to the else block. If the else block doesn't exist, we
-        // jump to the end of the if statement.
-        // The label initially points to the else block index. However, if we have additional
-        // elif blocks to generate for, we alter the label so we jump to those conditionals
-        // by reducing the label count by 2 to accomodate for the 2 labels needed by the elif.
         let has_elifs = elif_exprs.len() != 0;
         let mut jmpcnd_lbl = self.lblcnt() + 1;
-        for (i, ee) in elif_exprs.iter().enumerate() {
+
+        // Generate statements for elif nodes. Each elif generation returns the jump index
+        // for the unconditional branch: these must be updated later to the correct index
+        // once we know how many blocks we processed here. We store them in a vec and
+        // overwrite them.
+        let mut jmpa_op_idxs = Vec::new();
+        for ee in elif_exprs {
             self.newlbl();
 
-            let mut jmp_lbl = el_jmp_idx;
-            if i != elif_exprs.len() - 1 {
-                jmp_lbl = jmp_lbl - 2;
-            }
-
-            // We pass in jmp_lbl for the next elif expr, and final_jmp_idx to
-            // get to the end of the if statement.
-            self.elif(ee, jmp_lbl, final_jmp_idx);
+            let jmpa_idx = self.elif(&ee);
+            jmpa_op_idxs.push(jmpa_idx);
         }
 
         // Generate statements for else nodes. No additional labeling is needed here,
@@ -113,43 +91,70 @@ impl<'c> Compiler<'c> {
         };
         self.update_op_at(jmpcnd_idx, jmp_op_real);
 
-        // Update the always executed jump to go to the last label
+        // Update jmpa indexes in any elifs to point to the very end of this block, as they should
+        // always skip every other elif/else condition.
+        for idx in jmpa_op_idxs {
+            let jmpa_op_real = Op::JumpA {
+                lblidx: self.lblcnt(),
+            };
+            self.update_op_at(idx, jmpa_op_real);
+        }
+
+        // Update the always executed jump to go to the last label in this current block, as (like
+        // the elif labels) we should skip everything from this jump.
         let jmpa_op_real = Op::JumpA {
             lblidx: self.lblcnt(),
         };
         self.update_op_at(jmpa_idx, jmpa_op_real);
+
+        // Push a Nop in: this fixes jumps to "empty" blocks.
         self.push_op(Op::Nop);
     }
 
-    /// Generates instructions for an elif node. This takes in two jump label indices:
-    /// next_elif_jmp_idx: the index for the next subsequent elif block, if any.
-    /// final_jmp_idx: the label index for the end of the if statement.
-    fn elif(&mut self, elif: &AstNode, next_elif_jmp_idx: usize, final_jmp_idx: usize) {
+    /// Generates instructions for an elif node.
+    /// Returns the jmpa program index that should be updated later to change the jump
+    /// index to be the last out of the elif.
+    fn elif(&mut self, elif: &AstNode) -> usize {
         match elif {
             AstNode::ElifStmt { cond_expr, stmts } => {
                 self.expr(cond_expr);
 
-                // If the condition is false, we go to the next elif condition expression.
-                // If the next elif condition doesn't exist, then this will jump to the
-                // end of the if statement (the index should be the same as final_jmp_idx).
-                let jmp_op = Op::JumpCnd {
+                // Similar to regular if stmt generation, we store the index and register for
+                // the conditional jump so we can update it later once more label information
+                // is available.
+                let jmpcnd_idx = self.ops.len();
+                let jmpcnd_reg = self.prevreg();
+
+                let jmp_op_placeholder = Op::JumpCnd {
                     kind: JmpOpKind::Jmpf,
-                    src: self.prevreg(),
-                    lblidx: next_elif_jmp_idx,
+                    src: usize::MAX,
+                    lblidx: usize::MAX,
                 };
-                self.push_op(jmp_op);
+                self.push_op(jmp_op_placeholder);
                 self.newlbl();
 
                 // After we generate the statements for the elif block, we jump out of the
                 // if statement, skipping the else block if it exists.
                 self.block(stmts);
-                let jmpa_op = Op::JumpA {
-                    lblidx: final_jmp_idx,
+
+                // Update the conditional jump.
+                let jmp_op_real = Op::JumpCnd {
+                    kind: JmpOpKind::Jmpf,
+                    src: jmpcnd_reg,
+                    lblidx: self.lblcnt() + 1,
                 };
+                self.update_op_at(jmpcnd_idx, jmp_op_real);
+
+                // Record the location of the jmpa label so it can be updated later
+                // after all elifs are processed.
+                let jmpa_place = self.ops.len();
+                let jmpa_op = Op::JumpA { lblidx: usize::MAX };
                 self.push_op(jmpa_op);
+
+                jmpa_place
             }
-            _ => {}
-        };
+            _ => usize::MAX,
+        }
     }
 
     pub fn forstmt(&mut self, var_list: &AstNode, in_expr_list: &AstNode, stmts: &AstNode) {
