@@ -1,0 +1,5 @@
+if true || false {
+  var t = 0;
+} else {
+  var t = 1;
+}

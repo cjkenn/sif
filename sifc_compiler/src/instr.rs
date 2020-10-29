@@ -23,14 +23,6 @@ impl Instr {
     }
 }
 
-pub fn prog_to_string(prog: Vec<Instr>) -> String {
-    let mut result = String::new();
-    for i in prog {
-        result.push_str(&format!("{:#}\n", i));
-    }
-    result
-}
-
 impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut initial = String::new();
@@ -125,7 +117,7 @@ impl fmt::Display for Instr {
                 initial.push_str(&line);
             }
             Op::Nop => {
-                let line = format!("{}\t", "nop");
+                let line = format!("{}", "nop");
                 initial.push_str(&line);
             }
             Op::Incrr { src } => {
@@ -152,16 +144,16 @@ impl fmt::Display for Instr {
                 initial.push_str(&line);
             }
             Op::Call { name, .. } => {
-                let line = format!("call {} ", name);
+                let line = format!("call {}", name);
                 initial.push_str(&line);
             }
             Op::StdCall { name, .. } => {
-                let line = format!("stdcall {} ", name);
+                let line = format!("stdcall {}", name);
                 initial.push_str(&line);
             }
             Op::FnStackPush { src } => {
                 let rstr = reg_str(src);
-                let line = format!("fstpush {} ", rstr);
+                let line = format!("fstpush {}", rstr);
                 initial.push_str(&line);
             }
             Op::FnStackPop { dest } => {

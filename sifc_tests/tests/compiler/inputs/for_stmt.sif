@@ -1,0 +1,5 @@
+var g = [1,2,3];
+var x = 0;
+for idx, val in g {
+  x = x + val;
+}

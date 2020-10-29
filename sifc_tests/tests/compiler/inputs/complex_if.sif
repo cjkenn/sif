@@ -1,0 +1,10 @@
+if true || false {
+  var t = 0;
+} elif false && false {
+  if true && true {
+    var t = 1;
+  }
+  var t = 2;
+} elif true || false {
+  var t = 3;
+}

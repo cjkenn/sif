@@ -1,0 +1,7 @@
+if true || false {
+  var t = 0;
+} elif true && true {
+  var t = 1;
+} elif false || false {
+  var t = 2;
+}

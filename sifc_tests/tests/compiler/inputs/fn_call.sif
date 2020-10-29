@@ -1,0 +1,5 @@
+fn x(y) {
+  return y;
+}
+
+var g = x(1);
