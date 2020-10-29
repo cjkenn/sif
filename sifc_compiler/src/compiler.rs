@@ -496,6 +496,18 @@ impl<'c> Compiler<'c> {
                     destname: st_name.clone(),
                 });
             }
+            TokenTy::False => {
+                self.push_op(Op::StoreC {
+                    val: SifVal::Bl(false),
+                    name: st_name.clone(),
+                });
+            }
+            TokenTy::True => {
+                self.push_op(Op::StoreC {
+                    val: SifVal::Bl(false),
+                    name: st_name.clone(),
+                });
+            }
             _ => {}
         };
     }

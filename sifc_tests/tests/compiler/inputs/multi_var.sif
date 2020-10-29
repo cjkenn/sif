@@ -1,0 +1,3 @@
+var g = 0;
+var t = "hello";
+var r = false;

@@ -23,6 +23,14 @@ impl Instr {
     }
 }
 
+pub fn prog_to_string(prog: Vec<Instr>) -> String {
+    let mut result = String::new();
+    for i in prog {
+        result.push_str(&format!("{:#}\n", i));
+    }
+    result
+}
+
 impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut initial = String::new();
