@@ -40,58 +40,7 @@ const ARG_DUR: &str = "timings";
 const ARG_BC_OPT: &str = "bco";
 
 fn main() {
-    let matches = App::new("sif")
-        .version("0.1")
-        .author("cjkenn")
-        .about("sif interpreter and vm")
-        .arg(
-            Arg::new(ARG_FILENAME)
-                .about("sif file to parse and run")
-                .required(true)
-                .index(1),
-        )
-        .arg(
-            Arg::new(ARG_EMIT_AST)
-                .long(ARG_EMIT_AST)
-                .about("Prints the syntax tree to stdout"),
-        )
-        .arg(
-            Arg::new(ARG_EMIT_IR)
-                .long(ARG_EMIT_IR)
-                .about("Prints sif bytecode to stdout"),
-        )
-        .arg(
-            Arg::new(ARG_TRACE_EXEC)
-                .short('t')
-                .long(ARG_TRACE_EXEC)
-                .about("Traces VM execution by printing running instructions to stdout"),
-        )
-        .arg(
-            Arg::new(ARG_HEAP_SIZE)
-                .short('H')
-                .long(ARG_HEAP_SIZE)
-                .default_value(DEFAULT_HEAP)
-                .about("Sets initial heap size"),
-        )
-        .arg(
-            Arg::new(ARG_REG_COUNT)
-                .short('R')
-                .long(ARG_REG_COUNT)
-                .default_value(DEFAULT_DREG)
-                .about("Sets the default virtual register count"),
-        )
-        .arg(
-            Arg::new(ARG_DUR)
-                .long(ARG_DUR)
-                .about("Display basic time durations for phases of sif"),
-        )
-        .arg(
-            Arg::new(ARG_BC_OPT)
-                .long(ARG_BC_OPT)
-                .about("Runs the bytecode optimizer before executing in vm"),
-        )
-        .get_matches();
-
+    let matches = parse_cl();
     from_file(matches);
 }
 
@@ -235,4 +184,58 @@ fn run_vm_raw(opts: ArgMatches, comp_result: CompileResult) {
             eprintln!("sif: exiting due to errors");
         }
     }
+}
+
+fn parse_cl() -> ArgMatches {
+    App::new("sif")
+        .version("0.1")
+        .author("cjkenn")
+        .about("sif interpreter and vm")
+        .arg(
+            Arg::new(ARG_FILENAME)
+                .about("sif file to parse and run")
+                .required(true)
+                .index(1),
+        )
+        .arg(
+            Arg::new(ARG_EMIT_AST)
+                .long(ARG_EMIT_AST)
+                .about("Prints the syntax tree to stdout"),
+        )
+        .arg(
+            Arg::new(ARG_EMIT_IR)
+                .long(ARG_EMIT_IR)
+                .about("Prints sif bytecode to stdout"),
+        )
+        .arg(
+            Arg::new(ARG_TRACE_EXEC)
+                .short('t')
+                .long(ARG_TRACE_EXEC)
+                .about("Traces VM execution by printing running instructions to stdout"),
+        )
+        .arg(
+            Arg::new(ARG_HEAP_SIZE)
+                .short('H')
+                .long(ARG_HEAP_SIZE)
+                .default_value(DEFAULT_HEAP)
+                .about("Sets initial heap size"),
+        )
+        .arg(
+            Arg::new(ARG_REG_COUNT)
+                .short('R')
+                .long(ARG_REG_COUNT)
+                .default_value(DEFAULT_DREG)
+                .about("Sets the default virtual register count"),
+        )
+        .arg(
+            Arg::new(ARG_DUR)
+                .long(ARG_DUR)
+                .about("Display basic durations for phases of sif"),
+        )
+        .arg(
+            Arg::new(ARG_BC_OPT)
+                .long(ARG_BC_OPT)
+                .about("Runs the bytecode optimizer before executing in vm"),
+        )
+        .get_matches()
 }
