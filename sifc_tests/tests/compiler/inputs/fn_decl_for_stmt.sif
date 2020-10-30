@@ -1,0 +1,6 @@
+fn t(x) {
+  var arr = [1,2,3];
+  for i,v in arr {
+    @print(v);
+  }
+}

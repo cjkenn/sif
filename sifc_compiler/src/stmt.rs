@@ -22,7 +22,7 @@ impl<'c> Compiler<'c> {
         // Insert a placeholder for the conditional jump. This well be updated later
         // when we have more label information and can compute the proper jump index.
         // We store the register and the idx for later, when the udpate is performed.
-        let jmpcnd_idx = self.ops.len();
+        let jmpcnd_idx = self.instr_count_in_scope();
         let jmpcnd_reg = self.prevreg();
         let jmpcnd_op_placeholder = Op::JumpCnd {
             kind: JmpOpKind::Jmpf,
@@ -38,12 +38,12 @@ impl<'c> Compiler<'c> {
         // Like the conditional jump, we store a palceholder for the unconditional
         // jump instruction. We need to update this later when we know the exact
         // position to jump to.
-        let jmpa_idx = self.ops.len();
+        let jmpa_idx = self.instr_count_in_scope();
         let jmpa_op_placeholder = Op::JumpA { lblidx: usize::MAX };
         self.push_op(jmpa_op_placeholder);
 
         let has_elifs = elif_exprs.len() != 0;
-        let mut jmpcnd_lbl = self.lblcnt() + 1;
+        let mut jmpcnd_lbl = self.lblcnt() + 1; // first elif label, if exists
 
         // Generate statements for elif nodes. Each elif generation returns the jump index
         // for the unconditional branch: these must be updated later to the correct index
@@ -60,19 +60,22 @@ impl<'c> Compiler<'c> {
         // Generate statements for else nodes. No additional labeling is needed here,
         // as the else will fall through to subsequent instructions after being evaluated.
         let has_else = else_stmts.len() != 0;
+        if has_else && !has_elifs {
+            jmpcnd_lbl = self.lblcnt() + 1;
+        }
+
         if has_else {
             self.newlbl();
-            jmpcnd_lbl = self.lblcnt();
             self.blocks(else_stmts);
         }
 
         // We may need a spare nop instruction to close out the block at the end of
         // generation if we are inside a function. This allows proper jump indexing
         // out of the statement, and ensures we don't run into other decl instructions.
-        if self.decl_scope() {
-            self.newlbl();
-            self.push_op(Op::Nop);
-        }
+        // if self.decl_scope() {
+        //     self.newlbl();
+        //     self.push_op(Op::Nop);
+        // }
 
         self.newlbl();
 
@@ -122,7 +125,7 @@ impl<'c> Compiler<'c> {
                 // Similar to regular if stmt generation, we store the index and register for
                 // the conditional jump so we can update it later once more label information
                 // is available.
-                let jmpcnd_idx = self.ops.len();
+                let jmpcnd_idx = self.instr_count_in_scope();
                 let jmpcnd_reg = self.prevreg();
 
                 let jmp_op_placeholder = Op::JumpCnd {
@@ -147,7 +150,7 @@ impl<'c> Compiler<'c> {
 
                 // Record the location of the jmpa label so it can be updated later
                 // after all elifs are processed.
-                let jmpa_place = self.ops.len();
+                let jmpa_place = self.instr_count_in_scope();
                 let jmpa_op = Op::JumpA { lblidx: usize::MAX };
                 self.push_op(jmpa_op);
 

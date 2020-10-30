@@ -212,7 +212,7 @@ compile_test! {
 lbl0: ldc true r0
 lbl0: ldc false r1
 lbl0: or r0 r1 r2
-lbl0: jmpf r2 lbl6
+lbl0: jmpf r2 lbl2
 lbl1: stc 0 t
 lbl1: jmpa lbl7
 lbl2: ldc true r3
@@ -283,4 +283,110 @@ lbl7: stc 3 t
 lbl7: jmpa lbl8
 lbl8: nop
 "
+}
+
+compile_test! {
+    fn_decl_if,
+    r#"
+lbl0: fn @t ["x"]
+lbl0: fstpop r0
+lbl0: strr r0 x
+lbl1: ldc true r1
+lbl1: ldc false r2
+lbl1: or r1 r2 r3
+lbl1: jmpf r3 lbl3
+lbl2: stc 0 t
+lbl2: jmpa lbl3
+lbl3: nop
+lbl3: ret
+"#
+}
+
+compile_test! {
+    fn_decl_if_else,
+    r#"
+lbl0: fn @t ["x"]
+lbl0: fstpop r0
+lbl0: strr r0 x
+lbl1: ldc true r1
+lbl1: ldc false r2
+lbl1: or r1 r2 r3
+lbl1: jmpf r3 lbl3
+lbl2: stc 0 t
+lbl2: jmpa lbl4
+lbl3: stc 1 t
+lbl4: nop
+lbl4: ret
+"#
+}
+
+compile_test! {
+    fn_decl_if_elif,
+    r#"
+lbl0: fn @t ["x"]
+lbl0: fstpop r0
+lbl0: strr r0 x
+lbl1: ldc true r1
+lbl1: ldc false r2
+lbl1: or r1 r2 r3
+lbl1: jmpf r3 lbl3
+lbl2: stc 0 t
+lbl2: jmpa lbl5
+lbl3: ldc false r4
+lbl3: ldc false r5
+lbl3: and r4 r5 r6
+lbl3: jmpf r6 lbl5
+lbl4: stc 1 t
+lbl4: jmpa lbl5
+lbl5: nop
+lbl5: ret
+"#
+}
+
+compile_test! {
+    fn_decl_if_elif_else,
+    r#"
+lbl0: fn @t ["x"]
+lbl0: fstpop r0
+lbl0: strr r0 x
+lbl1: ldc true r1
+lbl1: ldc false r2
+lbl1: or r1 r2 r3
+lbl1: jmpf r3 lbl3
+lbl2: stc 0 t
+lbl2: jmpa lbl6
+lbl3: ldc false r4
+lbl3: ldc false r5
+lbl3: and r4 r5 r6
+lbl3: jmpf r6 lbl5
+lbl4: stc 1 t
+lbl4: jmpa lbl6
+lbl5: stc 2 t
+lbl6: nop
+lbl6: ret
+"#
+}
+
+compile_test! {
+    fn_decl_for_stmt,
+    r#"
+lbl0: fn @t ["x"]
+lbl0: fstpop r0
+lbl0: strr r0 x
+lbl1: stc [Num(1.0), Num(2.0), Num(3.0)] arr
+lbl2: stc 0 i
+lbl2: ldarrs arr r2
+lbl3: ldn i r1
+lbl3: ldarrv arr r1 r3
+lbl3: strr r3 v
+lbl3: ldn v r4
+lbl3: fstpush r4
+lbl3: stdcall print
+lbl3: mvfrr r5
+lbl3: incrr r1
+lbl3: strr r1 i
+lbl3: lt r1 r2 r6
+lbl3: jmpt r6 lbl3
+lbl3: ret
+"#
 }

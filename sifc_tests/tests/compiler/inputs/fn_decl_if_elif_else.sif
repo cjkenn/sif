@@ -1,0 +1,9 @@
+fn t(x) {
+  if true || false {
+    var t = 0;
+  } elif false && false {
+    var t = 1;
+  } else {
+    var t = 2;
+  }
+}

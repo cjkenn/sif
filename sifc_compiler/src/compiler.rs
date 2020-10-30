@@ -71,7 +71,7 @@ pub struct Compiler<'c> {
     /// Vector of instructions which the compiler will prepare and fill.
     /// This refers to the code section of the vm layout. It's size should be
     /// known before interpreting begins.
-    pub ops: Vec<Instr>,
+    ops: Vec<Instr>,
 
     /// Vector of instructions which the compiler will fill with declarations,
     /// particularly function bodies.
@@ -209,6 +209,13 @@ impl<'c> Compiler<'c> {
 
     pub fn decl_scope(&self) -> bool {
         self.decl_scope
+    }
+
+    pub fn instr_count_in_scope(&self) -> usize {
+        match self.decl_scope {
+            true => self.decls.len(),
+            false => self.ops.len(),
+        }
     }
 
     pub fn push_op(&mut self, op: Op) {
@@ -381,6 +388,8 @@ impl<'c> Compiler<'c> {
         let fn_name = ident_tkn.get_name();
         let mut param_names = Vec::new();
         let mut stkops = Vec::new();
+        // set our section to the decl section for function declaration instructions.
+        self.decl_scope = true;
 
         match fn_params {
             AstNode::FnParams { params } => {
@@ -407,9 +416,6 @@ impl<'c> Compiler<'c> {
             }
             _ => {}
         };
-
-        // set our section to the decl section for function declaration instructions.
-        self.decl_scope = true;
 
         self.push_op(Op::Fn {
             name: fn_name,

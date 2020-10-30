@@ -155,6 +155,10 @@ fn compile_and_run(opts: ArgMatches, ast: &AstNode) {
     let jumptab = comp_result.jumptab;
     let fntab = comp_result.fntab;
 
+    for i in program.clone() {
+        println!("{:#}", i);
+    }
+
     if opts.is_present(ARG_EMIT_IR) {
         printer::dump_decls(comp_result.decls.clone());
         printer::dump_code(comp_result.code.clone());
