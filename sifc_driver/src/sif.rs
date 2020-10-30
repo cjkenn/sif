@@ -3,6 +3,10 @@ extern crate sifc_bytecode;
 extern crate sifc_parse;
 extern crate sifc_vm;
 
+mod benchmark;
+
+use crate::benchmark::Benchmarks;
+
 use clap::{App, Arg, ArgMatches};
 use sifc_bytecode::{
     compiler::{CompileResult, Compiler},
@@ -94,18 +98,14 @@ fn main() {
 
 fn from_file(opts: ArgMatches) {
     let exec_start = Instant::now();
+
+    let mut benchmarks: Benchmarks = Default::default();
     let is_bench = opts.is_present(ARG_BENCH);
     let mut symtab = SymTab::new();
     let path = opts.value_of(ARG_FILENAME).unwrap();
 
     let parse_result = parse(&path, &mut symtab);
-    if is_bench {
-        println!(
-            "sif: parsing of '{}' completed in {:#?}",
-            path,
-            exec_start.elapsed()
-        );
-    }
+    benchmarks.parse_time = exec_start.elapsed();
 
     // Any errors should already have been emitted by the
     // parser, whether or not they are continuable.
@@ -121,6 +121,7 @@ fn from_file(opts: ArgMatches) {
 
     let compile_start = Instant::now();
     let comp_result = compile(&ast);
+    benchmarks.compile_time = compile_start.elapsed();
 
     let maybe_err = &comp_result.err;
     if maybe_err.is_some() {
@@ -134,33 +135,25 @@ fn from_file(opts: ArgMatches) {
         printer::dump_code(comp_result.code.clone());
     }
 
-    if is_bench {
-        println!(
-            "sif: bytecode compilation completed in {:#?}",
-            compile_start.elapsed()
-        );
-    }
-
     if opts.is_present(ARG_BC_OPT) {
         let opt_start = Instant::now();
         let opt_result = run_optimizer(&comp_result);
-        if is_bench {
-            println!(
-                "sif: bytecode optimization completed in {:#?}",
-                opt_start.elapsed()
-            );
-        }
+        benchmarks.optimize_time = opt_start.elapsed();
+
+        let vm_start = Instant::now();
         // TODO: need to provide better params/options to run_vm method
         run_vm_optimized(opts, opt_result, comp_result);
+        benchmarks.vm_time = vm_start.elapsed();
     } else {
+        let vm_start = Instant::now();
         run_vm_raw(opts, comp_result);
+        benchmarks.vm_time = vm_start.elapsed();
     }
 
+    benchmarks.total_time = exec_start.elapsed();
+
     if is_bench {
-        println!(
-            "\nsif: total execution completed in {:#?}",
-            exec_start.elapsed()
-        );
+        benchmarks.emit();
     }
 }
 
@@ -192,7 +185,6 @@ fn run_optimizer(comp_result: &CompileResult) -> OptimizeResult {
 }
 
 fn run_vm_optimized(opts: ArgMatches, opt_result: OptimizeResult, comp_result: CompileResult) {
-    let is_bench = opts.is_present(ARG_BENCH);
     let program = opt_result.optimized;
     let code_start = comp_result.code_start;
     let jumptab = comp_result.jumptab;
@@ -206,15 +198,9 @@ fn run_vm_optimized(opts: ArgMatches, opt_result: OptimizeResult, comp_result: C
         initial_dreg_count: dreg_count,
     };
 
-    let vm_start = Instant::now();
-
     // TODO: use a param struct for this? A builder?
     let mut vm = VM::init(program, code_start, jumptab, fntab, conf);
     let vm_result = vm.run();
-
-    if is_bench {
-        println!("sif: vm execution finished in {:#?}", vm_start.elapsed());
-    }
 
     match vm_result {
         Ok(()) => {}
@@ -226,7 +212,6 @@ fn run_vm_optimized(opts: ArgMatches, opt_result: OptimizeResult, comp_result: C
 }
 
 fn run_vm_raw(opts: ArgMatches, comp_result: CompileResult) {
-    let is_bench = opts.is_present(ARG_BENCH);
     let program = comp_result.program;
     let code_start = comp_result.code_start;
     let jumptab = comp_result.jumptab;
@@ -240,15 +225,9 @@ fn run_vm_raw(opts: ArgMatches, comp_result: CompileResult) {
         initial_dreg_count: dreg_count,
     };
 
-    let vm_start = Instant::now();
-
     // TODO: use a param struct for this? A builder?
     let mut vm = VM::init(program, code_start, jumptab, fntab, conf);
     let vm_result = vm.run();
-
-    if is_bench {
-        println!("sif: vm execution finished in {:#?}", vm_start.elapsed());
-    }
 
     match vm_result {
         Ok(()) => {}
