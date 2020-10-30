@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 #[derive(Default)]
-pub struct Benchmarks {
+pub struct Timings {
     pub parse_time: Duration,
     pub compile_time: Duration,
     pub optimize_time: Duration,
@@ -9,10 +9,10 @@ pub struct Benchmarks {
     pub total_time: Duration,
 }
 
-impl Benchmarks {
+impl Timings {
     pub fn emit(&self) {
         println!("=====================");
-        println!("SIF BENCHMARKS:");
+        println!("SIF EXECUTION TIMINGS:");
         println!("=====================");
 
         println!("parse duration: {:#?}", self.parse_time);

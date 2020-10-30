@@ -3,9 +3,9 @@ extern crate sifc_bytecode;
 extern crate sifc_parse;
 extern crate sifc_vm;
 
-mod benchmark;
+mod timings;
 
-use crate::benchmark::Benchmarks;
+use crate::timings::Timings;
 
 use clap::{App, Arg, ArgMatches};
 use sifc_bytecode::{
@@ -36,7 +36,7 @@ const ARG_EMIT_IR: &str = "emit-ir";
 const ARG_TRACE_EXEC: &str = "trace-exec";
 const ARG_HEAP_SIZE: &str = "heap-size";
 const ARG_REG_COUNT: &str = "reg-count";
-const ARG_BENCH: &str = "bench";
+const ARG_DUR: &str = "timings";
 const ARG_BC_OPT: &str = "bco";
 
 fn main() {
@@ -81,10 +81,9 @@ fn main() {
                 .about("Sets the default virtual register count"),
         )
         .arg(
-            Arg::new(ARG_BENCH)
-                .short('b')
-                .long(ARG_BENCH)
-                .about("Display basic benchmarks for phases of sif"),
+            Arg::new(ARG_DUR)
+                .long(ARG_DUR)
+                .about("Display basic time durations for phases of sif"),
         )
         .arg(
             Arg::new(ARG_BC_OPT)
@@ -99,13 +98,13 @@ fn main() {
 fn from_file(opts: ArgMatches) {
     let exec_start = Instant::now();
 
-    let mut benchmarks: Benchmarks = Default::default();
-    let is_bench = opts.is_present(ARG_BENCH);
+    let mut timings: Timings = Default::default();
+    let show_duration = opts.is_present(ARG_DUR);
     let mut symtab = SymTab::new();
     let path = opts.value_of(ARG_FILENAME).unwrap();
 
     let parse_result = parse(&path, &mut symtab);
-    benchmarks.parse_time = exec_start.elapsed();
+    timings.parse_time = exec_start.elapsed();
 
     // Any errors should already have been emitted by the
     // parser, whether or not they are continuable.
@@ -121,7 +120,7 @@ fn from_file(opts: ArgMatches) {
 
     let compile_start = Instant::now();
     let comp_result = compile(&ast);
-    benchmarks.compile_time = compile_start.elapsed();
+    timings.compile_time = compile_start.elapsed();
 
     let maybe_err = &comp_result.err;
     if maybe_err.is_some() {
@@ -138,22 +137,22 @@ fn from_file(opts: ArgMatches) {
     if opts.is_present(ARG_BC_OPT) {
         let opt_start = Instant::now();
         let opt_result = run_optimizer(&comp_result);
-        benchmarks.optimize_time = opt_start.elapsed();
+        timings.optimize_time = opt_start.elapsed();
 
         let vm_start = Instant::now();
         // TODO: need to provide better params/options to run_vm method
         run_vm_optimized(opts, opt_result, comp_result);
-        benchmarks.vm_time = vm_start.elapsed();
+        timings.vm_time = vm_start.elapsed();
     } else {
         let vm_start = Instant::now();
         run_vm_raw(opts, comp_result);
-        benchmarks.vm_time = vm_start.elapsed();
+        timings.vm_time = vm_start.elapsed();
     }
 
-    benchmarks.total_time = exec_start.elapsed();
+    timings.total_time = exec_start.elapsed();
 
-    if is_bench {
-        benchmarks.emit();
+    if show_duration {
+        timings.emit();
     }
 }
 
