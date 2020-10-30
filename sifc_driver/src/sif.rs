@@ -1,10 +1,14 @@
 extern crate clap;
-extern crate sifc_compiler;
+extern crate sifc_bytecode;
 extern crate sifc_parse;
 extern crate sifc_vm;
 
 use clap::{App, Arg, ArgMatches};
-use sifc_compiler::{compiler::Compiler, printer};
+use sifc_bytecode::{
+    compiler::{CompileResult, Compiler},
+    optimize::{BytecodeOptimizer, OptimizeResult},
+    printer,
+};
 use sifc_err::err::SifErr;
 use sifc_parse::{
     ast::AstNode,
@@ -20,7 +24,7 @@ const DEFAULT_HEAP: &str = "100";
 
 // Default size of data register vec. If we exceeed this len,
 // we can increase the size of the vec.
-const DEFAULT_DREG: &str = "64";
+const DEFAULT_DREG: &str = "1024";
 
 const ARG_FILENAME: &str = "filename";
 const ARG_EMIT_AST: &str = "emit-ast";
@@ -29,6 +33,7 @@ const ARG_TRACE_EXEC: &str = "trace-exec";
 const ARG_HEAP_SIZE: &str = "heap-size";
 const ARG_REG_COUNT: &str = "reg-count";
 const ARG_BENCH: &str = "bench";
+const ARG_BC_OPT: &str = "bco";
 
 fn main() {
     let matches = App::new("sif")
@@ -77,6 +82,11 @@ fn main() {
                 .long(ARG_BENCH)
                 .about("Display basic benchmarks for phases of sif"),
         )
+        .arg(
+            Arg::new(ARG_BC_OPT)
+                .long(ARG_BC_OPT)
+                .about("Runs the bytecode optimizer before executing in vm"),
+        )
         .get_matches();
 
     from_file(matches);
@@ -85,9 +95,9 @@ fn main() {
 fn from_file(opts: ArgMatches) {
     let exec_start = Instant::now();
     let is_bench = opts.is_present(ARG_BENCH);
-
     let mut symtab = SymTab::new();
     let path = opts.value_of(ARG_FILENAME).unwrap();
+
     let parse_result = parse(&path, &mut symtab);
     if is_bench {
         println!(
@@ -103,14 +113,48 @@ fn from_file(opts: ArgMatches) {
         eprintln!("sif: Exiting due to parser errors");
         return;
     }
-
     let ast = parse_result.ast.unwrap();
 
     if opts.is_present(ARG_EMIT_AST) {
         println!("{:#?}", ast);
     }
 
-    compile_and_run(opts, &ast);
+    let compile_start = Instant::now();
+    let comp_result = compile(&ast);
+
+    let maybe_err = &comp_result.err;
+    if maybe_err.is_some() {
+        maybe_err.as_ref().unwrap().emit();
+        eprintln!("sif: exiting due to errors");
+        return;
+    }
+
+    if opts.is_present(ARG_EMIT_IR) {
+        printer::dump_decls(comp_result.decls.clone());
+        printer::dump_code(comp_result.code.clone());
+    }
+
+    if is_bench {
+        println!(
+            "sif: bytecode compilation completed in {:#?}",
+            compile_start.elapsed()
+        );
+    }
+
+    if opts.is_present(ARG_BC_OPT) {
+        let opt_start = Instant::now();
+        let opt_result = run_optimizer(&comp_result);
+        if is_bench {
+            println!(
+                "sif: bytecode optimization completed in {:#?}",
+                opt_start.elapsed()
+            );
+        }
+        // TODO: need to provide better params/options to run_vm method
+        run_vm_optimized(opts, opt_result, comp_result);
+    } else {
+        run_vm_raw(opts, comp_result);
+    }
 
     if is_bench {
         println!(
@@ -137,42 +181,22 @@ fn parse(filename: &str, symtab: &mut SymTab) -> ParserResult {
     parser.parse()
 }
 
-fn compile_and_run(opts: ArgMatches, ast: &AstNode) {
-    let compile_start = Instant::now();
-
+fn compile(ast: &AstNode) -> CompileResult {
     let mut comp = Compiler::new(ast);
-    let comp_result = comp.compile();
+    comp.compile()
+}
 
-    let maybe_err = comp_result.err;
-    if maybe_err.is_some() {
-        maybe_err.unwrap().emit();
-        eprintln!("sif: exiting due to errors");
-        return;
-    }
+fn run_optimizer(comp_result: &CompileResult) -> OptimizeResult {
+    let opt = BytecodeOptimizer::new();
+    opt.run_passes(&comp_result.program)
+}
 
-    let program = comp_result.program;
+fn run_vm_optimized(opts: ArgMatches, opt_result: OptimizeResult, comp_result: CompileResult) {
+    let is_bench = opts.is_present(ARG_BENCH);
+    let program = opt_result.optimized;
     let code_start = comp_result.code_start;
     let jumptab = comp_result.jumptab;
     let fntab = comp_result.fntab;
-
-    for i in program.clone() {
-        println!("{:#}", i);
-    }
-
-    if opts.is_present(ARG_EMIT_IR) {
-        printer::dump_decls(comp_result.decls.clone());
-        printer::dump_code(comp_result.code.clone());
-    }
-
-    let is_bench = opts.is_present(ARG_BENCH);
-
-    if is_bench {
-        println!(
-            "sif: bytecode compilation completed in {:#?}",
-            compile_start.elapsed()
-        );
-    }
-
     let heap_size: usize = opts.value_of(ARG_HEAP_SIZE).unwrap().parse().unwrap();
     let dreg_count: usize = opts.value_of(ARG_REG_COUNT).unwrap().parse().unwrap();
 
@@ -197,7 +221,40 @@ fn compile_and_run(opts: ArgMatches, ast: &AstNode) {
         Err(e) => {
             e.emit();
             eprintln!("sif: exiting due to errors");
-            return;
+        }
+    }
+}
+
+fn run_vm_raw(opts: ArgMatches, comp_result: CompileResult) {
+    let is_bench = opts.is_present(ARG_BENCH);
+    let program = comp_result.program;
+    let code_start = comp_result.code_start;
+    let jumptab = comp_result.jumptab;
+    let fntab = comp_result.fntab;
+    let heap_size: usize = opts.value_of(ARG_HEAP_SIZE).unwrap().parse().unwrap();
+    let dreg_count: usize = opts.value_of(ARG_REG_COUNT).unwrap().parse().unwrap();
+
+    let conf = VMConfig {
+        trace: opts.is_present(ARG_TRACE_EXEC),
+        initial_heap_size: heap_size,
+        initial_dreg_count: dreg_count,
+    };
+
+    let vm_start = Instant::now();
+
+    // TODO: use a param struct for this? A builder?
+    let mut vm = VM::init(program, code_start, jumptab, fntab, conf);
+    let vm_result = vm.run();
+
+    if is_bench {
+        println!("sif: vm execution finished in {:#?}", vm_start.elapsed());
+    }
+
+    match vm_result {
+        Ok(()) => {}
+        Err(e) => {
+            e.emit();
+            eprintln!("sif: exiting due to errors");
         }
     }
 }

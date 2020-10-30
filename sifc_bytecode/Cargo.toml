@@ -1,5 +1,5 @@
 [package]
-name = "sifc_compiler"
+name = "sifc_bytecode"
 version = "0.1.0"
 edition = "2018"
 

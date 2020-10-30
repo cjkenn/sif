@@ -64,7 +64,12 @@ impl SymTab {
     pub fn retrieve(&self, key: &str) -> Option<AstNode> {
         let mut curr = self.curr_lvl;
 
-        while curr >= 0 {
+        // This loop always breaks: if we find the symbol we immediately
+        // return out of the loop. If we don't find it, we decrement the scope
+        // and look at a higher level. If we find nothing there, we continue
+        // UNLESS the current scope level is 0 (the top level scope). In that
+        // case, we break and return None.
+        loop {
             match self.tab[curr].get(key) {
                 Some(val) => {
                     return Some(val.clone());

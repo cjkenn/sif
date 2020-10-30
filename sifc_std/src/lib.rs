@@ -1,4 +1,4 @@
-use sifc_compiler::sifv::SifVal;
+use sifc_bytecode::sifv::SifVal;
 use std::collections::HashMap;
 
 /// Std contains the sif std library. This is a small amount of

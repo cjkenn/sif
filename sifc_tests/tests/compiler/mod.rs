@@ -1,4 +1,4 @@
-use sifc_compiler::{compiler::Compiler, instr::Instr};
+use sifc_bytecode::{compiler::Compiler, instr::Instr};
 use sifc_parse::{lex::Lexer, parser::Parser, symtab::SymTab};
 use std::fs::File;
 

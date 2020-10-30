@@ -2,7 +2,7 @@ use crate::{
     config::VMConfig,
     dreg::{DReg, DataRegisterList},
 };
-use sifc_compiler::{
+use sifc_bytecode::{
     instr::Instr,
     opc::{BinOpKind, JmpOpKind, Op, UnOpKind},
     sifv::SifVal,

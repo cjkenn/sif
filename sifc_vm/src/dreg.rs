@@ -1,4 +1,4 @@
-use sifc_compiler::sifv::SifVal;
+use sifc_bytecode::sifv::SifVal;
 use std::{cell::RefCell, rc::Rc};
 
 type DRegVec = Vec<Rc<RefCell<DReg>>>;

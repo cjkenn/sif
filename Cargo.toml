@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  "sifc_compiler",
+  "sifc_bytecode",
   "sifc_driver",
   "sifc_err",
   "sifc_parse",
