@@ -1,7 +1,4 @@
-use crate::{
-    config::VMConfig,
-    dreg::{DReg, DataRegisterList},
-};
+use crate::{config::VMConfig, dreg::DataRegisterList};
 use sifc_bytecode::{
     instr::Instr,
     opc::{BinOpKind, JmpOpKind, Op, UnOpKind},
@@ -9,9 +6,7 @@ use sifc_bytecode::{
 };
 use sifc_err::runtime_err::{RuntimeErr, RuntimeErrTy};
 use sifc_std::Std;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
-
-const FRR_NAME: &'static str = "frr";
+use std::collections::HashMap;
 
 pub struct VM<'v> {
     /// Contains all required sections and relevant instructions in one vector. This
@@ -41,11 +36,6 @@ pub struct VM<'v> {
     /// Data registers. This is managed by the DataRegisterList struct, which handles getting
     /// references to registers and growing the list when we want more registers.
     dregs: DataRegisterList,
-
-    /// Special data register that holds values from function returns. This register
-    /// is used to place return value before jumping out of a function body, and to
-    /// read from in following code after the function has returned.
-    frr: Rc<RefCell<DReg>>,
 
     /// Heap section. This contains arrays, tables, and globals. We use the
     /// name of the data as a key to retrieve and store information in the heap.
@@ -96,7 +86,6 @@ impl<'v> VM<'v> {
             fntab: ft,
             jumptab: jt,
             dregs: reglist,
-            frr: Rc::new(RefCell::new(DReg::new(FRR_NAME.to_string()))),
             heap: heap,
             stdlib: Std::new(),
             fn_param_stack: Vec::new(),
@@ -136,7 +125,6 @@ impl<'v> VM<'v> {
         match curr {
             Op::LoadC { dest, val } => self.loadc(dest, val)?,
             Op::LoadN { dest, name } => self.loadn(dest, name)?,
-            Op::MvFRR { dest } => self.mvfrr(dest)?,
             Op::Mv { src, dest } => self.mv(src, dest)?,
             Op::LoadArrs { name, dest } => self.loadarrs(name, dest)?,
             Op::LoadArrv {
@@ -162,13 +150,6 @@ impl<'v> VM<'v> {
                         self.heap.insert(destname.to_string(), to_insert)
                     }
                     None => self.heap.insert(destname.to_string(), SifVal::Null),
-                };
-            }
-            Op::StoreFRR { name } => {
-                let to_store = &self.frr.borrow().cont;
-                match to_store {
-                    Some(v) => self.heap.insert(name.to_string(), v.clone()),
-                    None => self.heap.insert(name.to_string(), SifVal::Null),
                 };
             }
             Op::JumpA { lblidx } => {
@@ -225,21 +206,9 @@ impl<'v> VM<'v> {
             Op::Incrr { src } => self.incrr(src)?,
             Op::Decrr { src } => self.decrr(src)?,
             Op::Fn { name, params: _ } => {
+                // This case should never be executed, since fn decls
+                // should be in the decls section and not executed in the code loop.
                 self.fntab.insert(name.clone(), self.ip);
-            }
-            Op::FnRetR { src } => {
-                // Set the frr to the correct return value
-                let srcreg = self.dregs.get(src);
-                let src_contents = srcreg.borrow().cont.clone();
-                self.frr.borrow_mut().cont = src_contents;
-
-                // Jump back to the value in cdr, which should be set before
-                // the function call executes.
-                let ret_loc = self.call_stack.pop();
-                if ret_loc.is_none() {
-                    return Err(self.newerr(RuntimeErrTy::EmptyCallStack));
-                }
-                self.ip = ret_loc.unwrap();
             }
             Op::FnRet => {
                 let ret_loc = self.call_stack.pop();
@@ -333,12 +302,6 @@ impl<'v> VM<'v> {
             Some(n) => self.dregs.set_contents(dest, Some(n.clone())),
             None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
         };
-        Ok(())
-    }
-
-    fn mvfrr(&mut self, dest: usize) -> Result<(), RuntimeErr> {
-        let contents = &self.frr.borrow().cont;
-        self.dregs.set_contents(dest, contents.clone());
         Ok(())
     }
 
@@ -441,8 +404,8 @@ impl<'v> VM<'v> {
             return Err(self.newerr(RuntimeErrTy::RegNoContents(self.reg_str(src2))));
         }
 
-        let contents1 = mb_contents1.unwrap();
-        let contents2 = mb_contents2.unwrap();
+        let contents1 = mb_contents1.unwrap().clone();
+        let contents2 = mb_contents2.unwrap().clone();
 
         match kind {
             BinOpKind::Add => match (contents1, contents2) {
@@ -457,8 +420,9 @@ impl<'v> VM<'v> {
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),
             },
-            BinOpKind::Mul => match (contents1, contents2) {
+            BinOpKind::Mul => match (contents1.clone(), contents2.clone()) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
+                    println!("c1: {:#?}, c2: {:#?}", contents1, contents2);
                     self.dregs.set_contents(dest, Some(SifVal::Num(n1 * n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),

@@ -103,7 +103,8 @@ lbl0: fn @x ["y"]
 lbl0: fstpop r0
 lbl0: strr r0 y
 lbl1: ldn y r1
-lbl1: retr r1
+lbl1: fstpush r1
+lbl1: ret
 "#
 }
 
@@ -114,11 +115,12 @@ lbl0: fn @x ["y"]
 lbl0: fstpop r0
 lbl0: strr r0 y
 lbl1: ldn y r1
-lbl1: retr r1
+lbl1: fstpush r1
+lbl1: ret
 lbl2: ldc 1 r2
 lbl2: fstpush r2
 lbl2: call x
-lbl2: mvfrr r3
+lbl2: fstpop r3
 lbl2: strr r3 g
 "#
 }
@@ -150,7 +152,7 @@ compile_test! {
 lbl0: ldc hello world r0
 lbl0: fstpush r0
 lbl0: stdcall print
-lbl0: mvfrr r1
+lbl0: fstpop r1
 "
 }
 
@@ -382,7 +384,7 @@ lbl3: strr r3 v
 lbl3: ldn v r4
 lbl3: fstpush r4
 lbl3: stdcall print
-lbl3: mvfrr r5
+lbl3: fstpop r5
 lbl3: incrr r1
 lbl3: strr r1 i
 lbl3: lt r1 r2 r6

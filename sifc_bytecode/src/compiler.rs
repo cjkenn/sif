@@ -373,12 +373,13 @@ impl<'c> Compiler<'c> {
     fn ret(&mut self, ret_expr: &Option<Box<AstNode>>) {
         match ret_expr {
             Some(exp) => {
+                // Evaluate and push result onto fn stack.
                 self.expr(exp);
-                // return moves the value from last reg into the frr register
-                let op = Op::FnRetR {
+                let puop = Op::FnStackPush {
                     src: self.prevreg(),
                 };
-                self.push_op(op);
+                self.push_op(puop);
+                self.push_op(Op::FnRet);
             }
             None => self.push_op(Op::FnRet),
         };
@@ -549,7 +550,7 @@ impl<'c> Compiler<'c> {
     ) {
         self.fncallexpr(fn_ident_tkn, fn_params, is_std);
 
-        // After the call returns, move the frr register to the next
+        // After the call returns, store the popped return value in the next
         // available reg, and then store that register in the variable
         // being assigned to.
         let strop = Op::StoreR {
@@ -583,12 +584,12 @@ impl<'c> Compiler<'c> {
             }
         };
 
-        // After the call returns, move the frr register to the next
-        // available reg, and then store that register in the variable
-        // being assigned to.
-        let frrop = Op::MvFRR {
+        // Pop return value, if the fn call has one. If it doesn't, when the pop
+        // is executed it will return None, and any registers that attempt to store
+        // that value will have null contents.
+        let rop = Op::FnStackPop {
             dest: self.nextreg(),
         };
-        self.push_op(frrop);
+        self.push_op(rop);
     }
 }

@@ -82,11 +82,6 @@ pub enum Op {
         name: String,
     },
 
-    /// Moves the frr into the next available register for subsequent expressions
-    MvFRR {
-        dest: usize,
-    },
-
     /// Moves (copies) the contents of one register to another. Does not erase the
     /// contents of the src register.
     Mv {
@@ -126,11 +121,6 @@ pub enum Op {
         name: String,
     },
 
-    /// Store frr (function return register)
-    StoreFRR {
-        name: String,
-    },
-
     /// Jump conditionally, based on the value in src register
     JumpCnd {
         kind: JmpOpKind,
@@ -159,12 +149,6 @@ pub enum Op {
         params: Vec<String>,
     },
 
-    /// Move the return value in src to the frr register, then
-    /// jumps to previous code location.
-    FnRetR {
-        src: usize,
-    },
-
     /// Function call
     Call {
         name: String,
@@ -177,8 +161,8 @@ pub enum Op {
         param_count: usize,
     },
 
-    /// When we have no expression to return, we simply jump to the appropriate
-    /// code location.
+    /// Returns control to the caller of function. Return values are expected
+    /// to be pushed onto the function stack by the time this is executed
     FnRet,
 
     /// Push a value in a register onto the function stack.

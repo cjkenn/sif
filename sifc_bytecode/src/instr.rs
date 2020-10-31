@@ -60,11 +60,6 @@ impl fmt::Display for Instr {
                 let line = format!("ldn {} {}", name, dstr);
                 initial.push_str(&line);
             }
-            Op::MvFRR { dest } => {
-                let dstr = reg_str(dest);
-                let line = format!("mvfrr {}", dstr);
-                initial.push_str(&line);
-            }
             Op::Mv { src, dest } => {
                 let rstr = reg_str(src);
                 let dstr = reg_str(dest);
@@ -100,10 +95,6 @@ impl fmt::Display for Instr {
                 let line = format!("strr {} {}", rstr, name);
                 initial.push_str(&line);
             }
-            Op::StoreFRR { name } => {
-                let line = format!("strfrr {}", name);
-                initial.push_str(&line);
-            }
             Op::JumpCnd { kind, src, lblidx } => {
                 let op_str = jmp_kind_str(kind);
                 let lbl = lbl_str(lblidx);
@@ -132,11 +123,6 @@ impl fmt::Display for Instr {
             }
             Op::Fn { name, params } => {
                 let line = format!("fn @{} {:?}", name, params);
-                initial.push_str(&line);
-            }
-            Op::FnRetR { src } => {
-                let rstr = reg_str(src);
-                let line = format!("retr {}", rstr);
                 initial.push_str(&line);
             }
             Op::FnRet => {
@@ -223,11 +209,6 @@ impl fmt::Debug for Instr {
                 let line = format!("\t ldn {} {}\t ; {}, {}\n", name, dstr, self.line, self.lbl);
                 initial.push_str(&line);
             }
-            Op::MvFRR { dest } => {
-                let dstr = reg_str(dest);
-                let line = format!("\t mvfrr {}\t ; {}, {}\n", dstr, self.line, self.lbl);
-                initial.push_str(&line);
-            }
             Op::Mv { src, dest } => {
                 let rstr = reg_str(src);
                 let dstr = reg_str(dest);
@@ -275,10 +256,6 @@ impl fmt::Debug for Instr {
                 );
                 initial.push_str(&line);
             }
-            Op::StoreFRR { name } => {
-                let line = format!("\t strfrr {}\t ; {}, {}\n", name, self.line, self.lbl);
-                initial.push_str(&line);
-            }
             Op::JumpCnd { kind, src, lblidx } => {
                 let op_str = jmp_kind_str(kind);
                 let rstr = reg_str(src);
@@ -310,11 +287,6 @@ impl fmt::Debug for Instr {
             }
             Op::Fn { name, params } => {
                 let line = format!("fn @{} {:?}\n", name, params);
-                initial.push_str(&line);
-            }
-            Op::FnRetR { src } => {
-                let rstr = reg_str(src);
-                let line = format!("\t retr {}\t ; {}, {}\n", rstr, self.line, self.lbl);
                 initial.push_str(&line);
             }
             Op::FnRet => {
