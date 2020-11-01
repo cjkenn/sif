@@ -2,20 +2,21 @@ use crate::{
     reserved::{get_reserved_words, is_reserved_word},
     token::{Token, TokenTy},
 };
-
 use sifc_err::{
     err::SifErr,
     lex_err::{LexErr, LexErrTy},
 };
-
+use std::io::Read;
 use std::{
     collections::HashMap,
-    fs::File,
-    io::{BufRead, BufReader, Seek, SeekFrom},
+    io::{BufRead, BufReader},
 };
 
 #[derive(Debug)]
-pub struct Lexer {
+pub struct Lexer<T>
+where
+    T: Read,
+{
     /// Current character in input buffer
     pub curr: Option<char>,
 
@@ -25,8 +26,9 @@ pub struct Lexer {
     /// Current char position in line
     pub line_pos: usize,
 
-    /// File reader
-    reader: BufReader<File>,
+    /// Buffer over the input. The input of type T must implement read and seek, which is
+    /// mostly intended to handle files or strings (converted)
+    reader: BufReader<T>,
 
     /// Buffer holding the current line
     buffer: Vec<char>,
@@ -38,8 +40,11 @@ pub struct Lexer {
     bytes_read: usize,
 }
 
-impl Lexer {
-    pub fn new(infile: File) -> Lexer {
+impl<T> Lexer<T>
+where
+    T: Read,
+{
+    pub fn new(infile: T) -> Lexer<T> {
         let mut reader = BufReader::new(infile);
         let mut buf = String::new();
         let init_bytes = reader
@@ -211,36 +216,6 @@ impl Lexer {
                 self.eof_tkn()
             }
         }
-    }
-
-    /// Look ahead to the next token, and then reset the buffer and rewind
-    /// the reader for future calls to lex().
-    pub fn peek(&mut self) -> Token {
-        // Copy the current state of the lexer
-        let start_curr = self.curr;
-        let start_pos = self.line_pos;
-        let start_line = self.line_num;
-        let start_buffer = self.buffer.clone();
-        let start_bytes_read = self.bytes_read;
-
-        let tkn = self.lex();
-
-        // Rewind the reader to its place before we performed
-        // reads in the lex() call
-        let seek_bytes = (self.bytes_read - start_bytes_read) as i64;
-        // TODO: don't panic here?
-        match self.reader.seek(SeekFrom::Current(-seek_bytes)) {
-            Err(e) => panic!("failed to seek in input file: {}", e),
-            Ok(_) => {}
-        };
-
-        // Reset the state of the lexer to what it was before the peek
-        self.curr = start_curr;
-        self.line_pos = start_pos;
-        self.line_num = start_line;
-        self.buffer = start_buffer;
-
-        tkn
     }
 
     /// Lex a string literal. We expect to have a " character when this

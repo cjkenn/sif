@@ -11,6 +11,7 @@ use sifc_err::{
 };
 
 use std::collections::HashMap;
+use std::io::Read;
 
 const FN_PARAM_MAX_LEN: usize = 64;
 
@@ -31,9 +32,12 @@ pub struct ParserResult {
     pub errors: Vec<ParseErr>,
 }
 
-pub struct Parser<'l, 's> {
+pub struct Parser<'l, 's, T>
+where
+    T: Read,
+{
     /// Reference to the lexer needed to get characters from the file.
-    lexer: &'l mut Lexer,
+    lexer: &'l mut Lexer<T>,
 
     /// Reference to a symbol table, used to store symbols defined in this file.
     sym_tab: &'s mut SymTab,
@@ -51,8 +55,11 @@ pub struct Parser<'l, 's> {
     should_check_sym_tab: bool,
 }
 
-impl<'l, 's> Parser<'l, 's> {
-    pub fn new(lex: &'l mut Lexer, symt: &'s mut SymTab) -> Parser<'l, 's> {
+impl<'l, 's, T> Parser<'l, 's, T>
+where
+    T: Read,
+{
+    pub fn new(lex: &'l mut Lexer<T>, symt: &'s mut SymTab) -> Parser<'l, 's, T> {
         let firsttkn = lex.lex();
 
         Parser {
