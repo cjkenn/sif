@@ -132,7 +132,7 @@ impl<'v> VM<'v> {
                 idx_reg,
                 dest,
             } => self.loadarrv(name, idx_reg, dest)?,
-            Op::NewArrv {
+            Op::UpdArr {
                 name,
                 idx_reg,
                 val_reg,
@@ -403,6 +403,9 @@ impl<'v> VM<'v> {
             None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
         };
 
+        // This only works because we're guaranteed to return an error early before this name
+        // is set if anything is incorrect. If we can ever get here without setting new_a properly,
+        // this becomes incorrect.
         self.heap.insert(name, SifVal::Arr(new_a));
 
         Ok(())

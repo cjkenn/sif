@@ -311,7 +311,7 @@ impl<'c> Compiler<'c> {
         self.expr(rhs);
         let valr = self.ri - 1;
         self.expr(index);
-        let op = Op::NewArrv {
+        let op = Op::UpdArr {
             name: array_tkn.get_name(),
             idx_reg: self.prevreg(),
             val_reg: valr,

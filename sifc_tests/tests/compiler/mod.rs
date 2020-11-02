@@ -392,3 +392,13 @@ lbl3: jmpt r6 lbl3
 lbl3: ret
 "#
 }
+
+compile_test! {
+    array_mut,
+    r"
+lbl0: stc [Num(1.0), Num(2.0)] g
+lbl0: ldc 3 r0
+lbl0: ldc 1 r1
+lbl0: updarr g r0 r1
+"
+}

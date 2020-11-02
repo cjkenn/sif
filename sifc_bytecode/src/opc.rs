@@ -104,7 +104,7 @@ pub enum Op {
     },
 
     /// Updates a value in an array.
-    NewArrv {
+    UpdArr {
         name: String,
         idx_reg: usize,
         val_reg: usize,
