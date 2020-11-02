@@ -1,0 +1,5 @@
+var g = [1,2];
+g[1] = 3;
+
+# this is illegal index access, but should parse fine
+g[3] = 10;

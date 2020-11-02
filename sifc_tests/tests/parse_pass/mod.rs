@@ -28,3 +28,4 @@ parse_pass_test!(fn_call);
 parse_pass_test!(exprs);
 parse_pass_test!(table_decl);
 parse_pass_test!(array_decl);
+parse_pass_test!(array_mut_assign);

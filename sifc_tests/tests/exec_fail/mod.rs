@@ -52,3 +52,4 @@ exec_fail_test!(invalid_binarg);
 exec_fail_test!(binop_str_num);
 exec_fail_test!(binop_str_bool);
 exec_fail_test!(binop_num_bool);
+exec_fail_test!(array_index_bounds);
