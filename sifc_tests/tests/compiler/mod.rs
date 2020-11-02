@@ -66,7 +66,7 @@ compile_test! {
 lbl0: ldc 10 r0
 lbl0: ldc 10 r1
 lbl0: add r0 r1 r2
-lbl0: strr r2 g
+lbl0: str r2 g
 "
 }
 
@@ -75,7 +75,7 @@ compile_test! {
     r"
 lbl0: ldc 10 r0
 lbl0: nneg r0 r1
-lbl0: strr r1 g
+lbl0: str r1 g
 "
 }
 
@@ -84,7 +84,7 @@ compile_test! {
     r"
 lbl0: ldc false r0
 lbl0: lneg r0 r1
-lbl0: strr r1 g
+lbl0: str r1 g
 "
 }
 
@@ -101,7 +101,7 @@ compile_test! {
     r#"
 lbl0: fn @x ["y"]
 lbl0: fstpop r0
-lbl0: strr r0 y
+lbl0: str r0 y
 lbl1: ldn y r1
 lbl1: fstpush r1
 lbl1: ret
@@ -113,7 +113,7 @@ compile_test! {
     r#"
 lbl0: fn @x ["y"]
 lbl0: fstpop r0
-lbl0: strr r0 y
+lbl0: str r0 y
 lbl1: ldn y r1
 lbl1: fstpush r1
 lbl1: ret
@@ -121,7 +121,7 @@ lbl2: ldc 1 r2
 lbl2: fstpush r2
 lbl2: call x
 lbl2: fstpop r3
-lbl2: strr r3 g
+lbl2: str r3 g
 "#
 }
 
@@ -131,16 +131,16 @@ compile_test! {
 lbl0: stc [Num(1.0), Num(2.0), Num(3.0)] g
 lbl0: stc 0 x
 lbl1: stc 0 idx
-lbl1: ldarrs g r1
+lbl1: ldas g r1
 lbl2: ldn idx r0
-lbl2: ldarrv g r0 r2
-lbl2: strr r2 val
+lbl2: ldav g r0 r2
+lbl2: str r2 val
 lbl2: ldn x r3
 lbl2: ldn val r4
 lbl2: add r3 r4 r5
-lbl2: strr r5 x
+lbl2: str r5 x
 lbl2: incrr r0
-lbl2: strr r0 idx
+lbl2: str r0 idx
 lbl2: lt r0 r1 r6
 lbl2: jmpt r6 lbl2
 "
@@ -292,7 +292,7 @@ compile_test! {
     r#"
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
-lbl0: strr r0 x
+lbl0: str r0 x
 lbl1: ldc true r1
 lbl1: ldc false r2
 lbl1: or r1 r2 r3
@@ -309,7 +309,7 @@ compile_test! {
     r#"
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
-lbl0: strr r0 x
+lbl0: str r0 x
 lbl1: ldc true r1
 lbl1: ldc false r2
 lbl1: or r1 r2 r3
@@ -327,7 +327,7 @@ compile_test! {
     r#"
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
-lbl0: strr r0 x
+lbl0: str r0 x
 lbl1: ldc true r1
 lbl1: ldc false r2
 lbl1: or r1 r2 r3
@@ -350,7 +350,7 @@ compile_test! {
     r#"
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
-lbl0: strr r0 x
+lbl0: str r0 x
 lbl1: ldc true r1
 lbl1: ldc false r2
 lbl1: or r1 r2 r3
@@ -374,19 +374,19 @@ compile_test! {
     r#"
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
-lbl0: strr r0 x
+lbl0: str r0 x
 lbl1: stc [Num(1.0), Num(2.0), Num(3.0)] arr
 lbl2: stc 0 i
-lbl2: ldarrs arr r2
+lbl2: ldas arr r2
 lbl3: ldn i r1
-lbl3: ldarrv arr r1 r3
-lbl3: strr r3 v
+lbl3: ldav arr r1 r3
+lbl3: str r3 v
 lbl3: ldn v r4
 lbl3: fstpush r4
 lbl3: stdcall print
 lbl3: fstpop r5
 lbl3: incrr r1
-lbl3: strr r1 i
+lbl3: str r1 i
 lbl3: lt r1 r2 r6
 lbl3: jmpt r6 lbl3
 lbl3: ret
@@ -399,6 +399,6 @@ compile_test! {
 lbl0: stc [Num(1.0), Num(2.0)] g
 lbl0: ldc 3 r0
 lbl0: ldc 1 r1
-lbl0: updarr g r0 r1
+lbl0: upda g r0 r1
 "
 }

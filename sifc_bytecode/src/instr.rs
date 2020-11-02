@@ -49,13 +49,13 @@ impl fmt::Display for Instr {
                 let line = format!("{} {} {}", op_str, reg1, dstr);
                 initial.push_str(&line);
             }
-            Op::LoadC { dest, val } => {
+            Op::Ldc { dest, val } => {
                 let dstr = reg_str(dest);
                 let vstr = val_str(val);
                 let line = format!("ldc {} {}", vstr, dstr);
                 initial.push_str(&line);
             }
-            Op::LoadN { dest, name } => {
+            Op::Ldn { dest, name } => {
                 let dstr = reg_str(dest);
                 let line = format!("ldn {} {}", name, dstr);
                 initial.push_str(&line);
@@ -66,53 +66,53 @@ impl fmt::Display for Instr {
                 let line = format!("mv {} {}", rstr, dstr);
                 initial.push_str(&line);
             }
-            Op::LoadArrs { name, dest } => {
+            Op::Ldas { name, dest } => {
                 let dstr = reg_str(dest);
-                let line = format!("ldarrs {} {}", name, dstr);
+                let line = format!("ldas {} {}", name, dstr);
                 initial.push_str(&line);
             }
-            Op::LoadArrv {
+            Op::Ldav {
                 name,
                 idx_reg,
                 dest,
             } => {
                 let dstr = reg_str(dest);
                 let istr = reg_str(idx_reg);
-                let line = format!("ldarrv {} {} {}", name, istr, dstr);
+                let line = format!("ldav {} {} {}", name, istr, dstr);
                 initial.push_str(&line);
             }
-            Op::UpdArr {
+            Op::Upda {
                 name,
                 idx_reg,
                 val_reg,
             } => {
                 let dstr = reg_str(idx_reg);
                 let istr = reg_str(val_reg);
-                let line = format!("updarr {} {} {}", name, istr, dstr);
+                let line = format!("upda {} {} {}", name, istr, dstr);
                 initial.push_str(&line);
             }
-            Op::StoreC { name, val } => {
+            Op::Stc { name, val } => {
                 let vstr = val_str(val);
                 let line = format!("stc {} {}", vstr, name);
                 initial.push_str(&line);
             }
-            Op::StoreN { srcname, destname } => {
+            Op::Stn { srcname, destname } => {
                 let line = format!("stn {} {}", srcname, destname);
                 initial.push_str(&line);
             }
-            Op::StoreR { name, src } => {
+            Op::Str { name, src } => {
                 let rstr = reg_str(src);
-                let line = format!("strr {} {}", rstr, name);
+                let line = format!("str {} {}", rstr, name);
                 initial.push_str(&line);
             }
-            Op::JumpCnd { kind, src, lblidx } => {
+            Op::JmpCnd { kind, src, lblidx } => {
                 let op_str = jmp_kind_str(kind);
                 let lbl = lbl_str(lblidx);
                 let rstr = reg_str(src);
                 let line = format!("{} {} {}", op_str, rstr, lbl);
                 initial.push_str(&line);
             }
-            Op::JumpA { lblidx } => {
+            Op::Jmpa { lblidx } => {
                 let lbl = lbl_str(lblidx);
                 let line = format!("jmpa {}", lbl);
                 initial.push_str(&line);
@@ -157,12 +157,12 @@ impl fmt::Display for Instr {
                 let line = format!("fstpop {}", rstr);
                 initial.push_str(&line);
             }
-            Op::TblI { tabname, key, src } => {
+            Op::Tbli { tabname, key, src } => {
                 let rstr = reg_str(src);
                 let line = format!("tbli {} {} {}", rstr, key, tabname);
                 initial.push_str(&line);
             }
-            Op::TblG { tabname, key, dest } => {
+            Op::Tblg { tabname, key, dest } => {
                 let rstr = reg_str(dest);
                 let line = format!("tblg {} {} {}", tabname, key, rstr);
                 initial.push_str(&line);
@@ -208,13 +208,13 @@ impl fmt::Debug for Instr {
                 );
                 initial.push_str(&line);
             }
-            Op::LoadC { dest, val } => {
+            Op::Ldc { dest, val } => {
                 let dstr = reg_str(dest);
                 let vstr = val_str(val);
                 let line = format!("\t ldc {} {}\t ; {}, {}\n", vstr, dstr, self.line, self.lbl);
                 initial.push_str(&line);
             }
-            Op::LoadN { dest, name } => {
+            Op::Ldn { dest, name } => {
                 let dstr = reg_str(dest);
                 let line = format!("\t ldn {} {}\t ; {}, {}\n", name, dstr, self.line, self.lbl);
                 initial.push_str(&line);
@@ -225,15 +225,15 @@ impl fmt::Debug for Instr {
                 let line = format!("\t mv {} {}\t ; {}, {}\n", rstr, dstr, self.line, self.lbl);
                 initial.push_str(&line);
             }
-            Op::LoadArrs { name, dest } => {
+            Op::Ldas { name, dest } => {
                 let dstr = reg_str(dest);
                 let line = format!(
-                    "\t ldarrs {} {}\t ; {}, {}\n",
+                    "\t ldas {} {}\t ; {}, {}\n",
                     name, dstr, self.line, self.lbl
                 );
                 initial.push_str(&line);
             }
-            Op::LoadArrv {
+            Op::Ldav {
                 name,
                 idx_reg,
                 dest,
@@ -241,12 +241,12 @@ impl fmt::Debug for Instr {
                 let dstr = reg_str(dest);
                 let istr = reg_str(idx_reg);
                 let line = format!(
-                    "\t ldarrv {} {} {}\t ; {}, {}\n",
+                    "\t ldav {} {} {}\t ; {}, {}\n",
                     name, istr, dstr, self.line, self.lbl
                 );
                 initial.push_str(&line);
             }
-            Op::UpdArr {
+            Op::Upda {
                 name,
                 idx_reg,
                 val_reg,
@@ -254,32 +254,29 @@ impl fmt::Debug for Instr {
                 let dstr = reg_str(val_reg);
                 let istr = reg_str(idx_reg);
                 let line = format!(
-                    "\t updarr {} {} {}\t ; {}, {}\n",
+                    "\t upda {} {} {}\t ; {}, {}\n",
                     name, istr, dstr, self.line, self.lbl
                 );
                 initial.push_str(&line);
             }
-            Op::StoreC { name, val } => {
+            Op::Stc { name, val } => {
                 let vstr = val_str(val);
                 let line = format!("\t stc {} {}\t ; {}, {}\n", vstr, name, self.line, self.lbl);
                 initial.push_str(&line);
             }
-            Op::StoreN { srcname, destname } => {
+            Op::Stn { srcname, destname } => {
                 let line = format!(
                     "\t stn {} {}\t ; {}, {}\n",
                     srcname, destname, self.line, self.lbl
                 );
                 initial.push_str(&line);
             }
-            Op::StoreR { name, src } => {
+            Op::Str { name, src } => {
                 let rstr = reg_str(src);
-                let line = format!(
-                    "\t strr {} {}\t ; {}, {}\n",
-                    rstr, name, self.line, self.lbl
-                );
+                let line = format!("\t str {} {}\t ; {}, {}\n", rstr, name, self.line, self.lbl);
                 initial.push_str(&line);
             }
-            Op::JumpCnd { kind, src, lblidx } => {
+            Op::JmpCnd { kind, src, lblidx } => {
                 let op_str = jmp_kind_str(kind);
                 let rstr = reg_str(src);
                 let lbl = lbl_str(lblidx);
@@ -289,7 +286,7 @@ impl fmt::Debug for Instr {
                 );
                 initial.push_str(&line);
             }
-            Op::JumpA { lblidx } => {
+            Op::Jmpa { lblidx } => {
                 let lbl = lbl_str(lblidx);
                 let line = format!("\t jmpa {}\t ; {}, {}\n", lbl, self.line, self.lbl);
                 initial.push_str(&line);
@@ -334,7 +331,7 @@ impl fmt::Debug for Instr {
                 let line = format!("\t fstpop {}\t ; {}, {}\n", rstr, self.line, self.lbl);
                 initial.push_str(&line);
             }
-            Op::TblI { tabname, key, src } => {
+            Op::Tbli { tabname, key, src } => {
                 let rstr = reg_str(src);
                 let line = format!(
                     "\t tbli {} {} {}\t ; {}, {}\n",
@@ -342,7 +339,7 @@ impl fmt::Debug for Instr {
                 );
                 initial.push_str(&line);
             }
-            Op::TblG { tabname, key, dest } => {
+            Op::Tblg { tabname, key, dest } => {
                 let rstr = reg_str(dest);
                 let line = format!(
                     "\t tblg {} {} {}\t ; {}, {}\n",

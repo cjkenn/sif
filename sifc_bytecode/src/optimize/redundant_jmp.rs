@@ -20,12 +20,12 @@ impl<'b> BytecodePass<'b> for RedundantJmp {
 
             if instr.lblidx != next_lbl {
                 let is_safe = match instr.op {
-                    Op::JumpCnd {
+                    Op::JmpCnd {
                         kind: _,
                         src: _,
                         lblidx,
                     } => lblidx != next_lbl,
-                    Op::JumpA { lblidx } => lblidx != next_lbl,
+                    Op::Jmpa { lblidx } => lblidx != next_lbl,
                     _ => true,
                 };
                 if is_safe {

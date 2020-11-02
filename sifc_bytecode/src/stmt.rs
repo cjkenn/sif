@@ -24,7 +24,7 @@ impl<'c> Compiler<'c> {
         // We store the register and the idx for later, when the udpate is performed.
         let jmpcnd_idx = self.instr_count_in_scope();
         let jmpcnd_reg = self.prevreg();
-        let jmpcnd_op_placeholder = Op::JumpCnd {
+        let jmpcnd_op_placeholder = Op::JmpCnd {
             kind: JmpOpKind::Jmpf,
             src: usize::MAX,
             lblidx: usize::MAX,
@@ -39,7 +39,7 @@ impl<'c> Compiler<'c> {
         // jump instruction. We need to update this later when we know the exact
         // position to jump to.
         let jmpa_idx = self.instr_count_in_scope();
-        let jmpa_op_placeholder = Op::JumpA { lblidx: usize::MAX };
+        let jmpa_op_placeholder = Op::Jmpa { lblidx: usize::MAX };
         self.push_op(jmpa_op_placeholder);
 
         let has_elifs = elif_exprs.len() != 0;
@@ -87,7 +87,7 @@ impl<'c> Compiler<'c> {
         if !has_else && !has_elifs {
             jmpcnd_lbl = self.lblcnt();
         }
-        let jmp_op_real = Op::JumpCnd {
+        let jmp_op_real = Op::JmpCnd {
             kind: JmpOpKind::Jmpf,
             src: jmpcnd_reg,
             lblidx: jmpcnd_lbl,
@@ -97,7 +97,7 @@ impl<'c> Compiler<'c> {
         // Update jmpa indexes in any elifs to point to the very end of this block, as they should
         // always skip every other elif/else condition.
         for idx in jmpa_op_idxs {
-            let jmpa_op_real = Op::JumpA {
+            let jmpa_op_real = Op::Jmpa {
                 lblidx: self.lblcnt(),
             };
             self.update_op_at(idx, jmpa_op_real);
@@ -105,7 +105,7 @@ impl<'c> Compiler<'c> {
 
         // Update the always executed jump to go to the last label in this current block, as (like
         // the elif labels) we should skip everything from this jump.
-        let jmpa_op_real = Op::JumpA {
+        let jmpa_op_real = Op::Jmpa {
             lblidx: self.lblcnt(),
         };
         self.update_op_at(jmpa_idx, jmpa_op_real);
@@ -128,7 +128,7 @@ impl<'c> Compiler<'c> {
                 let jmpcnd_idx = self.instr_count_in_scope();
                 let jmpcnd_reg = self.prevreg();
 
-                let jmp_op_placeholder = Op::JumpCnd {
+                let jmp_op_placeholder = Op::JmpCnd {
                     kind: JmpOpKind::Jmpf,
                     src: usize::MAX,
                     lblidx: usize::MAX,
@@ -141,7 +141,7 @@ impl<'c> Compiler<'c> {
                 self.block(stmts);
 
                 // Update the conditional jump.
-                let jmp_op_real = Op::JumpCnd {
+                let jmp_op_real = Op::JmpCnd {
                     kind: JmpOpKind::Jmpf,
                     src: jmpcnd_reg,
                     lblidx: self.lblcnt() + 1,
@@ -151,7 +151,7 @@ impl<'c> Compiler<'c> {
                 // Record the location of the jmpa label so it can be updated later
                 // after all elifs are processed.
                 let jmpa_place = self.instr_count_in_scope();
-                let jmpa_op = Op::JumpA { lblidx: usize::MAX };
+                let jmpa_op = Op::Jmpa { lblidx: usize::MAX };
                 self.push_op(jmpa_op);
 
                 jmpa_place
@@ -174,7 +174,7 @@ impl<'c> Compiler<'c> {
 
         // TODO: right now we assume that the value we are looping over is always an array.
         // later we could determine this by examining the in_expr_list node for other kinds.
-        self.push_op(Op::StoreC {
+        self.push_op(Op::Stc {
             name: idx_name.clone(),
             val: SifVal::Num(0.0),
         });
@@ -182,7 +182,7 @@ impl<'c> Compiler<'c> {
         let size_reg = self.nextreg();
 
         // Load array size into size register.
-        self.push_op(Op::LoadArrs {
+        self.push_op(Op::Ldas {
             name: loop_var_name.clone(),
             dest: size_reg,
         });
@@ -198,18 +198,18 @@ impl<'c> Compiler<'c> {
         // 2. Load the array value into the local register
         // 3. Store the array value into the local name at each iteration, so if it
         // is accessed by name we return the correct contents.
-        self.push_op(Op::LoadN {
+        self.push_op(Op::Ldn {
             dest: idx_reg,
             name: idx_name.clone(),
         });
 
         let local_reg = self.nextreg();
-        self.push_op(Op::LoadArrv {
+        self.push_op(Op::Ldav {
             name: loop_var_name.clone(),
             idx_reg: idx_reg,
             dest: local_reg,
         });
-        self.push_op(Op::StoreR {
+        self.push_op(Op::Str {
             name: local_name.clone(),
             src: local_reg,
         });
@@ -219,7 +219,7 @@ impl<'c> Compiler<'c> {
 
         // Increment index register and store it again.
         self.push_op(Op::Incrr { src: idx_reg });
-        self.push_op(Op::StoreR {
+        self.push_op(Op::Str {
             name: idx_name.clone(),
             src: idx_reg,
         });
@@ -235,7 +235,7 @@ impl<'c> Compiler<'c> {
         };
         self.push_op(idx_cmp);
 
-        let idx_jmp = Op::JumpCnd {
+        let idx_jmp = Op::JmpCnd {
             kind: JmpOpKind::Jmpt,
             src: self.prevreg(),
             lblidx: loop_lbl,

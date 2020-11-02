@@ -123,24 +123,24 @@ impl<'v> VM<'v> {
 
         let curr = self.prog[idx].op.clone();
         match curr {
-            Op::LoadC { dest, val } => self.loadc(dest, val)?,
-            Op::LoadN { dest, name } => self.loadn(dest, name)?,
+            Op::Ldc { dest, val } => self.loadc(dest, val)?,
+            Op::Ldn { dest, name } => self.loadn(dest, name)?,
             Op::Mv { src, dest } => self.mv(src, dest)?,
-            Op::LoadArrs { name, dest } => self.loadarrs(name, dest)?,
-            Op::LoadArrv {
+            Op::Ldas { name, dest } => self.loadarrs(name, dest)?,
+            Op::Ldav {
                 name,
                 idx_reg,
                 dest,
             } => self.loadarrv(name, idx_reg, dest)?,
-            Op::UpdArr {
+            Op::Upda {
                 name,
                 idx_reg,
                 val_reg,
             } => self.newarrv(name, idx_reg, val_reg)?,
-            Op::StoreC { name, val } => {
+            Op::Stc { name, val } => {
                 self.heap.insert(name.to_string(), val.clone());
             }
-            Op::StoreR { name, src } => {
+            Op::Str { name, src } => {
                 let reg = self.dregs.get(src);
                 let to_store = &reg.borrow().cont;
                 match to_store {
@@ -148,7 +148,7 @@ impl<'v> VM<'v> {
                     None => self.heap.insert(name.to_string(), SifVal::Null),
                 };
             }
-            Op::StoreN { srcname, destname } => {
+            Op::Stn { srcname, destname } => {
                 match self.heap.get(&srcname) {
                     Some(v) => {
                         let to_insert = v.clone();
@@ -157,14 +157,14 @@ impl<'v> VM<'v> {
                     None => self.heap.insert(destname.to_string(), SifVal::Null),
                 };
             }
-            Op::JumpA { lblidx } => {
+            Op::Jmpa { lblidx } => {
                 let codeidx = self.jumptab.get(&lblidx);
                 match codeidx {
                     Some(i) => self.ip = *i - 1,
                     None => return Err(self.newerr(RuntimeErrTy::InvalidJump)),
                 };
             }
-            Op::JumpCnd { kind, src, lblidx } => {
+            Op::JmpCnd { kind, src, lblidx } => {
                 let reg = self.dregs.get(src);
                 let contents = reg.borrow().cont.clone();
                 if contents.is_none() {
@@ -259,7 +259,7 @@ impl<'v> VM<'v> {
                 let to_pop = self.fn_param_stack.pop();
                 self.dregs.set_contents(dest, to_pop);
             }
-            Op::TblI { tabname, key, src } => {
+            Op::Tbli { tabname, key, src } => {
                 let srcreg = self.dregs.get(src);
                 let to_insert = srcreg.borrow().cont.clone();
 
@@ -275,7 +275,7 @@ impl<'v> VM<'v> {
                     None => return Err(self.newerr(RuntimeErrTy::InvalidName(tabname.clone()))),
                 };
             }
-            Op::TblG { tabname, key, dest } => {
+            Op::Tblg { tabname, key, dest } => {
                 match self.heap.get(&tabname) {
                     Some(n) => match n {
                         SifVal::Tab(hm) => {

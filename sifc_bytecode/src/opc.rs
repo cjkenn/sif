@@ -55,7 +55,7 @@ pub enum JmpOpKind {
 /// stores the value located in r2 into the address for "y"
 #[derive(Clone, Debug, PartialEq)]
 pub enum Op {
-    /// Binary operator with 2 register sources
+    /// Binary operator with 2 register sources.
     Binary {
         kind: BinOpKind,
         src1: usize,
@@ -63,21 +63,21 @@ pub enum Op {
         dest: usize,
     },
 
-    /// Unary operator with a single register source
+    /// Unary operator with a single register source.
     Unary {
         kind: UnOpKind,
         src1: usize,
         dest: usize,
     },
 
-    /// Load a constant SifVal
-    LoadC {
+    /// Load a constant SifVal. This does not access any memory.
+    Ldc {
         dest: usize,
         val: SifVal,
     },
 
-    /// Load a name
-    LoadN {
+    /// Load a name from memory.
+    Ldn {
         dest: usize,
         name: String,
     },
@@ -90,53 +90,53 @@ pub enum Op {
     },
 
     /// Loads the size (length) of the array by the given name.
-    LoadArrs {
+    Ldas {
         name: String,
         dest: usize,
     },
 
     /// Loads the value of the array at the index given. The idx field
     /// is expected to be a register.
-    LoadArrv {
+    Ldav {
         name: String,
         idx_reg: usize,
         dest: usize,
     },
 
     /// Updates a value in an array.
-    UpdArr {
+    Upda {
         name: String,
         idx_reg: usize,
         val_reg: usize,
     },
 
     /// Store a constant
-    StoreC {
+    Stc {
         val: SifVal,
         name: String,
     },
 
     /// Store a name
-    StoreN {
+    Stn {
         srcname: String,
         destname: String,
     },
 
     /// Store a register
-    StoreR {
+    Str {
         src: usize,
         name: String,
     },
 
     /// Jump conditionally, based on the value in src register
-    JumpCnd {
+    JmpCnd {
         kind: JmpOpKind,
         src: usize,
         lblidx: usize,
     },
 
     /// Always jump to given lbl index
-    JumpA {
+    Jmpa {
         lblidx: usize,
     },
 
@@ -183,14 +183,14 @@ pub enum Op {
     },
 
     /// Insert a value from src register into a table.
-    TblI {
+    Tbli {
         tabname: String,
         key: String,
         src: usize,
     },
 
     /// Retrieve a value from a table and place it into dest register.
-    TblG {
+    Tblg {
         tabname: String,
         key: String,
         dest: usize,

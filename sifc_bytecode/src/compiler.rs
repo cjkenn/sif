@@ -280,21 +280,21 @@ impl<'c> Compiler<'c> {
             AstNode::PrimaryExpr { tkn } => {
                 match &tkn.ty {
                     TokenTy::Val(v) => {
-                        let op = Op::LoadC {
+                        let op = Op::Ldc {
                             dest: self.nextreg(),
                             val: SifVal::Num(*v),
                         };
                         self.push_op(op);
                     }
                     TokenTy::Str(s) => {
-                        let op = Op::LoadC {
+                        let op = Op::Ldc {
                             dest: self.nextreg(),
                             val: SifVal::Str(s.clone()),
                         };
                         self.push_op(op);
                     }
                     TokenTy::Ident(i) => {
-                        let op = Op::LoadN {
+                        let op = Op::Ldn {
                             dest: self.nextreg(),
                             name: i.clone(),
                         };
@@ -311,7 +311,7 @@ impl<'c> Compiler<'c> {
         self.expr(rhs);
         let valr = self.ri - 1;
         self.expr(index);
-        let op = Op::UpdArr {
+        let op = Op::Upda {
             name: array_tkn.get_name(),
             idx_reg: self.prevreg(),
             val_reg: valr,
@@ -349,24 +349,24 @@ impl<'c> Compiler<'c> {
                 TokenTy::Val(v) => {
                     let sifv = SifVal::Num(*v);
                     let d = self.nextreg();
-                    let op = Op::LoadC { dest: d, val: sifv };
+                    let op = Op::Ldc { dest: d, val: sifv };
                     self.push_op(op);
                 }
                 TokenTy::True => {
                     let d = self.nextreg();
                     let sifv = SifVal::Bl(true);
-                    let op = Op::LoadC { dest: d, val: sifv };
+                    let op = Op::Ldc { dest: d, val: sifv };
                     self.push_op(op);
                 }
                 TokenTy::False => {
                     let d = self.nextreg();
                     let sifv = SifVal::Bl(false);
-                    let op = Op::LoadC { dest: d, val: sifv };
+                    let op = Op::Ldc { dest: d, val: sifv };
                     self.push_op(op);
                 }
                 TokenTy::Ident(i) => {
                     let d = self.nextreg();
-                    let op = Op::LoadN {
+                    let op = Op::Ldn {
                         dest: d,
                         name: i.clone(),
                     };
@@ -375,7 +375,7 @@ impl<'c> Compiler<'c> {
                 TokenTy::Str(s) => {
                     let sifv = SifVal::Str(s.clone());
                     let d = self.nextreg();
-                    let op = Op::LoadC { dest: d, val: sifv };
+                    let op = Op::Ldc { dest: d, val: sifv };
                     self.push_op(op);
                 }
                 _ => {}
@@ -422,7 +422,7 @@ impl<'c> Compiler<'c> {
                                 dest: self.nextreg(),
                             };
                             stkops.push(stkop);
-                            let strop = Op::StoreR {
+                            let strop = Op::Str {
                                 src: self.prevreg(),
                                 name: tkn.get_name(),
                             };
@@ -460,7 +460,7 @@ impl<'c> Compiler<'c> {
             // We generate a store for an empty value here, to ensure that the name is present
             // in memory if we try to assign to it later. We can detect null value accesses at some
             // point if we want to, or we can leave it to runtime.
-            let op = Op::StoreC {
+            let op = Op::Stc {
                 val: SifVal::Null,
                 name: st_name,
             };
@@ -491,7 +491,7 @@ impl<'c> Compiler<'c> {
                 // We assume that if we aren't assigning a declaration to a constant, we are using an
                 // expression. We store based on the correct register from the expression.
                 self.expr(&rhs);
-                let op = Op::StoreR {
+                let op = Op::Str {
                     name: st_name,
                     src: self.prevreg(),
                 };
@@ -503,31 +503,31 @@ impl<'c> Compiler<'c> {
     fn match_primary_assign(&mut self, st_name: &String, tkn: &Token) {
         match &tkn.ty {
             TokenTy::Val(v) => {
-                self.push_op(Op::StoreC {
+                self.push_op(Op::Stc {
                     val: SifVal::Num(*v),
                     name: st_name.clone(),
                 });
             }
             TokenTy::Str(s) => {
-                self.push_op(Op::StoreC {
+                self.push_op(Op::Stc {
                     val: SifVal::Str(s.clone()),
                     name: st_name.clone(),
                 });
             }
             TokenTy::Ident(i) => {
-                self.push_op(Op::StoreN {
+                self.push_op(Op::Stn {
                     srcname: i.clone(),
                     destname: st_name.clone(),
                 });
             }
             TokenTy::False => {
-                self.push_op(Op::StoreC {
+                self.push_op(Op::Stc {
                     val: SifVal::Bl(false),
                     name: st_name.clone(),
                 });
             }
             TokenTy::True => {
-                self.push_op(Op::StoreC {
+                self.push_op(Op::Stc {
                     val: SifVal::Bl(false),
                     name: st_name.clone(),
                 });
@@ -537,7 +537,7 @@ impl<'c> Compiler<'c> {
     }
 
     fn match_table_assign(&mut self, st_name: &String, items: &AstNode) {
-        self.push_op(Op::StoreC {
+        self.push_op(Op::Stc {
             val: SifVal::Tab(HashMap::new()),
             name: st_name.clone(),
         });
@@ -546,7 +546,7 @@ impl<'c> Compiler<'c> {
             AstNode::ItemList { items } => {
                 for (k, v) in items.iter() {
                     self.expr(v);
-                    let tabop = Op::TblI {
+                    let tabop = Op::Tbli {
                         tabname: st_name.clone(),
                         key: k.clone(),
                         src: self.prevreg(),
@@ -570,7 +570,7 @@ impl<'c> Compiler<'c> {
         // After the call returns, store the popped return value in the next
         // available reg, and then store that register in the variable
         // being assigned to.
-        let strop = Op::StoreR {
+        let strop = Op::Str {
             src: self.prevreg(),
             name: st_name.clone(),
         };

@@ -17,13 +17,13 @@ impl<'c> Compiler<'c> {
         match body {
             Some(ast) => {
                 let items = self.arrayitems(ast);
-                self.push_op(Op::StoreC {
+                self.push_op(Op::Stc {
                     name: name,
                     val: SifVal::Arr(items),
                 });
             }
             None => {
-                self.push_op(Op::StoreC {
+                self.push_op(Op::Stc {
                     name: name,
                     val: SifVal::Arr(Vec::new()),
                 });
@@ -36,7 +36,7 @@ impl<'c> Compiler<'c> {
         let name = array_tkn.get_name();
         self.expr(index_expr);
 
-        let op = Op::LoadArrv {
+        let op = Op::Ldav {
             name: name,
             idx_reg: self.prevreg(),
             dest: self.nextreg(),

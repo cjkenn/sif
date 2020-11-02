@@ -130,7 +130,7 @@ mod tests {
 
         code.push(Instr::new(
             0,
-            Op::LoadC {
+            Op::Ldc {
                 dest: 0,
                 val: SifVal::Num(1.0),
             },
@@ -139,7 +139,7 @@ mod tests {
 
         code.push(Instr::new(
             0,
-            Op::LoadC {
+            Op::Ldc {
                 dest: 1,
                 val: SifVal::Num(2.0),
             },
@@ -159,7 +159,7 @@ mod tests {
 
         code.push(Instr::new(
             0,
-            Op::JumpCnd {
+            Op::JmpCnd {
                 kind: JmpOpKind::Jmpf,
                 src: 2,
                 lblidx: 2,
@@ -167,7 +167,7 @@ mod tests {
             4,
         ));
 
-        code.push(Instr::new(1, Op::JumpA { lblidx: 2 }, 5));
+        code.push(Instr::new(1, Op::Jmpa { lblidx: 2 }, 5));
         code.push(Instr::new(2, Op::Nop, 6));
 
         code
