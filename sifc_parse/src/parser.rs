@@ -600,6 +600,13 @@ where
                             }
                         };
                     }
+                    AstNode::ArrayAccess { array_tkn, index } => {
+                        return Ok(AstNode::ArrayMutExpr {
+                            array_tkn: array_tkn,
+                            index: index,
+                            rhs: Box::new(rhs),
+                        });
+                    }
                     _ => {
                         return Err(self.add_error_w_pos(
                             op.line,

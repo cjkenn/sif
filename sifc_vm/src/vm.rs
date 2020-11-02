@@ -132,6 +132,11 @@ impl<'v> VM<'v> {
                 idx_reg,
                 dest,
             } => self.loadarrv(name, idx_reg, dest)?,
+            Op::NewArrv {
+                name,
+                idx_reg,
+                val_reg,
+            } => self.newarrv(name, idx_reg, val_reg)?,
             Op::StoreC { name, val } => {
                 self.heap.insert(name.to_string(), val.clone());
             }
@@ -350,6 +355,55 @@ impl<'v> VM<'v> {
             },
             None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
         };
+
+        Ok(())
+    }
+
+    fn newarrv(&mut self, name: String, idx_reg: usize, val_reg: usize) -> Result<(), RuntimeErr> {
+        let idx_reg = self.dregs.get(idx_reg);
+        let idx_sv = &idx_reg.borrow().cont;
+        if idx_sv.is_none() {
+            return Err(self.newerr(RuntimeErrTy::TyMismatch));
+        }
+
+        let maybe_to_idx = match &idx_sv.as_ref().unwrap() {
+            SifVal::Num(f) => Some(*f as usize),
+            _ => None,
+        };
+        if maybe_to_idx.is_none() {
+            return Err(self.newerr(RuntimeErrTy::TyMismatch));
+        }
+
+        let to_idx = maybe_to_idx.unwrap();
+
+        let val_reg = self.dregs.get(val_reg);
+        let val_sv = &val_reg.borrow().cont;
+        if val_sv.is_none() {
+            return Err(self.newerr(RuntimeErrTy::TyMismatch));
+        }
+
+        let val_sv_r = val_sv.clone().unwrap();
+        let mut new_a: Vec<SifVal>;
+
+        match self.heap.get(&name) {
+            Some(n) => match n {
+                SifVal::Arr(v) => {
+                    if to_idx >= v.len() {
+                        return Err(self.newerr(RuntimeErrTy::IndexOutOfBounds(
+                            name.clone(),
+                            to_idx,
+                            v.len(),
+                        )));
+                    }
+                    new_a = v.clone();
+                    new_a[to_idx] = val_sv_r;
+                }
+                _ => return Err(self.newerr(RuntimeErrTy::NotAnArray(name.clone()))),
+            },
+            None => return Err(self.newerr(RuntimeErrTy::InvalidName(name.clone()))),
+        };
+
+        self.heap.insert(name, SifVal::Arr(new_a));
 
         Ok(())
     }

@@ -8,7 +8,7 @@ const INPUT_PATH: &str = "./tests/compiler/inputs";
 /// implementation for Instr and does not contain section names.
 /// It always starts and ends with a newline. Line information for each instruction
 /// is excluded. If that is needed, use fmt::Debug.
-pub fn prog_to_string(prog: Vec<Instr>) -> String {
+fn prog_to_string(prog: Vec<Instr>) -> String {
     let mut result = String::from("\n");
     for i in prog {
         result.push_str(&format!("{:#}\n", i));

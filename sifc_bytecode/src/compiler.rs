@@ -272,6 +272,11 @@ impl<'c> Compiler<'c> {
                 fn_params,
                 is_std,
             } => self.fncallexpr(fn_ident_tkn, fn_params, *is_std),
+            AstNode::ArrayMutExpr {
+                array_tkn,
+                index,
+                rhs,
+            } => self.arraymutexpr(array_tkn, index, rhs),
             AstNode::PrimaryExpr { tkn } => {
                 match &tkn.ty {
                     TokenTy::Val(v) => {
@@ -300,6 +305,18 @@ impl<'c> Compiler<'c> {
             }
             _ => (),
         }
+    }
+
+    fn arraymutexpr(&mut self, array_tkn: &Token, index: &AstNode, rhs: &AstNode) {
+        self.expr(rhs);
+        let valr = self.ri - 1;
+        self.expr(index);
+        let op = Op::NewArrv {
+            name: array_tkn.get_name(),
+            idx_reg: self.prevreg(),
+            val_reg: valr,
+        };
+        self.push_op(op);
     }
 
     fn binop(&mut self, kind: BinOpKind, lhs: &AstNode, rhs: &AstNode) {

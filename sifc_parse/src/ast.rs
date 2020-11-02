@@ -93,6 +93,12 @@ pub enum AstNode {
         index: Box<AstNode>,
     },
 
+    ArrayMutExpr {
+        array_tkn: Token,
+        index: Box<AstNode>,
+        rhs: Box<AstNode>,
+    },
+
     FnCallExpr {
         fn_ident_tkn: Token,
         fn_params: Vec<AstNode>,

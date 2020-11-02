@@ -24,7 +24,7 @@ exprstmt   ::= expr ";" ;
 retstmt    ::= "return" [ expr ] ";" ;
 
 expr         ::= assignexpr ;
-assignexpr   ::= [ { [ funccall "." ] [ tablecall ] } ] assignexpr | orexpr ;
+assignexpr   ::= { [ funccall "." ] [ arrayaccess ] assignexpr } | orexpr ;
 orexpr       ::= andexpr { [ "||" ] andexpr } ;
 andexpr      ::= eqexpr { [ "&&" ] eqexpr } ;
 eqexpr       ::= cmpexpr { [ "!=" ] [ "==" ] cmpexpr } ;

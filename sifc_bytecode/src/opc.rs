@@ -103,6 +103,13 @@ pub enum Op {
         dest: usize,
     },
 
+    /// Updates a value in an array.
+    NewArrv {
+        name: String,
+        idx_reg: usize,
+        val_reg: usize,
+    },
+
     /// Store a constant
     StoreC {
         val: SifVal,

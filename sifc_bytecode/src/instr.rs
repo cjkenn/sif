@@ -81,6 +81,16 @@ impl fmt::Display for Instr {
                 let line = format!("ldarrv {} {} {}", name, istr, dstr);
                 initial.push_str(&line);
             }
+            Op::NewArrv {
+                name,
+                idx_reg,
+                val_reg,
+            } => {
+                let dstr = reg_str(idx_reg);
+                let istr = reg_str(val_reg);
+                let line = format!("newarrv {} {} {}", name, istr, dstr);
+                initial.push_str(&line);
+            }
             Op::StoreC { name, val } => {
                 let vstr = val_str(val);
                 let line = format!("stc {} {}", vstr, name);
@@ -232,6 +242,19 @@ impl fmt::Debug for Instr {
                 let istr = reg_str(idx_reg);
                 let line = format!(
                     "\t ldarrv {} {} {}\t ; {}, {}\n",
+                    name, istr, dstr, self.line, self.lbl
+                );
+                initial.push_str(&line);
+            }
+            Op::NewArrv {
+                name,
+                idx_reg,
+                val_reg,
+            } => {
+                let dstr = reg_str(val_reg);
+                let istr = reg_str(idx_reg);
+                let line = format!(
+                    "\t newarrv {} {} {}\t ; {}, {}\n",
                     name, istr, dstr, self.line, self.lbl
                 );
                 initial.push_str(&line);

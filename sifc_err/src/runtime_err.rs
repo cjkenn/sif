@@ -14,6 +14,7 @@ pub enum RuntimeErrTy {
     NotAnArray(String),
     InvalidFnSym(String),
     EmptyCallStack,
+    IndexOutOfBounds(String, usize, usize),
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +68,10 @@ impl SifErr for RuntimeErr {
             RuntimeErrTy::EmptyCallStack => {
                 String::from("invalid function call access: no return address specified")
             }
+            RuntimeErrTy::IndexOutOfBounds(n, idx, len) => format!(
+                "Array index out of bounds! Value {} has len {}, but requested index {}",
+                n, len, idx
+            ),
         }
     }
 }

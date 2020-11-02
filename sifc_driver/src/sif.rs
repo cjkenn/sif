@@ -26,7 +26,7 @@ use std::{fs::File, time::Instant};
 // Default size of heap, in number of items, NOT bytes.
 const DEFAULT_HEAP: &str = "100";
 
-// Default size of data register vec. If we exceeed this len,
+// Default size of data register vec. If we exceed this len,
 // we can increase the size of the vec.
 const DEFAULT_DREG: &str = "1024";
 
