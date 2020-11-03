@@ -87,7 +87,6 @@ fn from_file(opts: ArgMatches) {
         let opt_start = Instant::now();
         let opt_result = run_optimizer(&comp_result);
         timings.optimize_time = opt_start.elapsed();
-        printer::dump_code(opt_result.optimized.clone());
 
         let vm_start = Instant::now();
         // TODO: need to provide better params/options to run_vm method
