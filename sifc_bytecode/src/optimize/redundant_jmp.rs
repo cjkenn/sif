@@ -1,6 +1,8 @@
 use crate::optimize::BytecodePass;
 use crate::{instr::Instr, opc::Op};
 
+/// If a jmp instruction transfers control to the immediate next instruction,
+/// we can remove it and allow the program execution to continue.
 pub struct RedundantJmp;
 
 impl<'b> BytecodePass<'b> for RedundantJmp {
@@ -9,8 +11,6 @@ impl<'b> BytecodePass<'b> for RedundantJmp {
     }
 
     fn run_pass(&self, bytecode: &'b Vec<Instr>) -> Vec<Instr> {
-        // If a jump goes to the immediate next label and is the last instruction
-        // under the current label, remove it.
         let mut i = 0;
         let mut result = Vec::new();
 

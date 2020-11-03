@@ -1,7 +1,8 @@
 mod redundant_jmp;
+mod remove_after_ret;
 
 use crate::instr::Instr;
-use crate::optimize::redundant_jmp::RedundantJmp;
+use crate::optimize::{redundant_jmp::RedundantJmp, remove_after_ret::RemoveAfterRet};
 
 pub trait BytecodePass<'b> {
     fn name(&self) -> String;
@@ -14,17 +15,21 @@ pub struct OptimizeResult {
 
 pub struct BytecodeOptimizer {
     redundant_jmp: RedundantJmp,
+    remove_after_ret: RemoveAfterRet,
 }
 
 impl BytecodeOptimizer {
     pub fn new() -> BytecodeOptimizer {
         BytecodeOptimizer {
             redundant_jmp: RedundantJmp,
+            remove_after_ret: RemoveAfterRet,
         }
     }
 
     pub fn run_passes(&self, prog: &Vec<Instr>) -> OptimizeResult {
         let r1 = self.redundant_jmp.run_pass(prog);
-        OptimizeResult { optimized: r1 }
+        let r2 = self.remove_after_ret.run_pass(&r1);
+
+        OptimizeResult { optimized: r2 }
     }
 }
