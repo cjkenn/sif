@@ -445,13 +445,12 @@ impl<'c> Compiler<'c> {
             self.push_op(op);
         }
 
-        self.newlbl();
         // TODO: param scoping - need to be able to access names in vm using the stack
         self.block(fn_body);
-        self.newlbl();
 
-        // go back to code section.
+        // go back to code section and open a new label
         self.decl_scope = false;
+        self.newlbl();
     }
 
     fn vardecl(&mut self, tkn: &Token, rhs: Option<Box<AstNode>>) {

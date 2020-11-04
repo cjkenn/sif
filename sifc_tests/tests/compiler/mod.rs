@@ -92,7 +92,7 @@ compile_test! {
     empty_fn,
     r"
 lbl0: fn @x []
-lbl1: ret
+lbl0: ret
 "
 }
 
@@ -102,9 +102,9 @@ compile_test! {
 lbl0: fn @x ["y"]
 lbl0: fstpop r0
 lbl0: str r0 y
-lbl1: ldn y r1
-lbl1: fstpush r1
-lbl1: ret
+lbl0: ldn y r1
+lbl0: fstpush r1
+lbl0: ret
 "#
 }
 
@@ -114,14 +114,14 @@ compile_test! {
 lbl0: fn @x ["y"]
 lbl0: fstpop r0
 lbl0: str r0 y
-lbl1: ldn y r1
-lbl1: fstpush r1
-lbl1: ret
-lbl2: ldc 1 r2
-lbl2: fstpush r2
-lbl2: call x
-lbl2: fstpop r3
-lbl2: str r3 g
+lbl0: ldn y r1
+lbl0: fstpush r1
+lbl0: ret
+lbl1: ldc 1 r2
+lbl1: fstpush r2
+lbl1: call x
+lbl1: fstpop r3
+lbl1: str r3 g
 "#
 }
 
@@ -130,19 +130,19 @@ compile_test! {
     r"
 lbl0: stc [Num(1.0), Num(2.0), Num(3.0)] g
 lbl0: stc 0 x
-lbl1: stc 0 idx
-lbl1: ldas g r1
-lbl2: ldn idx r0
-lbl2: ldav g r0 r2
-lbl2: str r2 val
-lbl2: ldn x r3
-lbl2: ldn val r4
-lbl2: add r3 r4 r5
-lbl2: str r5 x
-lbl2: incrr r0
-lbl2: str r0 idx
-lbl2: lt r0 r1 r6
-lbl2: jmpt r6 lbl2
+lbl0: stc 0 idx
+lbl0: ldas g r1
+lbl1: ldn idx r0
+lbl1: ldav g r0 r2
+lbl1: str r2 val
+lbl1: ldn x r3
+lbl1: ldn val r4
+lbl1: add r3 r4 r5
+lbl1: str r5 x
+lbl1: incrr r0
+lbl1: str r0 idx
+lbl1: lt r0 r1 r6
+lbl1: jmpt r6 lbl1
 "
 }
 
@@ -293,14 +293,14 @@ compile_test! {
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
 lbl0: str r0 x
-lbl1: ldc true r1
-lbl1: ldc false r2
-lbl1: or r1 r2 r3
-lbl1: jmpf r3 lbl3
-lbl2: stc 0 t
-lbl2: jmpa lbl3
-lbl3: nop
-lbl3: ret
+lbl0: ldc true r1
+lbl0: ldc false r2
+lbl0: or r1 r2 r3
+lbl0: jmpf r3 lbl2
+lbl1: stc 0 t
+lbl1: jmpa lbl2
+lbl2: nop
+lbl2: ret
 "#
 }
 
@@ -310,15 +310,15 @@ compile_test! {
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
 lbl0: str r0 x
-lbl1: ldc true r1
-lbl1: ldc false r2
-lbl1: or r1 r2 r3
-lbl1: jmpf r3 lbl3
-lbl2: stc 0 t
-lbl2: jmpa lbl4
-lbl3: stc 1 t
-lbl4: nop
-lbl4: ret
+lbl0: ldc true r1
+lbl0: ldc false r2
+lbl0: or r1 r2 r3
+lbl0: jmpf r3 lbl2
+lbl1: stc 0 t
+lbl1: jmpa lbl3
+lbl2: stc 1 t
+lbl3: nop
+lbl3: ret
 "#
 }
 
@@ -328,20 +328,20 @@ compile_test! {
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
 lbl0: str r0 x
-lbl1: ldc true r1
-lbl1: ldc false r2
-lbl1: or r1 r2 r3
-lbl1: jmpf r3 lbl3
-lbl2: stc 0 t
-lbl2: jmpa lbl5
-lbl3: ldc false r4
-lbl3: ldc false r5
-lbl3: and r4 r5 r6
-lbl3: jmpf r6 lbl5
-lbl4: stc 1 t
-lbl4: jmpa lbl5
-lbl5: nop
-lbl5: ret
+lbl0: ldc true r1
+lbl0: ldc false r2
+lbl0: or r1 r2 r3
+lbl0: jmpf r3 lbl2
+lbl1: stc 0 t
+lbl1: jmpa lbl4
+lbl2: ldc false r4
+lbl2: ldc false r5
+lbl2: and r4 r5 r6
+lbl2: jmpf r6 lbl4
+lbl3: stc 1 t
+lbl3: jmpa lbl4
+lbl4: nop
+lbl4: ret
 "#
 }
 
@@ -351,21 +351,21 @@ compile_test! {
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
 lbl0: str r0 x
-lbl1: ldc true r1
-lbl1: ldc false r2
-lbl1: or r1 r2 r3
-lbl1: jmpf r3 lbl3
-lbl2: stc 0 t
-lbl2: jmpa lbl6
-lbl3: ldc false r4
-lbl3: ldc false r5
-lbl3: and r4 r5 r6
-lbl3: jmpf r6 lbl5
-lbl4: stc 1 t
-lbl4: jmpa lbl6
-lbl5: stc 2 t
-lbl6: nop
-lbl6: ret
+lbl0: ldc true r1
+lbl0: ldc false r2
+lbl0: or r1 r2 r3
+lbl0: jmpf r3 lbl2
+lbl1: stc 0 t
+lbl1: jmpa lbl5
+lbl2: ldc false r4
+lbl2: ldc false r5
+lbl2: and r4 r5 r6
+lbl2: jmpf r6 lbl4
+lbl3: stc 1 t
+lbl3: jmpa lbl5
+lbl4: stc 2 t
+lbl5: nop
+lbl5: ret
 "#
 }
 
@@ -375,21 +375,21 @@ compile_test! {
 lbl0: fn @t ["x"]
 lbl0: fstpop r0
 lbl0: str r0 x
-lbl1: stc [Num(1.0), Num(2.0), Num(3.0)] arr
-lbl2: stc 0 i
-lbl2: ldas arr r2
-lbl3: ldn i r1
-lbl3: ldav arr r1 r3
-lbl3: str r3 v
-lbl3: ldn v r4
-lbl3: fstpush r4
-lbl3: stdcall print
-lbl3: fstpop r5
-lbl3: incrr r1
-lbl3: str r1 i
-lbl3: lt r1 r2 r6
-lbl3: jmpt r6 lbl3
-lbl3: ret
+lbl0: stc [Num(1.0), Num(2.0), Num(3.0)] arr
+lbl0: stc 0 i
+lbl0: ldas arr r2
+lbl1: ldn i r1
+lbl1: ldav arr r1 r3
+lbl1: str r3 v
+lbl1: ldn v r4
+lbl1: fstpush r4
+lbl1: stdcall print
+lbl1: fstpop r5
+lbl1: incrr r1
+lbl1: str r1 i
+lbl1: lt r1 r2 r6
+lbl1: jmpt r6 lbl1
+lbl1: ret
 "#
 }
 

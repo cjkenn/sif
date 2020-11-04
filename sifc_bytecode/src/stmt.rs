@@ -69,14 +69,6 @@ impl<'c> Compiler<'c> {
             self.blocks(else_stmts);
         }
 
-        // We may need a spare nop instruction to close out the block at the end of
-        // generation if we are inside a function. This allows proper jump indexing
-        // out of the statement, and ensures we don't run into other decl instructions.
-        // if self.decl_scope() {
-        //     self.newlbl();
-        //     self.push_op(Op::Nop);
-        // }
-
         self.newlbl();
 
         // Updating the first conditional jump as follows:
@@ -161,8 +153,6 @@ impl<'c> Compiler<'c> {
     }
 
     pub fn forstmt(&mut self, var_list: &AstNode, in_expr_list: &AstNode, stmts: &AstNode) {
-        self.newlbl();
-
         // Load the index register and set it to 0 initially.
         let idx_reg = self.nextreg();
         let (idx_name, local_name) = self.names_from_identpair(var_list);
