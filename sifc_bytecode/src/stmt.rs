@@ -102,7 +102,7 @@ impl<'c> Compiler<'c> {
         };
         self.update_op_at(jmpa_idx, jmpa_op_real);
 
-        // Push a Nop in: this fixes jumps to "empty" blocks.
+        // Push a Nop in: this fixes jumps to "empty" blocks (ie. make an exit block)
         self.push_op(Op::Nop);
     }
 
