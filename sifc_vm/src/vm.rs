@@ -46,9 +46,11 @@ pub struct VM<'v> {
     /// Standard libary function mappings.
     stdlib: Std<'v>,
 
-    /// Stack for storing function params. Note that we do not use this for function return
-    /// values, which are placed into frr.
-    fn_param_stack: Vec<SifVal>,
+    /// Stack for storing function params and return values. We sacrifice a bit of memory efficiency
+    /// by not sharing this stacke for function call locations, but this is easier to implement
+    /// using SifVals, and it would be annoying to convert every jmp address to a SifVal before
+    /// pushing it onto the call stack.
+    fn_stack: Vec<SifVal>,
 
     /// Stack that stores jump locations for calling functions and returning from them. Like a normal
     /// calls stack, when a function is called we push the location to return to on to the stack. Once the
@@ -88,7 +90,7 @@ impl<'v> VM<'v> {
             dregs: reglist,
             heap: heap,
             stdlib: Std::new(),
-            fn_param_stack: Vec::new(),
+            fn_stack: Vec::new(),
             call_stack: Vec::new(),
             csi: code_start,
             ip: code_start,
@@ -244,19 +246,22 @@ impl<'v> VM<'v> {
                 let mut params = Vec::new();
                 let mut i = 0;
                 while i < param_count {
-                    let v = self.fn_param_stack.pop();
+                    let v = self.fn_stack.pop();
                     params.push(v.unwrap());
                     i += 1;
                 }
-                self.stdlib.call(&name, params);
+                // Std::call will return something always, but if the library function doesn't
+                // actually have a return value we will get SifVal::Null
+                let result = self.stdlib.call(&name, params);
+                self.fn_stack.push(result);
             }
             Op::FnStackPush { src } => {
                 let srcreg = self.dregs.get(src);
                 let to_push = srcreg.borrow().cont.clone();
-                self.fn_param_stack.push(to_push.unwrap());
+                self.fn_stack.push(to_push.unwrap());
             }
             Op::FnStackPop { dest } => {
-                let to_pop = self.fn_param_stack.pop();
+                let to_pop = self.fn_stack.pop();
                 self.dregs.set_contents(dest, to_pop);
             }
             Op::Tbli { tabname, key, src } => {

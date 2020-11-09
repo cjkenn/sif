@@ -6,3 +6,6 @@ var y = [1,2,3];
 
 var z = [[r => "x", t => 4,]];
 @print(z);
+
+var upto5 = @range(0, 5);
+@print(upto5);

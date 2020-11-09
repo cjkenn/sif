@@ -10,6 +10,15 @@ pub enum SifVal {
     Null,
 }
 
+impl SifVal {
+    pub fn extract_num(&self) -> f64 {
+        match self {
+            SifVal::Num(f) => *f,
+            _ => panic!("not a number!"),
+        }
+    }
+}
+
 impl fmt::Display for SifVal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

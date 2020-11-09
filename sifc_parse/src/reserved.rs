@@ -23,7 +23,10 @@ pub fn get_reserved_words() -> HashMap<String, TokenTy> {
 }
 
 pub fn get_reserved_fns() -> HashSet<String> {
-    [(String::from("print"))].iter().cloned().collect()
+    [(String::from("print")), (String::from("range"))]
+        .iter()
+        .cloned()
+        .collect()
 }
 
 pub fn is_reserved_word(word: &str) -> bool {
