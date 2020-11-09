@@ -2,6 +2,7 @@
 name = "sifc_bytecode"
 version = "0.1.0"
 edition = "2018"
+license = "MIT"
 
 [dependencies]
 sifc_parse = { path = "../sifc_parse" }
