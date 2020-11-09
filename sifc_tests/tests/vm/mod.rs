@@ -38,7 +38,49 @@ macro_rules! vm_run {
 }
 
 #[test]
-fn test_stc() {
+fn stc() {
     let vm = vm_run!("var y = 0;");
-    assert_eq!(vm.inspect_heap(String::from("y")), Some(&SifVal::Num(0.0)));
+    assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Num(0.0)));
+}
+
+#[test]
+fn stn() {
+    let vm = vm_run!("var y = 0; var x = y;");
+    assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Num(0.0)));
+    assert_eq!(vm.inspect_heap("x"), Some(&SifVal::Num(0.0)));
+}
+
+#[test]
+fn ldc() {
+    let mut vm = vm_run!("var y = 1 + 2;");
+    assert_eq!(vm.inspect_dreg(0), Some(SifVal::Num(1.0)));
+    assert_eq!(vm.inspect_dreg(1), Some(SifVal::Num(2.0)));
+    assert_eq!(vm.inspect_dreg(2), Some(SifVal::Num(3.0)));
+    assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Num(3.0)));
+}
+
+#[test]
+fn ldn() {
+    let mut vm = vm_run!("var y = 1; var x = 2 + y;");
+    assert_eq!(vm.inspect_dreg(0), Some(SifVal::Num(2.0)));
+    assert_eq!(vm.inspect_dreg(1), Some(SifVal::Num(1.0)));
+    assert_eq!(vm.inspect_dreg(2), Some(SifVal::Num(3.0)));
+    assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Num(1.0)));
+    assert_eq!(vm.inspect_heap("x"), Some(&SifVal::Num(3.0)));
+}
+
+#[test]
+fn nneg() {
+    let mut vm = vm_run!("var y = -1;");
+    assert_eq!(vm.inspect_dreg(0), Some(SifVal::Num(1.0)));
+    assert_eq!(vm.inspect_dreg(1), Some(SifVal::Num(-1.0)));
+    assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Num(-1.0)));
+}
+
+#[test]
+fn lneg() {
+    let mut vm = vm_run!("var y = !true;");
+    assert_eq!(vm.inspect_dreg(0), Some(SifVal::Bl(true)));
+    assert_eq!(vm.inspect_dreg(1), Some(SifVal::Bl(false)));
+    assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Bl(false)));
 }

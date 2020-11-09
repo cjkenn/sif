@@ -110,8 +110,8 @@ impl<'v> VM<'v> {
         contents
     }
 
-    pub fn inspect_heap(&self, name: String) -> Option<&SifVal> {
-        self.heap.get(&name)
+    pub fn inspect_heap(&self, name: &str) -> Option<&SifVal> {
+        self.heap.get(name)
     }
 
     fn execute(&mut self) -> Result<(), RuntimeErr> {
