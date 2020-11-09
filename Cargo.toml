@@ -7,4 +7,5 @@ members = [
   "sifc_std",
   "sifc_tests",
   "sifc_vm",
+  "sifc_analysis",
 ]
