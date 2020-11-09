@@ -58,3 +58,4 @@ exec_pass_test!(table_decl);
 exec_pass_test!(std_lib_calls);
 exec_pass_test!(scopes);
 exec_pass_test!(array_mut_assign);
+exec_pass_test!(for_stmt_fn_call);

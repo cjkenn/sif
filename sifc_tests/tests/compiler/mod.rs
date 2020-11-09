@@ -402,3 +402,26 @@ lbl0: ldc 1 r1
 lbl0: upda g r0 r1
 "
 }
+
+compile_test! {
+    for_stmt_fn_call,
+    r"
+lbl0: ldc 0 r1
+lbl0: fstpush r1
+lbl0: ldc 1 r2
+lbl0: fstpush r2
+lbl0: stdcall range
+lbl0: fstpop r3
+lbl0: str r3 fortmp
+lbl0: stc 0 i
+lbl0: ldas fortmp r4
+lbl1: ldn i r0
+lbl1: ldav fortmp r0 r5
+lbl1: str r5 v
+lbl1: stc 0 y
+lbl1: incrr r0
+lbl1: str r0 i
+lbl1: lt r0 r4 r6
+lbl1: jmpt r6 lbl1
+"
+}

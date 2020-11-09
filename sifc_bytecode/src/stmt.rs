@@ -157,13 +157,24 @@ impl<'c> Compiler<'c> {
         let idx_reg = self.nextreg();
         let (idx_name, local_name) = self.names_from_identpair(var_list);
 
+        // Determine the name of the array being looped over. We make a temp name if the
+        // loop expression is not a primary.
         let loop_var_name = match in_expr_list {
             AstNode::PrimaryExpr { tkn, .. } => tkn.get_name(),
-            _ => panic!("invalid expression list in ast!"),
+            AstNode::FnCallExpr { .. } => {
+                let temp_name = String::from("fortmp");
+                self.expr(in_expr_list);
+                // store temp var which is value of function call
+                let op = Op::Str {
+                    src: self.prevreg(),
+                    name: temp_name.clone(),
+                };
+                self.push_op(op);
+                temp_name
+            }
+            _ => panic!("Compiling for-loop from expression, but given an unexpected ast type!"),
         };
 
-        // TODO: right now we assume that the value we are looping over is always an array.
-        // later we could determine this by examining the in_expr_list node for other kinds.
         self.push_op(Op::Stc {
             name: idx_name.clone(),
             val: SifVal::Num(0.0),
