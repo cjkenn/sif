@@ -1,16 +1,14 @@
 use sifc_bytecode::{instr::Instr, opc::Op};
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
-// There is almost certainly a more elegant way to express a graph than this, but a list of
-// nodes, each containing a lsit of edges should probably suffice. To walk the graph, we can
-// use a standard iterative DFS/BFS and use the visited field in each block to indicate when
-// a block has been processed. The downside to this is that if we want to traverse a CFG
-// multiple times we need to reset that field, I think?
-// For a perhaps better example, see:
+// See the following for rust graph representation explanations:
 // http://smallcultfollowing.com/babysteps/blog/2015/04/06/modeling-graphs-in-rust-using-vector-indices/
-pub type CFG = Vec<SifBlock>;
+// https://github.com/nrc/r4cppp/blob/master/graphs/src/rc_graph.rs
+
 type BlockID = usize;
 
+/// Represents something like a basic block. This is just a standard graph vertex implementation,
+/// but the data it holds is a list of instructions in the block.
 #[derive(Debug, Clone)]
 pub struct SifBlock {
     pub name: String,
@@ -60,8 +58,7 @@ impl SifBlock {
 // any time from this though, because we still need an initial pass to initialize block
 // structures. The second pass is very similar to a textbook algorithm, which just
 // checks the instruction type and inserts edges for jumps.
-// Overall we still run in O(n) time and O(m) space, where n is the instruction count
-// and m is the number of blocks.
+// Overall we still run in O(n) time.
 // TODO: do we build an inter procedural cfg or treat each method as a separate cfg?
 // TODO: Do function calls split blocks from code section to decl section?
 pub fn build_cfg(instrs: Vec<Instr>) -> Rc<RefCell<SifBlock>> {
