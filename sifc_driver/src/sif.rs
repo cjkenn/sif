@@ -138,7 +138,6 @@ fn run_optimizer(comp_result: &CompileResult) -> OptimizeResult {
 }
 
 fn run_vm_optimized(opts: ArgMatches, opt_result: OptimizeResult) {
-    printer::dump_decls(opt_result.optimized.clone());
     let program = opt_result.optimized;
 
     let code_start = opt_result.new_code_start;
