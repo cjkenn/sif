@@ -1,4 +1,4 @@
-use crate::optimize::BytecodePass;
+use crate::optimize::bco::BytecodePass;
 use crate::{instr::Instr, opc::Op};
 
 /// If a jmp instruction transfers control to the immediate next instruction,

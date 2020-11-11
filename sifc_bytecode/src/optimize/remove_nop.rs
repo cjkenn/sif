@@ -1,4 +1,4 @@
-use crate::optimize::BytecodePass;
+use crate::optimize::bco::BytecodePass;
 use crate::{instr::Instr, opc::Op};
 
 /// Removes any nop instructions that are not the only instruction in a block. We have to leave

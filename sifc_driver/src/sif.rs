@@ -10,7 +10,7 @@ use crate::timings::Timings;
 use clap::{App, Arg, ArgMatches};
 use sifc_bytecode::{
     compiler::{CompileResult, Compiler},
-    optimize::{BytecodeOptimizer, OptimizeResult},
+    optimize::bco::{BytecodeOptimizer, OptimizeResult},
     printer,
 };
 use sifc_err::err::SifErr;

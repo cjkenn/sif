@@ -1,4 +1,4 @@
-use crate::optimize::BytecodePass;
+use crate::optimize::bco::BytecodePass;
 use crate::{instr::Instr, opc::Op};
 
 /// If there are any remaining instructions in a block after a return instruction,
