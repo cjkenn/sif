@@ -11,9 +11,10 @@ impl<'b> BytecodePass<'b> for RemoveNop {
     }
 
     fn run_pass(&self, bytecode: &'b Vec<Instr>) -> Vec<Instr> {
-        let mut i = 0;
         let mut result = Vec::new();
+        result.push(bytecode[0].clone());
 
+        let mut i = 1;
         while i < bytecode.len() - 1 {
             let curr = &bytecode[i];
             let prev = &bytecode[i - 1];
@@ -31,7 +32,7 @@ impl<'b> BytecodePass<'b> for RemoveNop {
             }
             i += 1;
         }
-
+        result.push(bytecode[i].clone());
         result
     }
 }

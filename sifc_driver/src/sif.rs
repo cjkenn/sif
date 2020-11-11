@@ -90,7 +90,7 @@ fn from_file(opts: ArgMatches) {
 
         let vm_start = Instant::now();
         // TODO: need to provide better params/options to run_vm method
-        run_vm_optimized(opts, opt_result, comp_result);
+        run_vm_optimized(opts, opt_result);
         timings.vm_time = vm_start.elapsed();
     } else {
         let vm_start = Instant::now();
@@ -128,15 +128,22 @@ fn compile(ast: &AstNode) -> CompileResult {
 }
 
 fn run_optimizer(comp_result: &CompileResult) -> OptimizeResult {
-    let opt = BytecodeOptimizer::new();
-    opt.run_passes(&comp_result.program)
+    let mut opt = BytecodeOptimizer::new(
+        comp_result.decls.clone(),
+        comp_result.code.clone(),
+        comp_result.code_start,
+    );
+
+    opt.run_passes()
 }
 
-fn run_vm_optimized(opts: ArgMatches, opt_result: OptimizeResult, comp_result: CompileResult) {
+fn run_vm_optimized(opts: ArgMatches, opt_result: OptimizeResult) {
+    printer::dump_decls(opt_result.optimized.clone());
     let program = opt_result.optimized;
-    let code_start = comp_result.code_start;
-    let jumptab = comp_result.jumptab;
-    let fntab = comp_result.fntab;
+
+    let code_start = opt_result.new_code_start;
+    let jumptab = opt_result.jumptab;
+    let fntab = opt_result.fntab;
     let heap_size: usize = opts.value_of(ARG_HEAP_SIZE).unwrap().parse().unwrap();
     let dreg_count: usize = opts.value_of(ARG_REG_COUNT).unwrap().parse().unwrap();
 
