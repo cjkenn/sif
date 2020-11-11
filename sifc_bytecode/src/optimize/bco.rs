@@ -1,6 +1,7 @@
 use crate::instr::Instr;
 use crate::optimize::{
     redundant_jmp::RedundantJmp, remove_after_ret::RemoveAfterRet, remove_nop::RemoveNop,
+    remove_pop_push::RemovePopPush,
 };
 use std::collections::HashMap;
 
@@ -46,9 +47,11 @@ pub struct BytecodeOptimizer {
     decls: Vec<Instr>,
     code: Vec<Instr>,
 
+    /// Various optimizer passes
     redundant_jmp: RedundantJmp,
     remove_after_ret: RemoveAfterRet,
     remove_nop: RemoveNop,
+    remove_pop_push: RemovePopPush,
 }
 
 impl BytecodeOptimizer {
@@ -60,6 +63,7 @@ impl BytecodeOptimizer {
             redundant_jmp: RedundantJmp,
             remove_after_ret: RemoveAfterRet,
             remove_nop: RemoveNop,
+            remove_pop_push: RemovePopPush,
         }
     }
 
@@ -88,10 +92,11 @@ impl BytecodeOptimizer {
         let r1 = self.redundant_jmp.run_pass(&self.decls);
         let r2 = self.remove_after_ret.run_pass(&r1);
         let r3 = self.remove_nop.run_pass(&r2);
+        let r4 = self.remove_pop_push.run_pass(&r3);
 
         SectionPassResult {
-            removed: self.decls.len() - r3.len(),
-            optimized: r3,
+            removed: self.decls.len() - r4.len(),
+            optimized: r4,
         }
     }
 
@@ -99,10 +104,11 @@ impl BytecodeOptimizer {
         let r1 = self.redundant_jmp.run_pass(&self.code);
         let r2 = self.remove_after_ret.run_pass(&r1);
         let r3 = self.remove_nop.run_pass(&r2);
+        let r4 = self.remove_pop_push.run_pass(&r3);
 
         SectionPassResult {
-            removed: self.code.len() - r3.len(),
-            optimized: r3,
+            removed: self.code.len() - r4.len(),
+            optimized: r4,
         }
     }
 }

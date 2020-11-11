@@ -32,6 +32,7 @@ impl<'b> BytecodePass<'b> for RemoveNop {
             }
             i += 1;
         }
+
         result.push(bytecode[i].clone());
         result
     }
