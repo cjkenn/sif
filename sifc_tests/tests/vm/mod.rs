@@ -84,3 +84,13 @@ fn lneg() {
     assert_eq!(vm.inspect_dreg(1), Some(SifVal::Bl(false)));
     assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Bl(false)));
 }
+
+#[test]
+fn stdcall_range() {
+    let mut vm = vm_run!("var y = @range(0,1);");
+    let expected_vec = vec![SifVal::Num(0.0), SifVal::Num(1.0)];
+    assert_eq!(vm.inspect_dreg(0), Some(SifVal::Num(0.0)));
+    assert_eq!(vm.inspect_dreg(1), Some(SifVal::Num(1.0)));
+    assert_eq!(vm.inspect_dreg(2), Some(SifVal::Arr(expected_vec.clone())));
+    assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Arr(expected_vec)));
+}
