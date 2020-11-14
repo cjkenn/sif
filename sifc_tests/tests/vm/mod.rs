@@ -94,3 +94,11 @@ fn stdcall_range() {
     assert_eq!(vm.inspect_dreg(2), Some(SifVal::Arr(expected_vec.clone())));
     assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Arr(expected_vec)));
 }
+
+#[test]
+fn fncall() {
+    let mut vm = vm_run!("fn x() { return 1; } var y = x();");
+    assert_eq!(vm.inspect_dreg(0), Some(SifVal::Num(1.0)));
+    assert_eq!(vm.inspect_dreg(1), Some(SifVal::Num(1.0)));
+    assert_eq!(vm.inspect_heap("y"), Some(&SifVal::Num(1.0)));
+}
