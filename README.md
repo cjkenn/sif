@@ -2,7 +2,9 @@
 
 ![sif-build](https://github.com/cjkenn/sif/workflows/sif-build/badge.svg?branch=master)
 
-sif is a scripting language with c-style syntax. It contains a bytecode compiler, optimizer and a register based vm. It's small and easily embeddable into rust programs.
+sif is a scripting language with c-style syntax. It contains a bytecode compiler, optimizer and a register based vm. It's small and easily embeddable into rust programs using macros. There is also a nano stdlib for basic operations and interacting with arrays and tables.
+
+sif doesn't contain much novel features, and has become a sort of training ground for implementations of classic compiler algorithms.
 
 ## Samples
 
@@ -25,8 +27,7 @@ fn fizzbuzz(input) {
   }
 }
 
-var nums = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-for i, v in nums {
+for i, v in @range(1, 15) {
     fizzbuzz(v);
 }
 ```
