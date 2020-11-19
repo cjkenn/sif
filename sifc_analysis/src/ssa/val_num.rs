@@ -1,14 +1,18 @@
 use crate::{
     cfg::{SifBlockRef, CFG},
-    ssa::SSAVal,
+    ssa::{PhiFn, SSAVal},
 };
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 pub struct ValueNumbering {
     cfg: CFG,
     curr_defs: HashMap<String, SSAVal>,
     var_count: usize,
     sealed_blocks: HashSet<usize>,
+    incomplete_phis: HashMap<String, SSAVal>,
 }
 
 impl ValueNumbering {
@@ -18,6 +22,7 @@ impl ValueNumbering {
             curr_defs: HashMap::new(),
             var_count: 0,
             sealed_blocks: HashSet::new(),
+            incomplete_phis: HashMap::new(),
         }
     }
 
@@ -45,21 +50,75 @@ impl ValueNumbering {
     fn read_var_gvn(&mut self, var: usize, block: SifBlockRef) -> SSAVal {
         let mut val = SSAVal::Empty;
         let block_id = block.borrow().id;
+
         if !self.sealed_blocks.contains(&block_id) {
             // 1. make new phi
+            let phi = PhiFn::new(Rc::clone(&block));
+            val = SSAVal::Phi(phi);
             // 2. store phi in incomplete phis set
+            self.insert_incomplete_phi(block_id, var, val.clone());
         } else if block.borrow().preds.len() == 1 {
-            val = self.read_var(var, block);
-            return val;
+            val = self.read_var(var, Rc::clone(&block));
         } else {
             // 1. make phi
+            let phi = PhiFn::new(Rc::clone(&block));
+            let phi_val = SSAVal::Phi(phi.clone());
+            self.write_var(var, Rc::clone(&block), phi_val.clone());
             // 2. write phi val
             // 3. put operands into phi
+            val = self.add_phi_operands(var, phi_val);
         }
         // 1. write val into var
         // 2. return val
-        // self.write_var(var, block, val);
+        self.write_var(var, block, val.clone());
         val
+    }
+
+    fn add_phi_operands(&mut self, var: usize, phi: SSAVal) -> SSAVal {
+        match phi {
+            SSAVal::Phi(phi) => {
+                let mut new_phi = phi.clone();
+
+                for pred in &phi.block.borrow().preds {
+                    let op_val = self.read_var(var, Rc::clone(pred));
+                    new_phi.operands.push(op_val);
+                }
+
+                return self.try_remove_trivial_phi(SSAVal::Phi(new_phi));
+            }
+            _ => panic!("ssa val is not a phi function!"),
+        }
+    }
+
+    fn try_remove_trivial_phi(&mut self, phi_val: SSAVal) -> SSAVal {
+        let mut same = SSAVal::Empty;
+        match phi_val {
+            SSAVal::Phi(ref phi) => {
+                for op in &phi.operands {
+                    if *op == same || *op == phi_val {
+                        continue;
+                    }
+
+                    if same != SSAVal::Empty {
+                        return phi_val;
+                    }
+                    same = op;
+                }
+
+                if same == SSAVal::Empty {
+                    same = SSAVal::Undef;
+                }
+            }
+            _ => panic!("ssa val is not a phi function!"),
+        }
+        SSAVal::Empty
+    }
+
+    fn insert_curr_def(&mut self) {}
+
+    fn insert_incomplete_phi(&mut self, block_id: usize, var: usize, val: SSAVal) {
+        let key = format!("{}:{}", block_id, var);
+        self.incomplete_phis.insert(key, val);
     }
 
     fn encode(&self, var: usize, block_id: usize) -> String {

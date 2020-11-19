@@ -11,7 +11,7 @@ use std::{
 pub type SifBlockRef = Rc<RefCell<SifBlock>>;
 type BlockID = usize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CFG {
     pub num_nodes: usize,
     pub graph: SifBlockRef,
@@ -19,7 +19,7 @@ pub struct CFG {
 
 /// Represents something like a basic block. This is just a standard graph vertex implementation,
 /// but the data it holds is a list of instructions in the block.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SifBlock {
     pub name: String,
     pub id: BlockID,

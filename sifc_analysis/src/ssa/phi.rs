@@ -1,6 +1,6 @@
 use crate::{cfg::SifBlockRef, ssa::SSAVal};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PhiFn {
     pub block: SifBlockRef,
     pub operands: Vec<SSAVal>,
