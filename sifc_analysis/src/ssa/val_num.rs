@@ -102,7 +102,7 @@ impl ValueNumbering {
                     if same != SSAVal::Empty {
                         return phi_val;
                     }
-                    same = op;
+                    same = op.clone();
                 }
 
                 if same == SSAVal::Empty {
