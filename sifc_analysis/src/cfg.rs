@@ -7,6 +7,12 @@ use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 type BlockID = usize;
 
+#[derive(Debug, Clone)]
+pub struct CFG {
+    pub num_nodes: usize,
+    pub graph: Rc<RefCell<SifBlock>>,
+}
+
 /// Represents something like a basic block. This is just a standard graph vertex implementation,
 /// but the data it holds is a list of instructions in the block.
 #[derive(Debug, Clone)]
@@ -61,7 +67,7 @@ impl SifBlock {
 // Overall we still run in O(n) time.
 // TODO: do we build an inter procedural cfg or treat each method as a separate cfg?
 // TODO: Do function calls split blocks from code section to decl section?
-pub fn build_cfg(instrs: Vec<Instr>) -> Rc<RefCell<SifBlock>> {
+pub fn build_cfg(instrs: Vec<Instr>) -> CFG {
     if instrs.len() == 0 {
         Rc::new(RefCell::new(SifBlock::new("entry", usize::MAX)));
     }
@@ -139,5 +145,8 @@ pub fn build_cfg(instrs: Vec<Instr>) -> Rc<RefCell<SifBlock>> {
         i += 1;
     }
 
-    entry_block
+    CFG {
+        num_nodes: nodes.len(),
+        graph: entry_block,
+    }
 }
