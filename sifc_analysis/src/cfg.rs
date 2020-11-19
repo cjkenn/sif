@@ -1,5 +1,9 @@
 use sifc_bytecode::{instr::Instr, opc::Op};
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashSet, VecDeque},
+    rc::Rc,
+};
 
 // See the following for rust graph representation explanations:
 // http://smallcultfollowing.com/babysteps/blog/2015/04/06/modeling-graphs-in-rust-using-vector-indices/
@@ -21,6 +25,7 @@ pub struct SifBlock {
     pub id: BlockID,
     pub instrs: Vec<Instr>,
     pub edges: Vec<Rc<RefCell<SifBlock>>>,
+    pub preds: Vec<Rc<RefCell<SifBlock>>>,
 }
 
 impl SifBlock {
@@ -30,6 +35,7 @@ impl SifBlock {
             id: id,
             instrs: Vec::new(),
             edges: Vec::new(),
+            preds: Vec::new(),
         };
 
         Rc::new(RefCell::new(block))
@@ -145,8 +151,32 @@ pub fn build_cfg(instrs: Vec<Instr>) -> CFG {
         i += 1;
     }
 
+    build_preds(&nodes, Rc::clone(&entry_block));
+
     CFG {
         num_nodes: nodes.len(),
         graph: entry_block,
+    }
+}
+
+fn build_preds(nodes: &Vec<Rc<RefCell<SifBlock>>>, entry: Rc<RefCell<SifBlock>>) {
+    let mut seen = HashSet::new();
+    let mut queue = VecDeque::new();
+    queue.push_front(Rc::clone(&entry));
+    seen.insert(entry.borrow().id);
+
+    while queue.len() != 0 {
+        let curr = queue.pop_front().unwrap();
+
+        for adj in &curr.borrow().edges {
+            if !seen.contains(&adj.borrow().id) {
+                for pred_id in &seen {
+                    let pred = Rc::clone(&nodes[*pred_id]);
+                    adj.borrow_mut().preds.push(pred);
+                }
+                seen.insert(adj.borrow().id);
+                queue.push_back(Rc::clone(&adj));
+            }
+        }
     }
 }
