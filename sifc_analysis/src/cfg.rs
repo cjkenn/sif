@@ -8,13 +8,13 @@ use std::{
 // See the following for rust graph representation explanations:
 // http://smallcultfollowing.com/babysteps/blog/2015/04/06/modeling-graphs-in-rust-using-vector-indices/
 // https://github.com/nrc/r4cppp/blob/master/graphs/src/rc_graph.rs
-
+pub type SifBlockRef = Rc<RefCell<SifBlock>>;
 type BlockID = usize;
 
 #[derive(Debug, Clone)]
 pub struct CFG {
     pub num_nodes: usize,
-    pub graph: Rc<RefCell<SifBlock>>,
+    pub graph: SifBlockRef,
 }
 
 /// Represents something like a basic block. This is just a standard graph vertex implementation,
@@ -24,12 +24,12 @@ pub struct SifBlock {
     pub name: String,
     pub id: BlockID,
     pub instrs: Vec<Instr>,
-    pub edges: Vec<Rc<RefCell<SifBlock>>>,
-    pub preds: Vec<Rc<RefCell<SifBlock>>>,
+    pub edges: Vec<SifBlockRef>,
+    pub preds: Vec<SifBlockRef>,
 }
 
 impl SifBlock {
-    pub fn new(name: &str, id: usize) -> Rc<RefCell<SifBlock>> {
+    pub fn new(name: &str, id: usize) -> SifBlockRef {
         let block = SifBlock {
             name: name.to_string(),
             id: id,
@@ -159,7 +159,12 @@ pub fn build_cfg(instrs: Vec<Instr>) -> CFG {
     }
 }
 
-fn build_preds(nodes: &Vec<Rc<RefCell<SifBlock>>>, entry: Rc<RefCell<SifBlock>>) {
+/// Add predecessors to nodes in the cfg. This information is primarly used for SSA construction.
+/// This treats predecessors as any node that is visited on a path to the current node, and thus
+/// contains a list of nodes rather than just the direct predecessor. Because we use a HashSet to
+/// store nodes here, the order is not guaranteed and thus we cannot determine the direct predecessor
+/// from this last at a later point.
+fn build_preds(nodes: &Vec<SifBlockRef>, entry: SifBlockRef) {
     let mut seen = HashSet::new();
     let mut queue = VecDeque::new();
     queue.push_front(Rc::clone(&entry));
