@@ -1,5 +1,5 @@
+mod builder;
 mod phi;
-mod val_num;
 
 use phi::PhiFn;
 use sifc_bytecode::sifv::SifVal;

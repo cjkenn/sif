@@ -7,7 +7,7 @@ use std::{
     rc::Rc,
 };
 
-pub struct ValueNumbering {
+pub struct SSABuilder {
     cfg: CFG,
     curr_defs: HashMap<String, SSAVal>,
     var_count: usize,
@@ -15,9 +15,9 @@ pub struct ValueNumbering {
     incomplete_phis: HashMap<String, SSAVal>,
 }
 
-impl ValueNumbering {
-    pub fn new(cfg: CFG) -> ValueNumbering {
-        ValueNumbering {
+impl SSABuilder {
+    pub fn new(cfg: CFG) -> SSABuilder {
+        SSABuilder {
             cfg: cfg,
             curr_defs: HashMap::new(),
             var_count: 0,
