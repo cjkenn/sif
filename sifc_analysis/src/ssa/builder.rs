@@ -27,7 +27,7 @@ impl SSABuilder {
     }
 
     /// Performs local value numbering for a block of instructions
-    fn lvn(&self) {}
+    pub fn build(&self) {}
 
     fn write_var(&mut self, var: usize, block: SifBlockRef, rhs: SSAVal) {
         let block_id = block.borrow().id;

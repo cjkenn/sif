@@ -8,6 +8,7 @@ mod timings;
 use crate::timings::Timings;
 
 use clap::{App, Arg, ArgMatches};
+use sifc_analysis::analyzer::Analyzer;
 use sifc_bytecode::{
     compiler::{CompileResult, Compiler},
     optimize::bco::{BytecodeOptimizer, OptimizeResult},
@@ -38,6 +39,7 @@ const ARG_HEAP_SIZE: &str = "heap-size";
 const ARG_REG_COUNT: &str = "reg-count";
 const ARG_DUR: &str = "timings";
 const ARG_BC_OPT: &str = "bco";
+const ARG_ANALYSIS: &str = "analysis";
 
 fn main() {
     let matches = parse_cl();
@@ -81,6 +83,11 @@ fn from_file(opts: ArgMatches) {
     if opts.is_present(ARG_EMIT_IR) {
         printer::dump_decls(comp_result.decls.clone());
         printer::dump_code(comp_result.code.clone());
+    }
+
+    if opts.is_present(ARG_ANALYSIS) {
+        let analyzer = Analyzer::new(comp_result.program.clone());
+        analyzer.perform();
     }
 
     if opts.is_present(ARG_BC_OPT) {
@@ -242,6 +249,12 @@ fn parse_cl() -> ArgMatches {
             Arg::new(ARG_BC_OPT)
                 .long(ARG_BC_OPT)
                 .about("Runs the bytecode optimizer before executing in vm"),
+        )
+        .arg(
+            Arg::new(ARG_ANALYSIS)
+                .short('a')
+                .long(ARG_ANALYSIS)
+                .about("Performs analysis on the CFG and IR before starting the vm"),
         )
         .get_matches()
 }

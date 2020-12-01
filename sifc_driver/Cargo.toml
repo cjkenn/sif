@@ -10,6 +10,7 @@ sifc_err = { path = "../sifc_err" }
 sifc_parse = { path = "../sifc_parse" }
 sifc_bytecode = { path = "../sifc_bytecode" }
 sifc_vm = { path = "../sifc_vm" }
+sifc_analysis = { path = "../sifc_analysis" }
 
 [[bin]]
 name = "sif"

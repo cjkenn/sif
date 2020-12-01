@@ -1,4 +1,4 @@
-mod builder;
+pub mod builder;
 mod phi;
 
 use phi::PhiFn;

@@ -73,7 +73,7 @@ impl SifBlock {
 // Overall we still run in O(n) time.
 // TODO: do we build an inter procedural cfg or treat each method as a separate cfg?
 // TODO: Do function calls split blocks from code section to decl section?
-pub fn build_cfg(instrs: Vec<Instr>) -> CFG {
+pub fn build_cfg(instrs: &Vec<Instr>) -> CFG {
     if instrs.len() == 0 {
         Rc::new(RefCell::new(SifBlock::new("entry", usize::MAX)));
     }
