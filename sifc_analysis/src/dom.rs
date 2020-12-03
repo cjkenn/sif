@@ -1,6 +1,8 @@
 use crate::block::{BlockID, SifBlockRef};
 use std::{collections::HashSet, rc::Rc};
 
+/// Calculate dominance lists (and dominance sets) for each node in nodes.
+/// This function will update each node in place with the correct dominance information.
 pub(crate) fn dom_calc(nodes: &Vec<SifBlockRef>) {
     // Initial conditions:
     // 1. The entry node's dominator set includes only itself.
@@ -40,8 +42,13 @@ pub(crate) fn dom_calc(nodes: &Vec<SifBlockRef>) {
             let mut pred_dom_intersection = dom_intersection(&node.borrow().preds);
             pred_dom_intersection.insert(0, Rc::clone(&node));
 
-            if pred_dom_intersection != node.borrow().dom {
-                node.borrow_mut().dom = pred_dom_intersection;
+            if dom_equal(&pred_dom_intersection, &node.borrow().dom) {
+                node.borrow_mut().dom = pred_dom_intersection.clone();
+                let new_dom_set: HashSet<BlockID> = pred_dom_intersection
+                    .iter()
+                    .map(|k| k.borrow().id)
+                    .collect();
+                node.borrow_mut().dom_set = new_dom_set;
                 changed = true;
             }
 
@@ -50,7 +57,15 @@ pub(crate) fn dom_calc(nodes: &Vec<SifBlockRef>) {
     }
 }
 
+/// Calculates the intersection of multiple dominance sets. This is intended
+/// to be called on the predecessor list of a block. It processes the
+/// preds and returns a vector of block refs that are common in each
+/// predecessor's dominance set.
 fn dom_intersection(preds: &Vec<SifBlockRef>) -> Vec<SifBlockRef> {
+    if preds.len() == 0 {
+        return Vec::new();
+    }
+
     let mut sets = Vec::new();
     let mut i = 1;
     while i < preds.len() {
@@ -76,4 +91,16 @@ fn dom_intersection(preds: &Vec<SifBlockRef>) -> Vec<SifBlockRef> {
     }
 
     result
+}
+
+/// Check if two dominator lists are equal by collecting the lists into sets
+/// of block id and checking set equality. This needs to be done
+/// because vector equality accounts for order, and the sets are considered the same
+/// even if the order is different.
+/// O(n) time and O(n) space.
+fn dom_equal(dom1: &Vec<SifBlockRef>, dom2: &Vec<SifBlockRef>) -> bool {
+    let dom_set1: HashSet<BlockID> = dom1.iter().map(|k| k.borrow().id).collect();
+    let dom_set2: HashSet<BlockID> = dom2.iter().map(|k| k.borrow().id).collect();
+
+    dom_set1 == dom_set2
 }
