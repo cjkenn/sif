@@ -26,8 +26,19 @@ impl SSABuilder {
         }
     }
 
-    /// Performs local value numbering for a block of instructions
-    pub fn build(&self) {}
+    pub fn build(&self) {
+        // Input: CFG with instrs
+        // Ouput: CFG with SASInsts? What type do we use?
+        //
+        // 1. Need to convert SifVals to SSAVals? This can probably be done while
+        //    traversal is happening?
+        // 2. Traverse the cfg. At each block, we must iterate each instruction
+        //    contained in the block.
+        // 3. Upon variable declarations/assignments, we call write_var. This correspond to
+        //    stc and stn instructions.
+        // 4. Upon any variable reads, we call read_var. What do we do with the result?
+        //    These correspond to ldn, ldc instructions
+    }
 
     fn write_var(&mut self, var: usize, block: SifBlockRef, rhs: SSAVal) {
         let block_id = block.borrow().id;

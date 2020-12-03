@@ -21,11 +21,30 @@ pub struct CFG {
 /// but the data it holds is a list of instructions in the block.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SifBlock {
+    /// String identifier
     pub name: String,
+
+    /// Usize identifier
     pub id: BlockID,
+
+    /// Sif IR instruction vec. This should be the full program that would
+    /// normally be executed
     pub instrs: Vec<Instr>,
+
+    /// Adjacent blocks
     pub edges: Vec<SifBlockRef>,
+
+    /// Predecessor blocks. This includes all blocks that can be reached when
+    /// traversing to the current block
     pub preds: Vec<SifBlockRef>,
+
+    /// List of dominators
+    pub dom: Vec<SifBlockRef>,
+
+    pub dom_set: HashSet<BlockID>,
+
+    /// Immediate dominator block
+    pub idom: Option<SifBlockRef>,
 }
 
 impl SifBlock {
@@ -36,6 +55,9 @@ impl SifBlock {
             instrs: Vec::new(),
             edges: Vec::new(),
             preds: Vec::new(),
+            dom: Vec::new(),
+            dom_set: HashSet::new(),
+            idom: None,
         };
 
         Rc::new(RefCell::new(block))
@@ -152,6 +174,7 @@ pub fn build_cfg(instrs: &Vec<Instr>) -> CFG {
     }
 
     build_preds(&nodes, Rc::clone(&entry_block));
+    dom_calc(&nodes);
 
     CFG {
         num_nodes: nodes.len(),
@@ -163,7 +186,7 @@ pub fn build_cfg(instrs: &Vec<Instr>) -> CFG {
 /// This treats predecessors as any node that is visited on a path to the current node, and thus
 /// contains a list of nodes rather than just the direct predecessor. Because we use a HashSet to
 /// store nodes here, the order is not guaranteed and thus we cannot determine the direct predecessor
-/// from this last at a later point.
+/// from this list at a later point.
 fn build_preds(nodes: &Vec<SifBlockRef>, entry: SifBlockRef) {
     let mut seen = HashSet::new();
     let mut queue = VecDeque::new();
@@ -184,4 +207,69 @@ fn build_preds(nodes: &Vec<SifBlockRef>, entry: SifBlockRef) {
             }
         }
     }
+}
+
+fn dom_calc(nodes: &Vec<SifBlockRef>) {
+    nodes[0].borrow_mut().dom = vec![Rc::clone(&nodes[0])];
+    nodes[0].borrow_mut().dom_set = [0].iter().cloned().collect();
+
+    let mut full_dom_set = HashSet::new();
+    for node in nodes {
+        full_dom_set.insert(node.borrow().id);
+    }
+
+    let mut i = 1;
+    while i < nodes.len() {
+        nodes[i].borrow_mut().dom = nodes.clone();
+        nodes[i].borrow_mut().dom_set = full_dom_set.clone();
+        i += 1;
+    }
+
+    let mut changed = true;
+    while changed {
+        changed = false;
+
+        let mut i = 1;
+        while i < nodes.len() {
+            let node = &nodes[i];
+
+            let mut pred_dom_intersection = dom_intersection(&node.borrow().preds);
+            pred_dom_intersection.insert(0, Rc::clone(&node));
+
+            if pred_dom_intersection != node.borrow().dom {
+                node.borrow_mut().dom = pred_dom_intersection;
+                changed = true;
+            }
+
+            i += 1;
+        }
+    }
+}
+
+fn dom_intersection(preds: &Vec<SifBlockRef>) -> Vec<SifBlockRef> {
+    let mut sets = Vec::new();
+    let mut i = 1;
+    while i < preds.len() {
+        let pred = &preds[i];
+        let dom_set = pred.borrow().dom_set.clone();
+        sets.push(dom_set);
+        i += 1;
+    }
+
+    let initial = preds[0].borrow().dom_set.clone();
+    let intersection: HashSet<BlockID> = initial
+        .iter()
+        .filter(|k| sets.iter().all(|s| s.contains(k)))
+        .cloned()
+        .collect();
+
+    let mut result = Vec::new();
+    for pred in preds {
+        let id = pred.borrow().id;
+        if intersection.contains(&id) {
+            result.push(Rc::clone(&pred));
+        }
+    }
+
+    result
 }
