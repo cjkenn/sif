@@ -1,4 +1,4 @@
-use crate::{cfg, ssa::builder::SSABuilder};
+use crate::{cfg::CFG, ssa::builder::SSABuilder};
 use sifc_bytecode::instr::Instr;
 
 pub struct Analyzer {
@@ -11,7 +11,7 @@ impl Analyzer {
     }
 
     pub fn perform(&self) {
-        let cfg = cfg::build_cfg(&self.program);
+        let cfg = CFG::build(&self.program);
         let ssab = SSABuilder::new(cfg);
         ssab.build();
     }

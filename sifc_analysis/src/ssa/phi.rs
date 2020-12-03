@@ -1,4 +1,4 @@
-use crate::{cfg::SifBlockRef, ssa::SSAVal};
+use crate::{block::SifBlockRef, ssa::SSAVal};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PhiFn {

@@ -1,5 +1,6 @@
 use crate::{
-    cfg::{SifBlockRef, CFG},
+    block::SifBlockRef,
+    cfg::CFG,
     ssa::{PhiFn, SSAVal},
 };
 use std::{
