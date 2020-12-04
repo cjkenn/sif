@@ -35,6 +35,9 @@ pub struct SifBlock {
     /// Immediate dominator block id. If the block is the entry node to a CFG, the idom
     /// is None.
     pub idom: Option<BlockID>,
+
+    /// Dominance frontier
+    pub dom_front: HashSet<BlockID>,
 }
 
 impl SifBlock {
@@ -46,6 +49,7 @@ impl SifBlock {
             edges: Vec::new(),
             preds: Vec::new(),
             dom_set: HashSet::new(),
+            dom_front: HashSet::new(),
             idom: None,
         };
 

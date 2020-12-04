@@ -74,6 +74,40 @@ pub(crate) fn idom_calc(nodes: &Vec<SifBlockRef>) {
     }
 }
 
+/// Calculate dominance frontiers for each node in the graph. We assume
+/// that the current dom_frontier fields in each node are empty sets
+/// when this is called.
+pub(crate) fn dom_front_calc(nodes: &Vec<SifBlockRef>) {
+    for node in nodes {
+        let node_id = node.borrow().id;
+        let mb_node_idom = node.borrow().idom;
+        if mb_node_idom.is_none() {
+            continue;
+        }
+
+        let node_idom = mb_node_idom.unwrap();
+
+        if node.borrow().preds.len() >= 1 {
+            for pred in &node.borrow().preds {
+                let mut runner = Rc::clone(&pred);
+
+                while runner.borrow().id != node_idom {
+                    runner.borrow_mut().dom_front.insert(node_id);
+                    let runner_mb_idom = runner.borrow().idom;
+                    if runner_mb_idom.is_none() {
+                        break;
+                    }
+                    let runner_idom = runner_mb_idom.unwrap();
+                    // CAREFUL! This only works when we know the blocks
+                    // in the list are placed at the index equivalent to their
+                    // ID!!!
+                    runner = Rc::clone(&nodes[runner_idom]);
+                }
+            }
+        }
+    }
+}
+
 /// Calculates the intersection of multiple dominance sets. This is intended
 /// to be called on the predecessor list of a block. It processes the
 /// preds and returns a set of block id's that are common in each
@@ -167,6 +201,28 @@ mod tests {
         let b3_idom = &blocks[3].borrow().idom;
         assert!(b3_idom.is_some());
         assert!(b3_idom.unwrap() == 0);
+    }
+
+    #[test]
+    fn test_dom_front_calc() {
+        let blocks = get_blocks();
+        dom_calc(&blocks);
+        idom_calc(&blocks);
+        dom_front_calc(&blocks);
+
+        let b0_dom_front = &blocks[0].borrow().dom_front;
+        assert!(b0_dom_front.len() == 0);
+
+        let b1_dom_front = &blocks[1].borrow().dom_front;
+        assert!(b1_dom_front.contains(&3));
+        assert!(b1_dom_front.len() == 1);
+
+        let b2_dom_front = &blocks[2].borrow().dom_front;
+        assert!(b2_dom_front.contains(&3));
+        assert!(b2_dom_front.len() == 1);
+
+        let b3_dom_front = &blocks[3].borrow().dom_front;
+        assert!(b3_dom_front.len() == 0);
     }
 
     /// Build a simple 4 node cfg that looks like this:
