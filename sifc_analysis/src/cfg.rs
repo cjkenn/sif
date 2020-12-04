@@ -107,9 +107,7 @@ impl CFG {
         }
 
         build_preds(&nodes, Rc::clone(&entry_block));
-        dom::dom_calc(&nodes);
-        dom::idom_calc(&nodes);
-        dom::dom_front_calc(&nodes);
+        dom::fill_doms(&nodes);
 
         CFG {
             num_nodes: nodes.len(),

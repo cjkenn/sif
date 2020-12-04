@@ -1,13 +1,27 @@
 use crate::block::{BlockID, SifBlockRef};
 use std::{collections::HashSet, rc::Rc};
 
+/// Calculates all required dominance information for a CFG. This will
+/// fill the dominator set, find immediate dominators and fill the
+/// dominance frontier set.
+pub(crate) fn fill_doms(nodes: &Vec<SifBlockRef>) {
+    // The order matters when calling these. Since they
+    // rely on previous information being filled, we cannot
+    // call them in any other order.
+    dom_calc(nodes);
+    idom_calc(nodes);
+    dom_front_calc(nodes);
+}
+
 /// Calculate dominance lists (and dominance sets) for each node in nodes.
 /// This function will update each node in place with the correct dominance information.
 /// Initial conditions:
 /// 1. The entry node's dominator set includes only itself.
 /// 2. For all other nodes (ie. not the entry), the dominator set
 ///    includes all nodes.
-pub(crate) fn dom_calc(nodes: &Vec<SifBlockRef>) {
+///
+/// From Engineering a Compiler 2nd ed., pp.479
+fn dom_calc(nodes: &Vec<SifBlockRef>) {
     // Set the dominators for the entry node, subject to initial conditions.
     nodes[0].borrow_mut().dom_set = [0].iter().cloned().collect();
 
@@ -53,7 +67,7 @@ pub(crate) fn dom_calc(nodes: &Vec<SifBlockRef>) {
 /// We  iterate over the node's dominator set and find the
 /// item with the ID that is closest to the current block ID
 /// (ie. the max block ID in the dominator set).
-pub(crate) fn idom_calc(nodes: &Vec<SifBlockRef>) {
+fn idom_calc(nodes: &Vec<SifBlockRef>) {
     for node in nodes {
         let mut idom = usize::MIN;
         let mut changed = false;
@@ -77,7 +91,9 @@ pub(crate) fn idom_calc(nodes: &Vec<SifBlockRef>) {
 /// Calculate dominance frontiers for each node in the graph. We assume
 /// that the current dom_frontier fields in each node are empty sets
 /// when this is called.
-pub(crate) fn dom_front_calc(nodes: &Vec<SifBlockRef>) {
+///
+/// From Engineering a Compiler 2nd ed., pp.499
+fn dom_front_calc(nodes: &Vec<SifBlockRef>) {
     for node in nodes {
         let node_id = node.borrow().id;
         let mb_node_idom = node.borrow().idom;
@@ -205,6 +221,14 @@ mod tests {
 
     #[test]
     fn test_dom_front_calc() {
+        // Based on the simple diamond shaped cfg from get_blocks(),
+        // we expect the dom set to look like this:
+        //
+        // Node:  0    1      2      3
+        // DOM:  {0} {0,1} {0, 2} {0, 3}
+        // IDOM:  -    0      0      0
+        // DF:   {}   {3}    {3}    {}
+
         let blocks = get_blocks();
         dom_calc(&blocks);
         idom_calc(&blocks);

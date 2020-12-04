@@ -33,10 +33,11 @@ pub struct SifBlock {
     pub dom_set: HashSet<BlockID>,
 
     /// Immediate dominator block id. If the block is the entry node to a CFG, the idom
-    /// is None.
+    /// is None
     pub idom: Option<BlockID>,
 
-    /// Dominance frontier
+    /// Dominance frontier. This contains "the first nodes reachable from n that n does not
+    /// dominate, on each path leaving n"
     pub dom_front: HashSet<BlockID>,
 }
 
