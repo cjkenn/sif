@@ -12,6 +12,7 @@ use std::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct CFG {
     pub num_nodes: usize,
+    pub nodes: Vec<SifBlockRef>,
     pub graph: SifBlockRef,
 }
 
@@ -110,6 +111,7 @@ impl CFG {
 
         CFG {
             num_nodes: nodes.len(),
+            nodes: nodes,
             graph: entry_block,
         }
     }

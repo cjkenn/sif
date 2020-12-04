@@ -28,14 +28,13 @@ pub struct SifBlock {
     /// traversing to the current block
     pub preds: Vec<SifBlockRef>,
 
-    /// List of dominators
-    pub dom: Vec<SifBlockRef>,
-
-    /// Set of dominators used for faster access to check dominators
+    /// Set of dominators. We can build a list of SifBlockRefs from this set
+    /// if needed, but we mostly need to check BlockID's for dominators
     pub dom_set: HashSet<BlockID>,
 
-    /// Immediate dominator block
-    pub idom: Option<SifBlockRef>,
+    /// Immediate dominator block id. If the block is the entry node to a CFG, the idom
+    /// is None.
+    pub idom: Option<BlockID>,
 }
 
 impl SifBlock {
@@ -46,7 +45,6 @@ impl SifBlock {
             instrs: Vec::new(),
             edges: Vec::new(),
             preds: Vec::new(),
-            dom: Vec::new(),
             dom_set: HashSet::new(),
             idom: None,
         };
