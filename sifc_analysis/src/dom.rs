@@ -155,8 +155,8 @@ fn dom_intersection(preds: &Vec<SifBlockRef>) -> HashSet<BlockID> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::block::{BlockID, SifBlock, SifBlockRef};
-    use std::{collections::HashSet, rc::Rc};
+    use crate::block::{SifBlock, SifBlockRef};
+    use std::rc::Rc;
 
     #[test]
     fn test_dom_calc() {

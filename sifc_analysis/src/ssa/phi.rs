@@ -1,15 +1,13 @@
-use crate::{block::SifBlockRef, ssa::SSAVal};
+use crate::ssa::SSAVal;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PhiFn {
-    pub block: SifBlockRef,
     pub operands: Vec<SSAVal>,
 }
 
 impl PhiFn {
-    pub fn new(block: SifBlockRef) -> PhiFn {
+    pub fn new() -> PhiFn {
         PhiFn {
-            block: block,
             operands: Vec::new(),
         }
     }

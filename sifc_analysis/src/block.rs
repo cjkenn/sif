@@ -1,5 +1,10 @@
+use crate::ssa::phi::PhiFn;
 use sifc_bytecode::instr::Instr;
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 // See the following for rust graph representation explanations:
 // http://smallcultfollowing.com/babysteps/blog/2015/04/06/modeling-graphs-in-rust-using-vector-indices/
@@ -39,6 +44,10 @@ pub struct SifBlock {
     /// Dominance frontier. This contains "the first nodes reachable from n that n does not
     /// dominate, on each path leaving n"
     pub dom_front: HashSet<BlockID>,
+
+    /// Set of phi functions on this block. The keys are the names of variables appearing in
+    /// predecessors of this block, which require the phi function to be inserted.
+    pub phis: HashMap<String, PhiFn>,
 }
 
 impl SifBlock {
@@ -50,27 +59,12 @@ impl SifBlock {
             edges: Vec::new(),
             preds: Vec::new(),
             dom_set: HashSet::new(),
-            dom_front: HashSet::new(),
             idom: None,
+            dom_front: HashSet::new(),
+            phis: HashMap::new(),
         };
 
         Rc::new(RefCell::new(block))
-    }
-
-    pub fn traverse<F>(&self, visit: &F, seen: &mut HashSet<BlockID>)
-    where
-        F: Fn(&Vec<Instr>),
-    {
-        if seen.contains(&self.id) {
-            return;
-        }
-
-        visit(&self.instrs);
-        seen.insert(self.id);
-
-        for block in &self.edges {
-            block.borrow().traverse(visit, seen);
-        }
     }
 
     pub fn add_instr(&mut self, i: &Instr) {

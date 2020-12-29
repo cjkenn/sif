@@ -12,7 +12,11 @@ use std::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct CFG {
     pub num_nodes: usize,
+    /// Nodes contains each node in the CFG in a list in any order. This is useful for
+    /// iterating over nodes to gather information when we do not need to traverse a graph.
     pub nodes: Vec<SifBlockRef>,
+
+    /// The head of the CFG. Should normally be used for traversing the CFG.
     pub graph: SifBlockRef,
 }
 

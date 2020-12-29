@@ -1,144 +1,125 @@
-use crate::{
-    block::SifBlockRef,
-    cfg::CFG,
-    ssa::{PhiFn, SSAVal},
-};
+use crate::{block::SifBlockRef, cfg::CFG, ssa::phi::PhiFn};
+use sifc_bytecode::opc::Op;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     rc::Rc,
 };
 
 pub struct SSABuilder {
     cfg: CFG,
-    curr_defs: HashMap<String, SSAVal>,
-    var_count: usize,
-    sealed_blocks: HashSet<usize>,
-    incomplete_phis: HashMap<String, SSAVal>,
+    globs: HashSet<String>,
+    blks: HashMap<String, Vec<SifBlockRef>>,
 }
 
 impl SSABuilder {
     pub fn new(cfg: CFG) -> SSABuilder {
         SSABuilder {
             cfg: cfg,
-            curr_defs: HashMap::new(),
-            var_count: 0,
-            sealed_blocks: HashSet::new(),
-            incomplete_phis: HashMap::new(),
+            globs: HashSet::new(),
+            blks: HashMap::new(),
         }
     }
 
-    pub fn build(&self) {
-        // Input: CFG with instrs
-        // Ouput: CFG with SASInsts? What type do we use?
-        //
-        // 1. Need to convert SifVals to SSAVals? This can probably be done while
-        //    traversal is happening?
-        // 2. Traverse the cfg. At each block, we must iterate each instruction
-        //    contained in the block.
-        // 3. Upon variable declarations/assignments, we call write_var. This correspond to
-        //    stc and stn instructions.
-        // 4. Upon any variable reads, we call read_var. What do we do with the result?
-        //    These correspond to ldn, ldc instructions
+    pub fn build(&mut self) {
+        self.get_globs();
+        self.insert_phis();
     }
 
-    fn write_var(&mut self, var: usize, block: SifBlockRef, rhs: SSAVal) {
-        let block_id = block.borrow().id;
-        let key = self.encode(var, block_id);
-        self.curr_defs.insert(key, rhs);
-        self.var_count += 1;
-    }
+    /// Determine "global" names. Global refers to names of variables that are defined outside
+    /// of the current block (determined by finding their usages in other blocks). We use these
+    /// globals to determine which variables need phi functions, not necessarily where the phi
+    /// functions are inserted.
+    /// This method also fills self.blks, which contains a mapping of names to the blocks that
+    /// contain definitions of the name.
+    fn get_globs(&mut self) {
+        for block in &self.cfg.nodes {
+            let mut varkill: HashSet<String> = HashSet::new();
 
-    fn read_var(&mut self, var: usize, block: SifBlockRef) -> SSAVal {
-        let block_id = block.borrow().id;
-        let key = self.encode(var, block_id);
-        if self.curr_defs.contains_key(&key) {
-            let val = self.curr_defs.get(&key).unwrap().clone();
-            return val;
-        }
-
-        self.read_var_gvn(var, block)
-    }
-
-    fn read_var_gvn(&mut self, var: usize, block: SifBlockRef) -> SSAVal {
-        let mut val = SSAVal::Empty;
-        let block_id = block.borrow().id;
-
-        if !self.sealed_blocks.contains(&block_id) {
-            // 1. make new phi
-            let phi = PhiFn::new(Rc::clone(&block));
-            val = SSAVal::Phi(phi);
-            // 2. store phi in incomplete phis set
-            self.insert_incomplete_phi(block_id, var, val.clone());
-        } else if block.borrow().preds.len() == 1 {
-            val = self.read_var(var, Rc::clone(&block));
-        } else {
-            // 1. make phi
-            let phi = PhiFn::new(Rc::clone(&block));
-            let phi_val = SSAVal::Phi(phi.clone());
-            self.write_var(var, Rc::clone(&block), phi_val.clone());
-            // 2. write phi val
-            // 3. put operands into phi
-            val = self.add_phi_operands(var, phi_val);
-        }
-        // 1. write val into var
-        // 2. return val
-        self.write_var(var, block, val.clone());
-        val
-    }
-
-    fn add_phi_operands(&mut self, var: usize, phi: SSAVal) -> SSAVal {
-        match phi {
-            SSAVal::Phi(phi) => {
-                let mut new_phi = phi.clone();
-
-                for pred in &phi.block.borrow().preds {
-                    let op_val = self.read_var(var, Rc::clone(pred));
-                    new_phi.operands.push(op_val);
-                }
-
-                return self.try_remove_trivial_phi(SSAVal::Phi(new_phi));
-            }
-            _ => panic!("ssa val is not a phi function!"),
-        }
-    }
-
-    fn try_remove_trivial_phi(&mut self, phi_val: SSAVal) -> SSAVal {
-        let mut same = SSAVal::Empty;
-        match phi_val {
-            SSAVal::Phi(ref phi) => {
-                for op in &phi.operands {
-                    if *op == same || *op == phi_val {
-                        continue;
+            for i in &block.borrow().instrs {
+                // we only care about instructions that set or load variables. Loading or setting
+                // registers doesn't matter for phi function insertion.
+                match i.op.clone() {
+                    Op::Ldn { dest: _, name } => {
+                        if !varkill.contains(&name) {
+                            self.globs.insert(name);
+                        }
                     }
-
-                    if same != SSAVal::Empty {
-                        return phi_val;
+                    Op::Ldas { name, .. } => {
+                        if !varkill.contains(&name) {
+                            self.globs.insert(name);
+                        }
                     }
-                    same = op.clone();
-                }
+                    Op::Ldav { name, .. } => {
+                        if !varkill.contains(&name) {
+                            self.globs.insert(name);
+                        }
+                    }
+                    Op::Upda { name, .. } => {
+                        if !varkill.contains(&name) {
+                            self.globs.insert(name);
+                        }
+                    }
+                    Op::Stn { srcname, destname } => {
+                        if !varkill.contains(&srcname) {
+                            self.globs.insert(srcname);
+                        }
 
-                if same == SSAVal::Empty {
-                    same = SSAVal::Undef;
+                        varkill.insert(destname.clone());
+                        let mut curr = self.blks.get(&destname).cloned().unwrap_or(Vec::new());
+                        curr.push(Rc::clone(block));
+                        self.blks.insert(destname, curr);
+                    }
+                    Op::Stc { val: _, name } => {
+                        varkill.insert(name.clone());
+                        let mut curr = self.blks.get(&name).cloned().unwrap_or(Vec::new());
+                        curr.push(Rc::clone(block));
+                        self.blks.insert(name, curr);
+                    }
+                    Op::Str { src: _, name } => {
+                        varkill.insert(name.clone());
+                        let mut curr = self.blks.get(&name).cloned().unwrap_or(Vec::new());
+                        curr.push(Rc::clone(block));
+                        self.blks.insert(name, curr);
+                    }
+                    Op::Tbli { tabname, .. } => {
+                        if !varkill.contains(&tabname) {
+                            self.globs.insert(tabname);
+                        }
+                    }
+                    Op::Tblg { tabname, .. } => {
+                        if !varkill.contains(&tabname) {
+                            self.globs.insert(tabname);
+                        }
+                    }
+                    _ => {}
                 }
             }
-            _ => panic!("ssa val is not a phi function!"),
         }
-        SSAVal::Empty
     }
 
-    fn insert_curr_def(&mut self) {}
+    /// Push phi functions to the head of each block where required. This assumes that
+    /// insert_globs() has already been called and the resulting sets are filled.
+    fn insert_phis(&mut self) {
+        for name in &self.globs {
+            let list = self.blks.get(name).cloned().unwrap_or(Vec::new());
+            let mut queue = VecDeque::new();
+            for bref in list {
+                queue.push_front(Rc::clone(&bref));
+            }
 
-    fn insert_incomplete_phi(&mut self, block_id: usize, var: usize, val: SSAVal) {
-        let key = format!("{}:{}", block_id, var);
-        self.incomplete_phis.insert(key, val);
-    }
-
-    fn encode(&self, var: usize, block_id: usize) -> String {
-        format!("{}:{}", var, block_id)
-    }
-
-    fn decode(&self, key: String) -> (String, usize) {
-        let parts: Vec<&str> = key.split(":").collect();
-        (parts[0].parse().unwrap(), parts[1].parse().unwrap())
+            while queue.len() != 0 {
+                let curr = queue.pop_front().unwrap();
+                for bid in &curr.borrow().dom_front {
+                    let d = &self.cfg.nodes[*bid];
+                    if !d.borrow().phis.contains_key(name) {
+                        // Insert new phi function for name
+                        // TODO: Operands?
+                        let phi = PhiFn::new();
+                        d.borrow_mut().phis.insert(name.to_string(), phi);
+                        queue.push_back(Rc::clone(&d));
+                    }
+                }
+            }
+        }
     }
 }

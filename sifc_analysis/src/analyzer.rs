@@ -12,7 +12,7 @@ impl Analyzer {
 
     pub fn perform(&self) {
         let cfg = CFG::build(&self.program);
-        let ssab = SSABuilder::new(cfg);
+        let mut ssab = SSABuilder::new(cfg);
         ssab.build();
     }
 }
