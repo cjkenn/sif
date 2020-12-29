@@ -1,8 +1,8 @@
-use crate::ssa::SSAVal;
+use crate::block::SifBlockRef;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PhiFn {
-    pub operands: Vec<SSAVal>,
+    pub operands: Vec<SifBlockRef>,
 }
 
 impl PhiFn {
@@ -10,5 +10,9 @@ impl PhiFn {
         PhiFn {
             operands: Vec::new(),
         }
+    }
+
+    pub fn from_operands(ops: Vec<SifBlockRef>) -> PhiFn {
+        PhiFn { operands: ops }
     }
 }

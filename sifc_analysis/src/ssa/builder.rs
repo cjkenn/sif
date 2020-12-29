@@ -99,8 +99,10 @@ impl SSABuilder {
 
     /// Push phi functions to the head of each block where required. This assumes that
     /// insert_globs() has already been called and the resulting sets are filled.
+    /// From Engineering a Compiler pp.501
     fn insert_phis(&mut self) {
         for name in &self.globs {
+            // Build a queue of blocks to iterate over when inserting phis
             let list = self.blks.get(name).cloned().unwrap_or(Vec::new());
             let mut queue = VecDeque::new();
             for bref in list {
@@ -109,12 +111,19 @@ impl SSABuilder {
 
             while queue.len() != 0 {
                 let curr = queue.pop_front().unwrap();
+
+                // For each block in the dominance frontier, if that block does
+                // not already contain a phi function for the current name, create one
+                // and insert it.
                 for bid in &curr.borrow().dom_front {
+                    // requires the cfg nodes array to be in order to match the ids. This should be
+                    // correct if using the cfg construction in this crate.
                     let d = &self.cfg.nodes[*bid];
+
                     if !d.borrow().phis.contains_key(name) {
                         // Insert new phi function for name
                         // TODO: Operands?
-                        let phi = PhiFn::new();
+                        let phi = PhiFn::from_operands(d.borrow().preds.clone());
                         d.borrow_mut().phis.insert(name.to_string(), phi);
                         queue.push_back(Rc::clone(&d));
                     }
