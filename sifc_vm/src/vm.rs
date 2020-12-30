@@ -484,7 +484,6 @@ impl<'v> VM<'v> {
             },
             BinOpKind::Mul => match (contents1.clone(), contents2.clone()) {
                 (SifVal::Num(n1), SifVal::Num(n2)) => {
-                    println!("c1: {:#?}, c2: {:#?}", contents1, contents2);
                     self.dregs.set_contents(dest, Some(SifVal::Num(n1 * n2)));
                 }
                 _ => return Err(self.newerr(RuntimeErrTy::TyMismatch)),

@@ -87,6 +87,7 @@ fn from_file(opts: ArgMatches) {
 
     if opts.is_present(ARG_ANALYSIS) {
         let analyzer = Analyzer::new(comp_result.program.clone());
+        // TODO: should be more fine grained eventually
         analyzer.perform();
     }
 

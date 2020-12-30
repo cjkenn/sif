@@ -2,17 +2,15 @@ use crate::block::SifBlockRef;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PhiFn {
-    pub operands: Vec<SifBlockRef>,
+    pub dest: String,
+    pub operands: Vec<String>,
 }
 
 impl PhiFn {
-    pub fn new() -> PhiFn {
+    pub fn new(d: String, o: Vec<String>) -> PhiFn {
         PhiFn {
-            operands: Vec::new(),
+            dest: d,
+            operands: o,
         }
-    }
-
-    pub fn from_operands(ops: Vec<SifBlockRef>) -> PhiFn {
-        PhiFn { operands: ops }
     }
 }

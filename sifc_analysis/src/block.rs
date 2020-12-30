@@ -3,6 +3,7 @@ use sifc_bytecode::instr::Instr;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    fmt,
     rc::Rc,
 };
 
@@ -14,7 +15,7 @@ pub(crate) type BlockID = usize;
 
 /// Represents something like a basic block. This is just a standard graph vertex implementation,
 /// but the data it holds is a list of instructions in the block.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct SifBlock {
     /// String identifier
     pub name: String,
@@ -69,5 +70,41 @@ impl SifBlock {
 
     pub fn add_instr(&mut self, i: &Instr) {
         self.instrs.push(i.clone());
+    }
+}
+
+// Impl debug for blocks so we don't accidentally follow edges and potentially end up in
+// an infinite loop if the CFG has a cycle -_-
+impl fmt::Debug for SifBlock {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut bl = String::new();
+        bl.push_str(&format!("Block {}: {{ \n", self.id));
+
+        let mut edge_vec = Vec::new();
+        for edge in &self.edges {
+            edge_vec.push(edge.borrow().id);
+        }
+
+        bl.push_str(&format!("Edge BIDs: {:#?}\n", edge_vec));
+
+        let mut pred_vec = Vec::new();
+        for edge in &self.preds {
+            pred_vec.push(edge.borrow().id);
+        }
+
+        bl.push_str(&format!("Pred BIDs: {:#?}\n", pred_vec));
+        bl.push_str(&format!("DOM Set BIDs: {:#?}\n", self.dom_set));
+        bl.push_str(&format!("IDOM: {:#?}\n", self.idom));
+        bl.push_str(&format!("DOM Frontier BIDs: {:#?}\n", self.dom_front));
+        bl.push_str(&format!("Phis: {:#?}\n", self.phis));
+
+        bl.push_str(&format!("Instrs:\n"));
+        for i in &self.instrs {
+            // better to use display and not debug here, but technically both work
+            bl.push_str(&format!("{:#}\n", i));
+        }
+
+        bl.push_str("}");
+        write!(f, "{}", bl)
     }
 }
