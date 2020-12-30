@@ -1,5 +1,5 @@
 use crate::{block::SifBlockRef, cfg::CFG, ssa::phi::PhiFn};
-use sifc_bytecode::opc::Op;
+use sifc_bytecode::{instr::Instr, opc::Op};
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     rc::Rc,
@@ -80,6 +80,11 @@ impl SSABuilder {
                             self.globs.insert(srcname);
                         }
 
+                        // TODO: are we sure we need to add destname into globals??
+                        if !varkill.contains(&destname) {
+                            self.globs.insert(destname.clone());
+                        }
+
                         varkill.insert(destname.clone());
                         let mut curr = self.blks.get(&destname).cloned().unwrap_or(Vec::new());
                         curr.push(Rc::clone(block));
@@ -118,7 +123,8 @@ impl SSABuilder {
     /// From Engineering a Compiler pp.501
     fn insert_phis(&mut self) {
         for name in &self.globs {
-            // Build a queue of blocks to iterate over when inserting phis
+            // Build a queue of blocks to iterate over when inserting phis. This allows
+            // us to pull from the queue and also add to the end as we iterate.
             let list = self.blks.get(name).cloned().unwrap_or(Vec::new());
             let mut queue = VecDeque::new();
             for bref in list {
@@ -150,10 +156,158 @@ impl SSABuilder {
     }
 
     fn rewrite(&mut self) {
-        self.rename_block();
+        println!("{:#?}", &self.cfg.nodes[0]);
+        for name in &self.globs {
+            self.rwcounter.insert(name.to_string(), 0);
+            self.rwstack.insert(name.to_string(), vec![0]);
+        }
+        self.rename_block(Rc::clone(&self.cfg.graph));
+        println!("{:#?}", &self.cfg.graph);
     }
 
-    fn rename_block(&mut self) {}
+    fn rename_block(&mut self, block: SifBlockRef) {
+        // Rename phi function dests
+        let mut rw_phis = HashMap::new();
+        for (_on, phi) in &block.borrow().phis {
+            let n = self.newname(&phi.dest);
+            let newphi = PhiFn::new(n.clone(), phi.operands.clone());
+            rw_phis.insert(n, newphi);
+        }
+        block.borrow_mut().phis = rw_phis;
+
+        // Rename instructions
+        let newinsts = self.rw_instrs(block.borrow().instrs.clone());
+        block.borrow_mut().instrs = newinsts;
+
+        // Rename phi function params in successor blocks
+
+        // Recursively rename each block in the dominator tree
+        // TODO: this is incorrect!! dom_set is the set of nodes dominating this node,
+        // NOT the set of successor nodes that are dominated by this node.
+        for bid in &block.borrow().dom_set {
+            self.rename_block(Rc::clone(&self.cfg.nodes[*bid]));
+        }
+
+        // Pop subscripts from rwstack for dest names in phis and instrs
+    }
+
+    fn rw_instrs(&mut self, instrs: Vec<Instr>) -> Vec<Instr> {
+        let mut newinsts = Vec::new();
+        for i in &instrs {
+            // we only care about instructions that set or load variables. Loading or setting
+            // registers doesn't matter for phi function insertion.
+            match i.op.clone() {
+                Op::Ldn { dest, name } => {
+                    let subscript = self.rwstack.get(&name).cloned().unwrap()[0];
+                    let nn = format!("{}{}", name, subscript);
+
+                    let new_op = Op::Ldn {
+                        dest: dest,
+                        name: nn,
+                    };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
+                }
+                Op::Ldas { name, dest } => {
+                    let subscript = self.rwstack.get(&name).cloned().unwrap()[0];
+                    let nn = format!("{}{}", name, subscript);
+
+                    let new_op = Op::Ldas {
+                        name: nn,
+                        dest: dest,
+                    };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
+                }
+                Op::Ldav {
+                    name,
+                    idx_reg,
+                    dest,
+                } => {
+                    let subscript = self.rwstack.get(&name).cloned().unwrap()[0];
+                    let nn = format!("{}{}", name, subscript);
+
+                    let new_op = Op::Ldav {
+                        name: nn,
+                        idx_reg: idx_reg,
+                        dest: dest,
+                    };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
+                }
+                Op::Upda {
+                    name,
+                    idx_reg,
+                    val_reg,
+                } => {
+                    let subscript = self.rwstack.get(&name).cloned().unwrap()[0];
+                    let nn = format!("{}{}", name, subscript);
+
+                    let new_op = Op::Upda {
+                        name: nn,
+                        idx_reg: idx_reg,
+                        val_reg: val_reg,
+                    };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
+                }
+                Op::Stn { srcname, destname } => {
+                    let srcsubscript = self.rwstack.get(&srcname).cloned().unwrap()[0];
+                    let nsrc = format!("{}{}", srcname, srcsubscript);
+                    let ndest = self.newname(&destname);
+
+                    let new_op = Op::Stn {
+                        srcname: nsrc,
+                        destname: ndest,
+                    };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
+                }
+                Op::Stc { val, name } => {
+                    let subscript = self.rwstack.get(&name).cloned().unwrap()[0];
+                    let nn = format!("{}{}", name, subscript);
+
+                    let new_op = Op::Stc { val: val, name: nn };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
+                }
+                Op::Str { src, name } => {
+                    let subscript = self.rwstack.get(&name).cloned().unwrap()[0];
+                    let nn = format!("{}{}", name, subscript);
+
+                    let new_op = Op::Str { src: src, name: nn };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
+                }
+                Op::Tbli { tabname, key, src } => {
+                    let subscript = self.rwstack.get(&tabname).cloned().unwrap()[0];
+                    let nn = format!("{}{}", tabname, subscript);
+
+                    let new_op = Op::Tbli {
+                        tabname: nn,
+                        key: key,
+                        src: src,
+                    };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
+                }
+                Op::Tblg { tabname, key, dest } => {
+                    let subscript = self.rwstack.get(&tabname).cloned().unwrap()[0];
+                    let nn = format!("{}{}", tabname, subscript);
+
+                    let new_op = Op::Tblg {
+                        tabname: nn,
+                        key: key,
+                        dest: dest,
+                    };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
+                }
+                _ => newinsts.push(i.clone()),
+            }
+        }
+        newinsts
+    }
 
     fn newname(&mut self, old: &str) -> String {
         let i = self.rwcounter.get(old).cloned().unwrap();

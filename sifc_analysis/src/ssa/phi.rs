@@ -1,5 +1,3 @@
-use crate::block::SifBlockRef;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct PhiFn {
     pub dest: String,
