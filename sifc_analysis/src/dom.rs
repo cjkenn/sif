@@ -1,5 +1,8 @@
 use crate::block::{BlockID, SifBlockRef};
-use std::{collections::HashSet, rc::Rc};
+use std::{
+    collections::{HashSet, VecDeque},
+    rc::Rc,
+};
 
 /// Calculates all required dominance information for a CFG. This will
 /// fill the dominator set, find immediate dominators and fill the
@@ -115,8 +118,7 @@ fn dom_front_calc(nodes: &Vec<SifBlockRef>) {
                     }
                     let runner_idom = runner_mb_idom.unwrap();
                     // CAREFUL! This only works when we know the blocks
-                    // in the list are placed at the index equivalent to their
-                    // ID!!!
+                    // in the list are placed at the index equivalent to their ID!
                     runner = Rc::clone(&nodes[runner_idom]);
                 }
             }
@@ -150,6 +152,69 @@ fn dom_intersection(preds: &Vec<SifBlockRef>) -> HashSet<BlockID> {
         .collect();
 
     intersection
+}
+
+/// DomTreeNode works only on IDs, because it's intended to be used
+/// as a lookup into the CFG by id. Then traversal can be done on the CFG
+/// based on the indices here.
+pub struct DomTreeNode {
+    pub id: BlockID,
+    pub edges: Vec<BlockID>,
+}
+
+impl DomTreeNode {
+    pub fn new(i: BlockID) -> DomTreeNode {
+        DomTreeNode {
+            id: i,
+            edges: Vec::new(),
+        }
+    }
+}
+
+pub struct DomTree {
+    pub nodes: Vec<DomTreeNode>,
+}
+
+impl DomTree {
+    /// Build creates a dominator tree containing all the block id's from the cfg. This requires
+    /// dominance information (particularly, immediate dominators) to be filled in for each
+    /// block, so calling this before fill_doms on a CFG will be ineffective.
+    pub fn build(nodes: &Vec<SifBlockRef>) -> DomTree {
+        // The dom tree has the same size as the cfg, so fill in the nodes
+        // array with id's before setting the edges.
+        let mut domtree_nodes = Vec::new();
+        for n in nodes {
+            domtree_nodes.push(DomTreeNode::new(n.borrow().id));
+        }
+
+        // Traverse the entire cfg. At each node, get the IDOM node, if it exists.
+        // Then, insert an edge from the IDOM to the current node.
+        let mut seen = HashSet::new();
+        let mut queue = VecDeque::new();
+        queue.push_front(Rc::clone(&nodes[0]));
+        seen.insert(nodes[0].borrow().id);
+
+        while queue.len() != 0 {
+            let curr = queue.pop_front().unwrap();
+
+            for adj in &curr.borrow().edges {
+                if !seen.contains(&adj.borrow().id) {
+                    match adj.borrow().idom {
+                        Some(id) => {
+                            domtree_nodes[id].edges.push(adj.borrow().id);
+                        }
+                        None => {}
+                    }
+                    seen.insert(adj.borrow().id);
+                    queue.push_back(Rc::clone(&adj));
+                }
+            }
+        }
+
+        DomTree {
+            nodes: domtree_nodes,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -247,6 +312,39 @@ mod tests {
 
         let b3_dom_front = &blocks[3].borrow().dom_front;
         assert!(b3_dom_front.len() == 0);
+    }
+
+    #[test]
+    fn test_build_dom_tree() {
+        // Based on the simple diamond shaped cfg from get_blocks(),
+        // we expect the dom tree to be:
+        //     0
+        //   / | \
+        //  1  2  3
+        //
+        let blocks = get_blocks();
+        dom_calc(&blocks);
+        idom_calc(&blocks);
+        dom_front_calc(&blocks);
+        let domtree = DomTree::build(&blocks);
+        assert!(domtree.nodes.len() == 4);
+
+        let b0 = &domtree.nodes[0];
+        assert!(b0.id == 0);
+        assert!(b0.edges.len() == 3);
+        assert_eq!(b0.edges, vec![1, 2, 3]);
+
+        let b1 = &domtree.nodes[1];
+        assert!(b1.id == 1);
+        assert!(b1.edges.len() == 0);
+
+        let b2 = &domtree.nodes[2];
+        assert!(b2.id == 2);
+        assert!(b2.edges.len() == 0);
+
+        let b3 = &domtree.nodes[3];
+        assert!(b3.id == 3);
+        assert!(b3.edges.len() == 0);
     }
 
     /// Build a simple 4 node cfg that looks like this:

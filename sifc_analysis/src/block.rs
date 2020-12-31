@@ -17,29 +17,29 @@ pub(crate) type BlockID = usize;
 /// but the data it holds is a list of instructions in the block.
 #[derive(Clone, PartialEq)]
 pub struct SifBlock {
-    /// String identifier
+    /// String identifier.
     pub name: String,
 
-    /// Usize identifier
+    /// Usize identifier.
     pub id: BlockID,
 
     /// Sif IR instruction vec. This should be the full program that would
-    /// normally be executed
+    /// normally be executed.
     pub instrs: Vec<Instr>,
 
-    /// Adjacent blocks
+    /// Adjacent blocks.
     pub edges: Vec<SifBlockRef>,
 
     /// Predecessor blocks. This includes all blocks that can be reached when
-    /// traversing to the current block
+    /// traversing to the current block.
     pub preds: Vec<SifBlockRef>,
 
     /// Set of dominators. We can build a list of SifBlockRefs from this set
-    /// if needed, but we mostly need to check BlockID's for dominators
+    /// if needed, but we mostly need to check BlockID's for dominators.
     pub dom_set: HashSet<BlockID>,
 
     /// Immediate dominator block id. If the block is the entry node to a CFG, the idom
-    /// is None
+    /// is None.
     pub idom: Option<BlockID>,
 
     /// Dominance frontier. This contains "the first nodes reachable from n that n does not
