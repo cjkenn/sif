@@ -9,7 +9,7 @@ use std::{
     rc::Rc,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct CFG {
     pub num_nodes: usize,
     /// Nodes contains each node in the CFG in a list in any order. This is useful for
@@ -18,6 +18,9 @@ pub struct CFG {
 
     /// The head of the CFG. Should normally be used for traversing the CFG.
     pub graph: SifBlockRef,
+
+    /// Dominator tree of the CFG.
+    pub dom_tree: dom::DomTree,
 }
 
 impl CFG {
@@ -110,13 +113,17 @@ impl CFG {
             i += 1;
         }
 
+        // These must be performed in order. Preds first, then dominance information,
+        // then dominance tree building.
         build_preds(&nodes, Rc::clone(&entry_block));
         dom::fill_doms(&nodes);
+        let dtree = dom::DomTree::build(&nodes);
 
         CFG {
             num_nodes: nodes.len(),
             nodes: nodes,
             graph: entry_block,
+            dom_tree: dtree,
         }
     }
 }

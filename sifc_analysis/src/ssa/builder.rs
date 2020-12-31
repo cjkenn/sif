@@ -182,11 +182,13 @@ impl SSABuilder {
         // Rename phi function params in successor blocks
 
         // Recursively rename each block in the dominator tree
-        // TODO: this is incorrect!! dom_set is the set of nodes dominating this node,
-        // NOT the set of successor nodes that are dominated by this node.
-        for bid in &block.borrow().dom_set {
-            self.rename_block(Rc::clone(&self.cfg.nodes[*bid]));
-        }
+        // TODO: still incorrect, we only work on immediate successors instead
+        // of all successors. need to properly traverse the dominator tree
+        let dom_tree_node = &self.cfg.dom_tree.nodes[block.borrow().id];
+
+        // for bid in &dom_tree_node.edges {
+        //     self.rename_block(Rc::clone(&self.cfg.nodes[*bid]));
+        // }
 
         // Pop subscripts from rwstack for dest names in phis and instrs
     }

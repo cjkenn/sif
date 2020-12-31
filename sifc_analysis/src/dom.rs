@@ -157,6 +157,7 @@ fn dom_intersection(preds: &Vec<SifBlockRef>) -> HashSet<BlockID> {
 /// DomTreeNode works only on IDs, because it's intended to be used
 /// as a lookup into the CFG by id. Then traversal can be done on the CFG
 /// based on the indices here.
+#[derive(Debug, Clone)]
 pub struct DomTreeNode {
     pub id: BlockID,
     pub edges: Vec<BlockID>,
@@ -171,6 +172,7 @@ impl DomTreeNode {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct DomTree {
     pub nodes: Vec<DomTreeNode>,
 }
