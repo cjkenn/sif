@@ -1,6 +1,7 @@
-use crate::{block::SifBlockRef, cfg::CFG, ssa::phi::PhiFn};
+use crate::{block::SifBlockRef, cfg::CFG, dom::DomTreeNode, ssa::phi::PhiFn};
 use sifc_bytecode::{instr::Instr, opc::Op};
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet, VecDeque},
     rc::Rc,
 };
@@ -38,6 +39,7 @@ impl SSABuilder {
     pub(crate) fn build(&mut self) {
         self.get_globs();
         self.insert_phis();
+        println!("{:#?}", self.cfg.dom_tree);
         self.rewrite();
     }
 
@@ -156,13 +158,14 @@ impl SSABuilder {
     }
 
     fn rewrite(&mut self) {
-        println!("{:#?}", &self.cfg.nodes[0]);
+        // println!("{:#?}", &self.cfg.nodes[0]);
+        println!("globs: {:#?}", self.globs);
         for name in &self.globs {
             self.rwcounter.insert(name.to_string(), 0);
             self.rwstack.insert(name.to_string(), vec![0]);
         }
         self.rename_block(Rc::clone(&self.cfg.graph));
-        println!("{:#?}", &self.cfg.graph);
+        // println!("{:#?}", &self.cfg.graph);
     }
 
     fn rename_block(&mut self, block: SifBlockRef) {
@@ -179,14 +182,27 @@ impl SSABuilder {
         let newinsts = self.rw_instrs(block.borrow().instrs.clone());
         block.borrow_mut().instrs = newinsts;
 
-        // Rename phi function params in successor blocks
+        // Rename phi function params in immediate cfg successors
+        for cfg_succ in &block.borrow().edges {
+            let mut rw_phis_ops = HashMap::new();
 
-        // Recursively rename each block in the dominator tree
-        // TODO: still incorrect, we only work on immediate successors instead
-        // of all successors. need to properly traverse the dominator tree
-        let dom_tree_node = &self.cfg.dom_tree.nodes[block.borrow().id];
+            for (name, phi) in &cfg_succ.borrow().phis {
+                let mut new_os = Vec::new();
+                for operand in &phi.operands {
+                    let subscript = self.rwstack.get(operand).cloned().unwrap()[0];
+                    let nn = format!("{}{}", operand, subscript);
+                    new_os.push(nn);
+                }
+                let newphi = PhiFn::new(phi.dest.clone(), new_os);
+                rw_phis_ops.insert(name.to_string(), newphi);
+            }
+            cfg_succ.borrow_mut().phis = rw_phis_ops;
+        }
 
+        // Recursively rename each immediate successor in the dom tree
+        let dom_tree_node = &self.cfg.dom_tree.nodes[block.borrow().id].clone();
         // for bid in &dom_tree_node.edges {
+        //     println!("dom tree successor bid: {}", bid);
         //     self.rename_block(Rc::clone(&self.cfg.nodes[*bid]));
         // }
 
@@ -274,6 +290,7 @@ impl SSABuilder {
                     newinsts.push(new_inst);
                 }
                 Op::Str { src, name } => {
+                    println!("name: {}", name);
                     let subscript = self.rwstack.get(&name).cloned().unwrap()[0];
                     let nn = format!("{}{}", name, subscript);
 
