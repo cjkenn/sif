@@ -15,6 +15,14 @@ pub struct SSABuilder {
     rwstack: HashMap<String, Vec<usize>>,
 }
 
+struct RWInstrs {
+    /// Vector of rewritten instructions with new variable names
+    pub instrs: Vec<Instr>,
+
+    /// Amount of instructions that were changed during rw_instrs phase
+    pub changed: usize,
+}
+
 impl SSABuilder {
     pub fn new(cfg: CFG) -> SSABuilder {
         SSABuilder {
@@ -178,11 +186,12 @@ impl SSABuilder {
     fn rewrite(&mut self) {
         println!("{:#?}", &self.cfg.nodes[0]);
         for name in &self.globs {
-            self.rwcounter.insert(name.to_string(), 0);
-            self.rwstack.insert(name.to_string(), vec![0]);
+            self.rwcounter.insert(name.to_string(), 1);
+            self.rwstack.insert(name.to_string(), vec![1]);
         }
         self.rename_block(Rc::clone(&self.cfg.graph));
-        println!("{:#?}", &self.cfg.graph);
+        println!("{:#?}", &self.cfg.nodes[0]);
+        println!("{:#?}", &self.cfg.nodes[1]);
     }
 
     fn rename_block(&mut self, block: SifBlockRef) {
@@ -196,8 +205,8 @@ impl SSABuilder {
         block.borrow_mut().phis = rw_phis;
 
         // Rename instructions
-        let newinsts = self.rw_instrs(block.borrow().instrs.clone());
-        block.borrow_mut().instrs = newinsts;
+        let rwinsts = self.rw_instrs(block.borrow().instrs.clone());
+        block.borrow_mut().instrs = rwinsts.instrs;
 
         // Rename phi function params in immediate cfg successors
         for cfg_succ in &block.borrow().edges {
@@ -206,9 +215,12 @@ impl SSABuilder {
             for (name, phi) in &cfg_succ.borrow().phis {
                 let mut new_os = Vec::new();
                 for operand in &phi.operands {
-                    let subscript = self.rwstack.get(operand).cloned().unwrap()[0];
-                    let nn = format!("{}{}", operand, subscript);
-                    new_os.push(nn);
+                    if let Some(subscript) = self.rwstack.get(operand) {
+                        let nn = format!("{}{}", operand, subscript[0]);
+                        new_os.push(nn);
+                    } else {
+                        new_os.push(operand.to_string());
+                    }
                 }
                 let newphi = PhiFn::new(phi.dest.clone(), new_os);
                 rw_phis_ops.insert(name.to_string(), newphi);
@@ -216,25 +228,29 @@ impl SSABuilder {
             cfg_succ.borrow_mut().phis = rw_phis_ops;
         }
 
-        // Recursively rename each immediate successor in the dom tree
+        // Recursively rename each immediate successor in the dom tree. dom_tree_node
+        // is cloned, but as long as we recursively call with a reference
+        // to the actual node being renamed that's fine.
         let dom_tree_node = &self.cfg.dom_tree.nodes[block.borrow().id].clone();
-        // for bid in &dom_tree_node.edges {
-        //     println!("dom tree successor bid: {}", bid);
-        //     self.rename_block(Rc::clone(&self.cfg.nodes[*bid]));
-        // }
+        for bid in &dom_tree_node.edges {
+            let next = Rc::clone(&self.cfg.nodes[*bid]);
+            self.rename_block(next);
+        }
 
-        // Pop subscripts from rwstack for dest names in phis and instrs
+        // TODO: Pop subscripts from rwstack for dest names in phis and instrs
     }
 
-    fn rw_instrs(&mut self, instrs: Vec<Instr>) -> Vec<Instr> {
+    fn rw_instrs(&mut self, instrs: Vec<Instr>) -> RWInstrs {
         let mut newinsts = Vec::new();
+        let mut changed = 0;
+
         for i in &instrs {
             // we only care about instructions that set or load variables. Loading or setting
             // registers doesn't matter for phi function insertion.
             match i.op.clone() {
                 Op::Ldn { dest, name } => {
                     if let Some(subscript_stack) = self.rwstack.get(&name) {
-                        let nn = format!("{}{}", name, subscript_stack[0]);
+                        let nn = format!("{}{}", name, self.top(subscript_stack));
 
                         let new_op = Op::Ldn {
                             dest: dest,
@@ -246,7 +262,7 @@ impl SSABuilder {
                 }
                 Op::Ldas { name, dest } => {
                     if let Some(subscript_stack) = self.rwstack.get(&name) {
-                        let nn = format!("{}{}", name, subscript_stack[0]);
+                        let nn = format!("{}{}", name, self.top(subscript_stack));
 
                         let new_op = Op::Ldas {
                             name: nn,
@@ -262,7 +278,7 @@ impl SSABuilder {
                     dest,
                 } => {
                     if let Some(subscript_stack) = self.rwstack.get(&name) {
-                        let nn = format!("{}{}", name, subscript_stack[0]);
+                        let nn = format!("{}{}", name, self.top(subscript_stack));
 
                         let new_op = Op::Ldav {
                             name: nn,
@@ -279,7 +295,7 @@ impl SSABuilder {
                     val_reg,
                 } => {
                     if let Some(subscript_stack) = self.rwstack.get(&name) {
-                        let nn = format!("{}{}", name, subscript_stack[0]);
+                        let nn = format!("{}{}", name, self.top(subscript_stack));
 
                         let new_op = Op::Upda {
                             name: nn,
@@ -292,8 +308,9 @@ impl SSABuilder {
                 }
                 Op::Stn { srcname, destname } => {
                     if let Some(srcsubscript) = self.rwstack.get(&srcname) {
-                        let nsrc = format!("{}{}", srcname, srcsubscript[0]);
+                        let nsrc = format!("{}{}", srcname, self.top(srcsubscript));
                         let ndest = self.newname(&destname);
+                        changed += 1;
 
                         let new_op = Op::Stn {
                             srcname: nsrc,
@@ -304,27 +321,24 @@ impl SSABuilder {
                     }
                 }
                 Op::Stc { val, name } => {
-                    if let Some(subscript_stack) = self.rwstack.get(&name) {
-                        let subscript = subscript_stack[0];
-                        let nn = format!("{}{}", name, subscript);
+                    let nn = self.newname(&name);
+                    changed += 1;
 
-                        let new_op = Op::Stc { val: val, name: nn };
-                        let new_inst = Instr::new(i.lblidx, new_op, i.line);
-                        newinsts.push(new_inst);
-                    }
+                    let new_op = Op::Stc { val: val, name: nn };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
                 }
                 Op::Str { src, name } => {
-                    if let Some(subscript_stack) = self.rwstack.get(&name) {
-                        let nn = format!("{}{}", name, subscript_stack[0]);
+                    let nn = self.newname(&name);
+                    changed += 1;
 
-                        let new_op = Op::Str { src: src, name: nn };
-                        let new_inst = Instr::new(i.lblidx, new_op, i.line);
-                        newinsts.push(new_inst);
-                    }
+                    let new_op = Op::Str { src: src, name: nn };
+                    let new_inst = Instr::new(i.lblidx, new_op, i.line);
+                    newinsts.push(new_inst);
                 }
                 Op::Tbli { tabname, key, src } => {
                     if let Some(subscript_stack) = self.rwstack.get(&tabname) {
-                        let nn = format!("{}{}", tabname, subscript_stack[0]);
+                        let nn = format!("{}{}", tabname, self.top(subscript_stack));
 
                         let new_op = Op::Tbli {
                             tabname: nn,
@@ -337,7 +351,7 @@ impl SSABuilder {
                 }
                 Op::Tblg { tabname, key, dest } => {
                     if let Some(subscript_stack) = self.rwstack.get(&tabname) {
-                        let nn = format!("{}{}", tabname, subscript_stack[0]);
+                        let nn = format!("{}{}", tabname, self.top(subscript_stack));
 
                         let new_op = Op::Tblg {
                             tabname: nn,
@@ -351,15 +365,29 @@ impl SSABuilder {
                 _ => newinsts.push(i.clone()),
             }
         }
-        newinsts
+
+        RWInstrs {
+            instrs: newinsts,
+            changed: changed,
+        }
     }
 
     fn newname(&mut self, old: &str) -> String {
-        let i = self.rwcounter.get(old).cloned().unwrap();
+        let mb_i = self.rwcounter.get(old).cloned();
+        if mb_i.is_none() {
+            return format!("{}{}", old, 0);
+        }
+
+        let i = mb_i.unwrap();
         self.rwcounter.insert(old.to_string(), i + 1);
         let mut stk = self.rwstack.get(old).cloned().unwrap();
         stk.push(i);
         self.rwstack.insert(old.to_string(), stk);
+
         format!("{}{}", old, i)
+    }
+
+    fn top(&self, stack: &Vec<usize>) -> usize {
+        stack[stack.len() - 1]
     }
 }
