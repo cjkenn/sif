@@ -133,24 +133,22 @@ impl CFG {
 /// contains a list of nodes rather than just the direct predecessor. Because we use a HashSet to
 /// store nodes here, the order is not guaranteed and thus we cannot determine the direct predecessor
 /// from this list at a later point.
+// TODO: does this handle cycles?
 fn build_preds(nodes: &Vec<SifBlockRef>, entry: SifBlockRef) {
     let mut seen = HashSet::new();
-    let mut queue = VecDeque::new();
-    queue.push_front(Rc::clone(&entry));
-    seen.insert(entry.borrow().id);
+    let mut stack = Vec::new();
+    stack.push(Rc::clone(&entry));
 
-    while queue.len() != 0 {
-        let curr = queue.pop_front().unwrap();
-
-        for adj in &curr.borrow().edges {
-            if !seen.contains(&adj.borrow().id) {
-                for pred_id in &seen {
-                    let pred = Rc::clone(&nodes[*pred_id]);
-                    adj.borrow_mut().preds.push(pred);
-                }
-                seen.insert(adj.borrow().id);
-                queue.push_back(Rc::clone(&adj));
+    while stack.len() != 0 {
+        let curr = stack.pop().unwrap();
+        if !seen.contains(&curr.borrow().id) {
+            for adj in &curr.borrow().edges {
+                let id = curr.borrow().id;
+                let pred = Rc::clone(&nodes[id]);
+                adj.borrow_mut().preds.push(pred);
+                stack.push(Rc::clone(&adj));
             }
+            seen.insert(curr.borrow().id);
         }
     }
 }

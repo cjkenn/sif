@@ -184,7 +184,7 @@ impl SSABuilder {
     }
 
     fn rewrite(&mut self) {
-        println!("{:#?}", &self.cfg.nodes[0]);
+        //println!("{:#?}", &self.cfg.nodes[0]);
         for name in &self.globs {
             self.rwcounter.insert(name.to_string(), 1);
             self.rwstack.insert(name.to_string(), vec![1]);
@@ -192,6 +192,8 @@ impl SSABuilder {
         self.rename_block(Rc::clone(&self.cfg.graph));
         println!("{:#?}", &self.cfg.nodes[0]);
         println!("{:#?}", &self.cfg.nodes[1]);
+        println!("{:#?}", &self.cfg.nodes[2]);
+        println!("{:#?}", &self.cfg.nodes[3]);
     }
 
     fn rename_block(&mut self, block: SifBlockRef) {
@@ -206,7 +208,7 @@ impl SSABuilder {
 
         // Rename instructions
         let rwinsts = self.rw_instrs(block.borrow().instrs.clone());
-        block.borrow_mut().instrs = rwinsts.instrs;
+        block.borrow_mut().instrs = rwinsts.instrs.clone();
 
         // Rename phi function params in immediate cfg successors
         for cfg_succ in &block.borrow().edges {
@@ -237,7 +239,11 @@ impl SSABuilder {
             self.rename_block(next);
         }
 
-        // TODO: Pop subscripts from rwstack for dest names in phis and instrs
+        // Pop subscripts from rwstack for dest names in phis and instrs
+        for (_on, phi) in &block.borrow().phis {
+            self.pop_discard(&phi.dest);
+        }
+        self.pop_remaining(rwinsts.instrs);
     }
 
     fn rw_instrs(&mut self, instrs: Vec<Instr>) -> RWInstrs {
@@ -372,6 +378,21 @@ impl SSABuilder {
         }
     }
 
+    // Anytime we call newname in rw_instrs, we need to pop from the appropriate stack here.
+    fn pop_remaining(&mut self, instrs: Vec<Instr>) {
+        for i in &instrs {
+            match i.op.clone() {
+                Op::Stn {
+                    srcname: _,
+                    destname,
+                } => self.pop_discard(&destname),
+                Op::Stc { val: _, name } => self.pop_discard(&name),
+                Op::Str { src: _, name } => self.pop_discard(&name),
+                _ => {}
+            }
+        }
+    }
+
     fn newname(&mut self, old: &str) -> String {
         let mb_i = self.rwcounter.get(old).cloned();
         if mb_i.is_none() {
@@ -389,5 +410,13 @@ impl SSABuilder {
 
     fn top(&self, stack: &Vec<usize>) -> usize {
         stack[stack.len() - 1]
+    }
+
+    fn pop_discard(&mut self, st_name: &str) {
+        if let Some(st) = self.rwstack.get(st_name) {
+            let mut ns = st.clone();
+            ns.pop();
+            self.rwstack.insert(st_name.to_string(), ns);
+        }
     }
 }
