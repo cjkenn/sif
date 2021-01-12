@@ -1,17 +1,35 @@
-use crate::{block::SifBlockRef, cfg::CFG, dom::DomTreeNode, ssa::phi::PhiFn};
+use crate::{
+    block::SifBlockRef,
+    cfg::CFG,
+    ssa::phi::{PhiFn, PhiOp},
+};
 use sifc_bytecode::{instr::Instr, opc::Op};
 use std::{
-    cell::RefCell,
     collections::{HashMap, HashSet, VecDeque},
     rc::Rc,
 };
 
 pub struct SSABuilder {
+    /// Current control flow graph. The builder operates on this graph and transforms it into
+    /// SSA form. This involves replacing and overwriting several components within the graph.
     pub cfg: CFG,
 
+    /// Set of global variables, populated by the get_globs() method. Globals contains
+    /// names that are used in a block that is separate from its definition, not specifically
+    /// a global variable.
     globs: HashSet<String>,
+
+    /// A mapping of variable names to blocks that contain that name. This is used mostly for
+    /// getting the list of blocks we may need to insert phi functions into.
     blks: HashMap<String, Vec<SifBlockRef>>,
+
+    /// "Rewrite counter": This is a map from variable name to usage count. We use this to get
+    /// the current usage value for rewriting variable names.
     rwcounter: HashMap<String, usize>,
+
+    /// A map of stacks for each global variable name. We grab the top value from the stack when
+    /// rewriting var names. The values are inserted by newname(), which uses the rwcounter to
+    /// store the usage counts.
     rwstack: HashMap<String, Vec<usize>>,
 }
 
@@ -171,10 +189,14 @@ impl SSABuilder {
                     let d = &self.cfg.nodes[*bid];
 
                     if !d.borrow().phis.contains_key(name) {
-                        // Insert new phi function for name. Operands are just two copies of
-                        // the current name, they have to be rewritten later anyway.
-                        let pops = vec![name.to_string(), name.to_string()];
-                        let phi = PhiFn::new(name.to_string(), pops);
+                        // Insert new phi function for name. Operands are currently copies
+                        // of the var name, which will be overwritten later during the renaming
+                        // phase. The amount of operands is equal to the amount of possible previous
+                        // usages of the destination. This is usually two, but not necessarily always.
+                        // We don't really need to set operands here anyway, since they should be
+                        // overwritten by renaming as well.
+                        let pops = Vec::new();
+                        let phi = PhiFn::new(name.to_string(), name.to_string(), pops);
                         d.borrow_mut().phis.insert(name.to_string(), phi);
                         queue.push_back(Rc::clone(&d));
                     }
@@ -184,24 +206,19 @@ impl SSABuilder {
     }
 
     fn rewrite(&mut self) {
-        //println!("{:#?}", &self.cfg.nodes[0]);
         for name in &self.globs {
             self.rwcounter.insert(name.to_string(), 1);
             self.rwstack.insert(name.to_string(), vec![1]);
         }
         self.rename_block(Rc::clone(&self.cfg.graph));
-        println!("{:#?}", &self.cfg.nodes[0]);
-        println!("{:#?}", &self.cfg.nodes[1]);
-        println!("{:#?}", &self.cfg.nodes[2]);
-        println!("{:#?}", &self.cfg.nodes[3]);
     }
 
     fn rename_block(&mut self, block: SifBlockRef) {
         // Rename phi function dests
         let mut rw_phis = HashMap::new();
-        for (_on, phi) in &block.borrow().phis {
+        for (on, phi) in &block.borrow().phis {
             let n = self.newname(&phi.dest);
-            let newphi = PhiFn::new(n.clone(), phi.operands.clone());
+            let newphi = PhiFn::new(on.clone(), n.clone(), phi.operands.clone());
             rw_phis.insert(n, newphi);
         }
         block.borrow_mut().phis = rw_phis;
@@ -210,26 +227,6 @@ impl SSABuilder {
         let rwinsts = self.rw_instrs(block.borrow().instrs.clone());
         block.borrow_mut().instrs = rwinsts.instrs.clone();
 
-        // Rename phi function params in immediate cfg successors
-        for cfg_succ in &block.borrow().edges {
-            let mut rw_phis_ops = HashMap::new();
-
-            for (name, phi) in &cfg_succ.borrow().phis {
-                let mut new_os = Vec::new();
-                for operand in &phi.operands {
-                    if let Some(subscript) = self.rwstack.get(operand) {
-                        let nn = format!("{}{}", operand, subscript[0]);
-                        new_os.push(nn);
-                    } else {
-                        new_os.push(operand.to_string());
-                    }
-                }
-                let newphi = PhiFn::new(phi.dest.clone(), new_os);
-                rw_phis_ops.insert(name.to_string(), newphi);
-            }
-            cfg_succ.borrow_mut().phis = rw_phis_ops;
-        }
-
         // Recursively rename each immediate successor in the dom tree. dom_tree_node
         // is cloned, but as long as we recursively call with a reference
         // to the actual node being renamed that's fine.
@@ -237,6 +234,33 @@ impl SSABuilder {
         for bid in &dom_tree_node.edges {
             let next = Rc::clone(&self.cfg.nodes[*bid]);
             self.rename_block(next);
+        }
+
+        // Rename phi function params in immediate cfg successors.
+        // We only write a single operand here, in each phi in the succesors. Each block should only
+        // write to a specific operand "slot" when rewriting, which is defined by the block id. This slot
+        // doesn't necessarily need to correspond to the amount of operands, but it is always the
+        // same for that block. If we need the operands in a list ordered by slot, we can perform that
+        // transformation later.
+        for cfg_succ in &block.borrow().edges {
+            let mut rw_phis_ops = HashMap::new();
+            for (name, phi) in &cfg_succ.borrow_mut().phis {
+                let mut new_os = phi.operands.clone();
+                let initial_dest = &phi.initial;
+
+                // If the initial name (ie. the destination) is in our stacks,
+                // add an operand for the rewritten name.
+                if let Some(subscript) = self.rwstack.get(initial_dest) {
+                    let nn = format!("{}{}", initial_dest, self.top(subscript));
+                    let new_op = PhiOp::new(block.borrow().id, nn);
+                    new_os.push(new_op);
+                }
+
+                // Clone the previoud phi but with additional operand.
+                let newphi = PhiFn::new(name.clone(), phi.dest.clone(), new_os);
+                rw_phis_ops.insert(name.to_string(), newphi);
+            }
+            cfg_succ.borrow_mut().phis = rw_phis_ops;
         }
 
         // Pop subscripts from rwstack for dest names in phis and instrs

@@ -3,11 +3,7 @@ use crate::{
     dom,
 };
 use sifc_bytecode::{instr::Instr, opc::Op};
-use std::{
-    cell::RefCell,
-    collections::{HashSet, VecDeque},
-    rc::Rc,
-};
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub struct CFG {
