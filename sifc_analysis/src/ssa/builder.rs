@@ -9,10 +9,10 @@ use std::{
     rc::Rc,
 };
 
-pub struct SSABuilder {
+pub struct SSABuilder<'c> {
     /// Current control flow graph. The builder operates on this graph and transforms it into
     /// SSA form. This involves replacing and overwriting several components within the graph.
-    pub cfg: CFG,
+    pub cfg: &'c CFG,
 
     /// Set of global variables, populated by the get_globs() method. Globals contains
     /// names that are used in a block that is separate from its definition, not specifically
@@ -41,8 +41,8 @@ struct RWInstrs {
     pub changed: usize,
 }
 
-impl SSABuilder {
-    pub fn new(cfg: CFG) -> SSABuilder {
+impl<'c> SSABuilder<'c> {
+    pub fn new(cfg: &'c CFG) -> SSABuilder<'c> {
         SSABuilder {
             cfg: cfg,
             globs: HashSet::new(),
