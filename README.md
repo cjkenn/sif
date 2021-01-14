@@ -41,6 +41,7 @@ ARGS:
     <filename>    sif file to parse and run
 
 FLAGS:
+    -a, --analysis      Performs analysis on the CFG and IR before starting the vm
         --bco           Runs the bytecode optimizer before executing in vm
         --emit-ast      Prints the syntax tree to stdout
         --emit-ir       Prints sif bytecode to stdout
@@ -52,6 +53,4 @@ FLAGS:
 OPTIONS:
     -H, --heap-size <heap-size>    Sets initial heap size [default: 100]
     -R, --reg-count <reg-count>    Sets the default virtual register count [default: 1024]
-
 ```
-
