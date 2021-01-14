@@ -114,6 +114,7 @@ impl CFG {
         build_preds(&nodes, Rc::clone(&entry_block));
         dom::fill_doms(&nodes);
         let dtree = dom::DomTree::build(&nodes);
+        println!("{:#?}", nodes);
 
         CFG {
             num_nodes: nodes.len(),
@@ -129,22 +130,27 @@ impl CFG {
 /// contains a list of nodes rather than just the direct predecessor. Because we use a HashSet to
 /// store nodes here, the order is not guaranteed and thus we cannot determine the direct predecessor
 /// from this list at a later point.
-// TODO: does this handle cycles?
+// TODO: fix this to handle cycles
 fn build_preds(nodes: &Vec<SifBlockRef>, entry: SifBlockRef) {
     let mut seen = HashSet::new();
+    let mut visiting = HashSet::new();
     let mut stack = Vec::new();
     stack.push(Rc::clone(&entry));
 
     while stack.len() != 0 {
         let curr = stack.pop().unwrap();
-        if !seen.contains(&curr.borrow().id) {
+        let curr_id = curr.borrow().id.clone();
+        visiting.insert(curr_id);
+
+        if !seen.contains(&curr_id) {
             for adj in &curr.borrow().edges {
-                let id = curr.borrow().id;
-                let pred = Rc::clone(&nodes[id]);
+                let pred = Rc::clone(&nodes[curr_id]);
                 adj.borrow_mut().preds.push(pred);
                 stack.push(Rc::clone(&adj));
             }
-            seen.insert(curr.borrow().id);
+
+            seen.insert(curr_id);
         }
+        visiting.remove(&curr_id);
     }
 }
