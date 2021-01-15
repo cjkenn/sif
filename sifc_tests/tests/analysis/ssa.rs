@@ -38,62 +38,62 @@ var z = x + y;
     // here, because the order of things like cfg edges and phi operands is not deterministic,
     // and depends on the orer in which nodes are visited in the cfg during analysis.
     let entry_bb = &ssa_cfg.nodes[0];
-    assert!(entry_bb.borrow().id == 0);
-    assert!(entry_bb.borrow().preds.len() == 0);
-    assert!(entry_bb.borrow().edges.len() == 2);
-    assert!(entry_bb.borrow().dom_set.len() == 1);
+    assert_eq!(entry_bb.borrow().id, 0);
+    assert_eq!(entry_bb.borrow().preds.len(), 0);
+    assert_eq!(entry_bb.borrow().edges.len(), 2);
+    assert_eq!(entry_bb.borrow().dom_set.len(), 1);
     assert!(entry_bb.borrow().dom_set.contains(&0));
     assert!(entry_bb.borrow().idom.is_none());
-    assert!(entry_bb.borrow().dom_front.len() == 0);
-    assert!(entry_bb.borrow().phis.len() == 0);
+    assert_eq!(entry_bb.borrow().dom_front.len(), 0);
+    assert_eq!(entry_bb.borrow().phis.len(), 0);
 
     let bb1 = &ssa_cfg.nodes[1];
-    assert!(bb1.borrow().id == 1);
-    assert!(bb1.borrow().preds.len() == 1);
-    assert!(bb1.borrow().preds[0].borrow().id == 0);
-    assert!(bb1.borrow().edges.len() == 1);
-    assert!(bb1.borrow().edges[0].borrow().id == 3);
-    assert!(bb1.borrow().dom_set.len() == 2);
+    assert_eq!(bb1.borrow().id, 1);
+    assert_eq!(bb1.borrow().preds.len(), 1);
+    assert_eq!(bb1.borrow().preds[0].borrow().id, 0);
+    assert_eq!(bb1.borrow().edges.len(), 1);
+    assert_eq!(bb1.borrow().edges[0].borrow().id, 3);
+    assert_eq!(bb1.borrow().dom_set.len(), 2);
     assert!(bb1.borrow().dom_set.contains(&0));
     assert!(bb1.borrow().dom_set.contains(&1));
     assert!(bb1.borrow().idom.is_some());
-    assert!(bb1.borrow().idom.unwrap() == 0);
-    assert!(bb1.borrow().dom_front.len() == 1);
+    assert_eq!(bb1.borrow().idom.unwrap(), 0);
+    assert_eq!(bb1.borrow().dom_front.len(), 1);
     assert!(bb1.borrow().dom_front.contains(&3));
-    assert!(bb1.borrow().phis.len() == 0);
+    assert_eq!(bb1.borrow().phis.len(), 0);
 
     let bb2 = &ssa_cfg.nodes[2];
-    assert!(bb2.borrow().id == 2);
-    assert!(bb2.borrow().preds.len() == 1);
-    assert!(bb2.borrow().preds[0].borrow().id == 0);
-    assert!(bb2.borrow().edges.len() == 1);
-    assert!(bb2.borrow().edges[0].borrow().id == 3);
-    assert!(bb2.borrow().dom_set.len() == 2);
+    assert_eq!(bb2.borrow().id, 2);
+    assert_eq!(bb2.borrow().preds.len(), 1);
+    assert_eq!(bb2.borrow().preds[0].borrow().id, 0);
+    assert_eq!(bb2.borrow().edges.len(), 1);
+    assert_eq!(bb2.borrow().edges[0].borrow().id, 3);
+    assert_eq!(bb2.borrow().dom_set.len(), 2);
     assert!(bb2.borrow().dom_set.contains(&0));
     assert!(bb2.borrow().dom_set.contains(&2));
     assert!(bb2.borrow().idom.is_some());
-    assert!(bb2.borrow().idom.unwrap() == 0);
-    assert!(bb2.borrow().dom_front.len() == 1);
+    assert_eq!(bb2.borrow().idom.unwrap(), 0);
+    assert_eq!(bb2.borrow().dom_front.len(), 1);
     assert!(bb2.borrow().dom_front.contains(&3));
-    assert!(bb2.borrow().phis.len() == 0);
+    assert_eq!(bb2.borrow().phis.len(), 0);
 
     let bb3 = &ssa_cfg.nodes[3];
-    assert!(bb3.borrow().id == 3);
-    assert!(bb3.borrow().preds.len() == 2);
-    assert!(bb3.borrow().edges.len() == 0);
-    assert!(bb3.borrow().dom_set.len() == 2);
+    assert_eq!(bb3.borrow().id, 3);
+    assert_eq!(bb3.borrow().preds.len(), 2);
+    assert_eq!(bb3.borrow().edges.len(), 0);
+    assert_eq!(bb3.borrow().dom_set.len(), 2);
     assert!(bb3.borrow().dom_set.contains(&0));
     assert!(bb3.borrow().dom_set.contains(&3));
     assert!(bb3.borrow().idom.is_some());
-    assert!(bb3.borrow().idom.unwrap() == 0);
-    assert!(bb3.borrow().dom_front.len() == 0);
-    assert!(bb3.borrow().phis.len() == 1);
+    assert_eq!(bb3.borrow().idom.unwrap(), 0);
+    assert_eq!(bb3.borrow().dom_front.len(), 0);
+    assert_eq!(bb3.borrow().phis.len(), 1);
 
     let phi_map = &bb3.borrow().phis;
     let phi = phi_map.get("y4").unwrap();
-    assert!(phi.initial == "y");
-    assert!(phi.dest == "y4");
-    assert!(phi.operands.len() == 2);
+    assert_eq!(phi.initial, "y");
+    assert_eq!(phi.dest, "y4");
+    assert_eq!(phi.operands.len(), 2);
 }
 
 #[test]
