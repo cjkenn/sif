@@ -243,8 +243,16 @@ impl<'c> SSABuilder<'c> {
         // same for that block. If we need the operands in a list ordered by slot, we can perform that
         // transformation later.
         for cfg_succ in &block.borrow().edges {
+            // Don't rewrite phis if the block is a successor of itself: phis should be
+            // rewritten by another block in this case anyway. If there is only one block
+            // (ie. this block has an edge to itself and that's the whole CFG), there is
+            // no phi function present anyway: every declared var is declared in this block.
+            if cfg_succ.borrow().id == block.borrow().id {
+                continue;
+            }
+
             let mut rw_phis_ops = HashMap::new();
-            for (name, phi) in &cfg_succ.borrow_mut().phis {
+            for (name, phi) in &cfg_succ.borrow().phis {
                 let mut new_os = phi.operands.clone();
                 let initial_dest = &phi.initial;
 
@@ -256,7 +264,7 @@ impl<'c> SSABuilder<'c> {
                     new_os.push(new_op);
                 }
 
-                // Clone the previoud phi but with additional operand.
+                // Clone the previous phi but with additional operand.
                 let newphi = PhiFn::new(name.clone(), phi.dest.clone(), new_os);
                 rw_phis_ops.insert(name.to_string(), newphi);
             }

@@ -2,7 +2,10 @@ use crate::{
     block::{SifBlock, SifBlockRef},
     dom,
 };
-use sifc_bytecode::{instr::Instr, opc::Op};
+use sifc_bytecode::{
+    instr::Instr,
+    opc::{JmpOpKind, Op},
+};
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 #[derive(Debug, Clone)]
@@ -77,9 +80,9 @@ impl CFG {
             let curr = &instrs[i];
             let prev = &instrs[i - 1];
 
-            match curr.op {
+            match &curr.op {
                 Op::JmpCnd {
-                    kind: _,
+                    kind,
                     src: _,
                     lblidx,
                 } => {
@@ -87,12 +90,29 @@ impl CFG {
                     // subsequent block in case the condition is false and we fall through to the
                     // following block.
                     let mut curr_block = nodes[curr.lblidx].borrow_mut();
-                    curr_block.edges.push(Rc::clone(&nodes[lblidx]));
-                    curr_block.edges.push(Rc::clone(&nodes[lblidx - 1]));
+                    curr_block.edges.push(Rc::clone(&nodes[*lblidx]));
+
+                    let target_idx = match kind {
+                        JmpOpKind::Jmpt => {
+                            let tidx = curr.lblidx + 1;
+                            if tidx >= nodes.len() {
+                                None
+                            } else {
+                                Some(tidx)
+                            }
+                        }
+                        JmpOpKind::Jmpf => Some(lblidx - 1),
+                    };
+
+                    if target_idx.is_some() {
+                        curr_block
+                            .edges
+                            .push(Rc::clone(&nodes[target_idx.unwrap()]));
+                    }
                 }
                 Op::Jmpa { lblidx } => {
                     let curr_block = &mut nodes[curr.lblidx].borrow_mut();
-                    curr_block.edges.push(Rc::clone(&nodes[lblidx]));
+                    curr_block.edges.push(Rc::clone(&nodes[*lblidx]));
                 }
                 _ => {
                     if curr.lblidx != prev.lblidx {
@@ -114,7 +134,6 @@ impl CFG {
         build_preds(&nodes, Rc::clone(&entry_block));
         dom::fill_doms(&nodes);
         let dtree = dom::DomTree::build(&nodes);
-        println!("{:#?}", nodes);
 
         CFG {
             num_nodes: nodes.len(),
@@ -130,27 +149,24 @@ impl CFG {
 /// contains a list of nodes rather than just the direct predecessor. Because we use a HashSet to
 /// store nodes here, the order is not guaranteed and thus we cannot determine the direct predecessor
 /// from this list at a later point.
-// TODO: fix this to handle cycles
 fn build_preds(nodes: &Vec<SifBlockRef>, entry: SifBlockRef) {
     let mut seen = HashSet::new();
-    let mut visiting = HashSet::new();
     let mut stack = Vec::new();
     stack.push(Rc::clone(&entry));
 
     while stack.len() != 0 {
         let curr = stack.pop().unwrap();
         let curr_id = curr.borrow().id.clone();
-        visiting.insert(curr_id);
 
         if !seen.contains(&curr_id) {
             for adj in &curr.borrow().edges {
                 let pred = Rc::clone(&nodes[curr_id]);
-                adj.borrow_mut().preds.push(pred);
-                stack.push(Rc::clone(&adj));
+                if !(adj.borrow().id == curr_id) {
+                    adj.borrow_mut().preds.push(pred);
+                    stack.push(Rc::clone(&adj));
+                }
             }
-
             seen.insert(curr_id);
         }
-        visiting.remove(&curr_id);
     }
 }

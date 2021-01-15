@@ -111,7 +111,9 @@ fn dom_front_calc(nodes: &Vec<SifBlockRef>) {
                 let mut runner = Rc::clone(&pred);
 
                 while runner.borrow().id != node_idom {
-                    runner.borrow_mut().dom_front.insert(node_id);
+                    if runner.borrow().id != node_id {
+                        runner.borrow_mut().dom_front.insert(node_id);
+                    }
                     let runner_mb_idom = runner.borrow().idom;
                     if runner_mb_idom.is_none() {
                         break;
