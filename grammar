@@ -33,6 +33,12 @@ addorsubexpr ::= mulordivexpr { [ "+" ] [ "-" ] mulordivexpr } ;
 mulordivexpr ::= modexpr { [ "*" ] [ "/" ] modexpr } ;
 modexpr      ::= unaryexpr { [ "%" ] unaryexpr } ;
 unaryexpr    ::= [ "-" ]  [ "!" ] unaryexpr | funccall ;
+funccall     ::= [ "@" ] primary "(" [ paramlist ] ")" |
+                 tableaccess |
+		 arrayaccess |
+		 primary ;
+tableaccess  ::= primary "." primary ;
+arrayaccess  ::= primary "[" expr "]" ;
 primary      ::= NUMBER |
                  STRING |
 	         TRUE   |
@@ -40,7 +46,3 @@ primary      ::= NUMBER |
 	         IDENT  |
 	         groupexpr ;
 groupexpr    ::= "(" expr ")" ;
-
-funccall     ::= [ "@" ] primary "(" [ paramlist ] ")" | tableaccess | arrayaccess ;
-tableaccess  ::= primary "." primary ;
-arrayaccess  ::= primary "[" expr "]" ;

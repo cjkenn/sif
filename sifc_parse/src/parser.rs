@@ -13,25 +13,42 @@ use sifc_err::{
 use std::collections::HashMap;
 use std::io::Read;
 
+/// Maximum amount of params allowed in function declarations.
 const FN_PARAM_MAX_LEN: usize = 64;
 
-/// ParserResult handles the result from parsing a file. This contains an optional
+/// [`ParserResult`] handles the result from parsing a file. This contains an optional
 /// AST structure, as well as a flag indicating whether or not continuable errors
 /// were encountered during the parsing phase. This is returned from the parse()
 /// method, and should be checked for errors before continuing further phases
 /// of the compiler.
 #[derive(Default)]
 pub struct ParserResult {
-    /// The resulting AST from parsing.
+    /// The resulting AST from parsing. This will be None if parsing failed with
+    /// non-continuable errors.
     pub ast: Option<AstNode>,
 
     /// Flag indicating if errors have ocurred during parsing.
     pub has_err: bool,
 
-    /// Vec of errors that have been parsed.
+    /// Vec of errors that have been parsed. It is possible to encounter
+    /// several continuable errors.
     pub errors: Vec<ParseErr>,
 }
 
+/// [`Parser`] implements a top-down, LL(1) recursive descent parser for the sif grammar.
+/// The grammar is fairly simple, and the structure of the parser follows
+/// pretty clearly from it. There are a couple of things to note:
+///
+/// 1. Operator precedence is encoded into the grammar itself. This means that parsing expressions
+/// begins at the most general precedence (expr), and ends at the most specific (primary expressions
+/// which are usually primitive values).
+///
+/// 2. The parser contains a flag to enabel/disable symbol table checking. This allows some control
+/// over when to emit parsing errors for undefined or poorly defined symbols, in cases where
+/// the parser may know that the symbols do not need to be defined when parsing certain constructs.
+///
+/// 3. Some errors encountered during parsing can be marked continuable, which indicates that
+/// parsing can continue after the error is recorded.
 pub struct Parser<'l, 's, T>
 where
     T: Read,
@@ -45,7 +62,7 @@ where
     /// The current token from the lexer.
     curr_tkn: Token,
 
-    /// Vec of errors parsed so far
+    /// Vec of errors parsed so far.
     errors: Vec<ParseErr>,
 
     /// Flag indicating whether or not potential identifiers should be looked up
@@ -59,6 +76,8 @@ impl<'l, 's, T> Parser<'l, 's, T>
 where
     T: Read,
 {
+    /// Creates a new parser. Makes an initial call to `lex()` in the supplied lexer,
+    /// in order to fill the `curr_tkn` field.
     pub fn new(lex: &'l mut Lexer<T>, symt: &'s mut SymTab) -> Parser<'l, 's, T> {
         let firsttkn = lex.lex();
 
@@ -102,6 +121,7 @@ where
         }
     }
 
+    /// Parses a declaration.
     fn decl(&mut self) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty {
             TokenTy::Var => self.var_decl(),
@@ -110,6 +130,7 @@ where
         }
     }
 
+    /// Parses a statement.
     fn stmt(&mut self) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty {
             TokenTy::If => self.if_stmt(),
@@ -249,7 +270,7 @@ where
         // We don't need to write a return statement in every function, but we need
         // to insert the return ast if we don't have one so we can generate the right code
         // and jumps later when we compile.
-        // TODO: we could do this in the compiler though...
+        // TODO: we should do this in the compiler though...
         let body_w_ret = match body {
             AstNode::Block { ref decls, scope } => match decls.len() {
                 0 => {
@@ -290,19 +311,19 @@ where
         Ok(node)
     }
 
-    // This is called to process param lists when we declare a function and when we call a function.
-    // When we declar a function, params can only be identifiers, so we do not recurse and instead
-    // match on the ident. We need to pass false in as could_be_expr in this case.
-    // When we call this from a function call expression, we need to pass true here, because
-    // our params passed in could be expressions and we need to parse them.
+    /// Processes param lists when we declare a function and when we call a function.
+    /// When we declare a function, params can only be identifiers, so we do not recurse and instead
+    /// match on the ident. We need to pass false in as could_be_expr in this case.
+    /// When we call this from a function call expression, we need to pass true here, because
+    /// our params passed in could be expressions and we need to parse them.
     fn param_list(&mut self, could_be_expr: bool) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty {
             TokenTy::RightParen => {
-                // this indicates an empty param list
+                // This indicates an empty param list.
                 Ok(AstNode::FnParams { params: Vec::new() })
             }
             _ => {
-                // we expect the param list to be all identifiers: fn f(x, y, z). We could
+                // We expect the param list to be all identifiers: fn f(x, y, z). We could
                 // call expr() for each param, but we can short circuit the recursive calls
                 // by just creating PrimaryExpr nodes here and adding them to the param list.
                 let mut param_list = Vec::new();
@@ -358,6 +379,7 @@ where
         Ok(node)
     }
 
+    /// Parses a list of table items in a table declaration.
     fn item_list(&mut self) -> Result<AstNode, ParseErr> {
         let mut items = HashMap::new();
 
@@ -436,6 +458,8 @@ where
     fn if_stmt(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::If)?;
 
+        // Parse the condition expression first, and then build the
+        // AST for the statements inside the if statement.
         let if_cond = self.expr()?;
         let if_blck = self.block(None)?;
 
@@ -980,7 +1004,22 @@ where
     }
 
     /// Checks that the token matches what we expect. If it does, we consume it and return true.
-    /// If not, return false.
+    /// If not, return false. Note that we do not report any error here, since the token we
+    /// expect is considered optional. The return value here should be used to what function the
+    /// parser should move to next.
+    /// For example, when parsing an array declaration, we can accept either of the following:
+    ///
+    /// var a = [
+    ///   1,
+    ///   2,
+    ///   3,
+    /// ]
+    /// var b = [1,2,3]
+    ///
+    /// If we call `expect(TokenTy::Comma)` after parsing the value 3, the parser will error.
+    /// If we don't call `expect(TokenTy::Comma)`, we don't support the trailing comma syntax.
+    /// Instead, we can call this function and then choose to match on the RightParen if this
+    /// returns false.
     fn optional(&mut self, tknty: TokenTy) -> bool {
         if self.curr_tkn.ty == tknty {
             self.consume();
@@ -1007,7 +1046,7 @@ where
         }
     }
 
-    /// Advance to the next token, discarded the previously read token.
+    /// Advance to the next token, discarding the previously read token.
     fn consume(&mut self) {
         self.curr_tkn = self.lexer.lex();
     }
