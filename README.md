@@ -19,7 +19,7 @@ cargo run <input-file>
 
 ### Hello world
 ```
-@print("Hello world")
+@print("Hello world");
 ```
 
 ### Fizzbuzz
@@ -65,7 +65,7 @@ OPTIONS:
 ```
 
 ## Tests
-sif has unit tests and integration tests. Unit tests are contained inline (for example, [dominance calculation tests](https://github.com/cjkenn/sif/blob/master/sifc_analysis/src/dom.rs#L224)), and the `sifc_tests` crate contains integration tests that require passes in many different crates. The `sifc_tests` [readme](https://github.com/cjkenn/sif/blob/master/sifc_tests/README.md) has more information on what integrations tests run. To run the tests, cargo can be used:
+sif has unit tests and integration tests. Unit tests are contained inline (for example, [dominance calculation tests](https://github.com/cjkenn/sif/blob/master/sifc_analysis/src/dom.rs#L224)), and the `sifc_tests` crate contains integration tests that require many different crates. The `sifc_tests` [readme](https://github.com/cjkenn/sif/blob/master/sifc_tests/README.md) has more information on what integrations tests do. To run the tests, cargo can be used:
 
 ```sh
 cargo test
