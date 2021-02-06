@@ -49,6 +49,11 @@ pub struct ParserResult {
 ///
 /// 3. Some errors encountered during parsing can be marked continuable, which indicates that
 /// parsing can continue after the error is recorded.
+///
+/// In general, parsing methods will match on tokens using `expect()` or `optional()`, and recurse
+/// to the correct production based on the current available token, `curr_tkn`. Each method makes use
+/// of the `Result` trait, and should also make use of the `?` operator when making calls to other
+/// production methods.
 pub struct Parser<'l, 's, T>
 where
     T: Read,
@@ -121,7 +126,9 @@ where
         }
     }
 
-    /// Parses a declaration.
+    /// Parses a declaration rule.
+    ///
+    /// decl ::= vardecl | funcdecl | { stmt } ;
     fn decl(&mut self) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty {
             TokenTy::Var => self.var_decl(),
@@ -130,7 +137,14 @@ where
         }
     }
 
-    /// Parses a statement.
+    /// Parses a statement. There are currently 5 kinds of statements, including the
+    /// Block statement, which is a brace delimited list of other declarations.
+    ///
+    /// stmt ::= ifstmt   |
+    ///          forstmt  |
+    ///          exprstmt |
+    ///          retstmt  |
+    ///          block    ;
     fn stmt(&mut self) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty {
             TokenTy::If => self.if_stmt(),
@@ -144,10 +158,15 @@ where
     /// Parses a block statement. Takes in an optional list of bindings that should
     /// be inserted into the symbol table while parsing the block. This makes it
     /// easier to bind variables to the scope defined in for loops and function declarations.
+    ///
+    /// block ::= "{" { decl } "}" ;
     fn block(&mut self, bindings: Option<Vec<AstNode>>) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::LeftBrace)?;
 
         let mut decls = Vec::new();
+
+        // Make a new scope for the block, and insert optional block scope bindings
+        // into the new scope.
         self.sym_tab.init_scope();
         match bindings {
             Some(nodes) => {
@@ -164,6 +183,7 @@ where
             None => (),
         };
 
+        // Match on declarations until we reach the closing brace.
         loop {
             match self.curr_tkn.ty {
                 TokenTy::RightBrace | TokenTy::Eof => break,
@@ -174,6 +194,7 @@ where
             };
         }
 
+        // Consume closing brace and close the block scope.
         self.expect(TokenTy::RightBrace)?;
         let lvl = self.sym_tab.level();
         self.sym_tab.close_scope();
@@ -184,6 +205,9 @@ where
         })
     }
 
+    /// Parses a variable declaration, including optional assignment.
+    ///
+    /// vardecl ::= "var" IDENT [ "=" expr | arraydecl | tabledecl ] ";" ;
     fn var_decl(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::Var)?;
 
@@ -194,11 +218,14 @@ where
         }
         let ident_tkn = maybe_ident_tkn.unwrap();
 
+        // If we now find a "=" token, we parse the assignment by declaring an array or table,
+        // or continuing to expression parsing. If we encounter a ";" token intead, we store the
+        // decl in the symbol table with no rhs.
         match self.curr_tkn.ty {
             TokenTy::Eq => {
                 self.expect(TokenTy::Eq)?;
 
-                let lhs = match self.curr_tkn.ty {
+                let rhs = match self.curr_tkn.ty {
                     TokenTy::LeftBracket => self.array_decl(ident_tkn.clone())?,
                     TokenTy::DoubleLeftBracket => self.table_decl(ident_tkn.clone())?,
                     _ => {
@@ -211,7 +238,7 @@ where
                 let node = AstNode::VarDecl {
                     ident_tkn: ident_tkn.clone(),
                     is_global: self.sym_tab.is_global(),
-                    rhs: Some(Box::new(lhs)),
+                    rhs: Some(Box::new(rhs)),
                 };
 
                 self.sym_tab.store(&ident_tkn.get_name(), node.clone());
@@ -235,6 +262,10 @@ where
         }
     }
 
+    /// Parse a function declaration. This function does some symbol table dancing in
+    /// order to properly parse recursive function definitions.
+    ///
+    /// funcdecl ::= "fn" IDENT "(" [ paramlist ] ")" block ;
     fn fn_decl(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::Fn)?;
 
@@ -316,6 +347,8 @@ where
     /// match on the ident. We need to pass false in as could_be_expr in this case.
     /// When we call this from a function call expression, we need to pass true here, because
     /// our params passed in could be expressions and we need to parse them.
+    ///
+    /// paramlist ::= [ { IDENT [ "," ] } ] ;
     fn param_list(&mut self, could_be_expr: bool) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty {
             TokenTy::RightParen => {
@@ -329,10 +362,12 @@ where
                 let mut param_list = Vec::new();
 
                 while self.curr_tkn.ty != TokenTy::RightParen {
+                    // Error on too many params.
                     if param_list.len() >= FN_PARAM_MAX_LEN {
                         return Err(self.add_error(ParseErrTy::FnParmCntExceeded(FN_PARAM_MAX_LEN)));
                     }
 
+                    // Missing closing paren or unexpected end of file.
                     if self.curr_tkn.ty == TokenTy::Eof {
                         return Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
                             "unexpected end of file",
@@ -340,9 +375,12 @@ where
                     }
 
                     if could_be_expr {
+                        // Parsing a function call, where the params could be nested expressions.
                         let param = self.expr()?;
                         param_list.push(param);
                     } else {
+                        // Parsing a function declaration, where the params are guaranteed to be
+                        // identifiers.
                         let maybe_ident_tkn = self.match_ident();
                         if maybe_ident_tkn.is_none() {
                             let ty_str = self.curr_tkn.ty.to_string();
@@ -363,6 +401,9 @@ where
         }
     }
 
+    /// Parses a table declaration.
+    ///
+    /// tabledecl ::= "[[" [ itemlist ] "]]" ;
     fn table_decl(&mut self, ident_tkn: Token) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::DoubleLeftBracket)?;
         let items = self.item_list()?;
@@ -380,16 +421,20 @@ where
     }
 
     /// Parses a list of table items in a table declaration.
+    ///
+    /// itemlist ::= { IDENT "=>" expr "," } ;
     fn item_list(&mut self) -> Result<AstNode, ParseErr> {
         let mut items = HashMap::new();
 
         while self.curr_tkn.ty != TokenTy::DoubleRightBracket {
+            // Missing closing double bracket or unexpected end of file.
             if self.curr_tkn.ty == TokenTy::Eof {
                 return Err(self.add_error(ParseErrTy::InvalidTkn(String::from(
                     "unexpected end of file",
                 ))));
             }
 
+            // Get the key for the table entry.
             let maybe_ident_tkn = self.match_ident();
             if maybe_ident_tkn.is_none() {
                 return Err(
@@ -397,10 +442,15 @@ where
                 );
             }
             let ident_tkn = maybe_ident_tkn.unwrap();
+
+            // Parse the value for this entry using expr().
             self.expect(TokenTy::EqArrow)?;
             let val = self.expr()?;
             items.insert(String::from(ident_tkn.get_name()), val);
 
+            // Entries are separated by comma tokens. The final comma in the list is
+            // optional: if we expect it but don't find it we must break. This is ok to do
+            // here, as the table_decl() method will match the ending bracket token for us.
             match self.optional(TokenTy::Comma) {
                 false => {
                     break;
@@ -412,6 +462,9 @@ where
         Ok(AstNode::ItemList { items: items })
     }
 
+    /// Parses an array declaration.
+    ///
+    /// arraydecl ::= "[" { expr "," } "]" ;
     fn array_decl(&mut self, ident_tkn: Token) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::LeftBracket)?;
 
@@ -455,6 +508,9 @@ where
         Ok(node)
     }
 
+    /// Parses an if-elif-else statement block.
+    ///
+    /// ifstmt ::= "if" expr block { "elif" expr block } [ "else" block ] ;
     fn if_stmt(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::If)?;
 
@@ -467,6 +523,7 @@ where
         let mut else_ifs = Vec::new();
         let mut else_cnt = 0;
 
+        // Continue parsing until we don't match on elif or else tokens.
         loop {
             match self.curr_tkn.ty {
                 TokenTy::Elif => {
@@ -490,6 +547,7 @@ where
             };
         }
 
+        // Don't allow multiple else statements.
         if else_cnt > 1 {
             self.add_error(ParseErrTy::InvalidIfStmt);
         }
@@ -502,6 +560,9 @@ where
         })
     }
 
+    /// Parses a for loop statement.
+    ///
+    /// forstmt ::= "for" identpair "in" expr block ;
     fn for_stmt(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::For)?;
 
@@ -525,6 +586,10 @@ where
         })
     }
 
+    /// Parses a pair of identifiers. This is intended to be used inside the for loop, but
+    /// could also be re-used if any tuple structures need to be parsed.
+    ///
+    /// identpair ::= IDENT "," IDENT ;
     fn ident_pair(&mut self) -> Result<AstNode, ParseErr> {
         let mut idents = Vec::new();
 
@@ -549,10 +614,14 @@ where
         Ok(AstNode::IdentPair { idents: idents })
     }
 
+    /// Parses a return statement.
+    ///
+    /// retstmt ::= "return" [ expr ] ";" ;
     fn ret_stmt(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::Return)?;
 
         match self.curr_tkn.ty {
+            // With no rhs expr, put None into the resulting AST node.
             TokenTy::Semicolon => {
                 self.expect(TokenTy::Semicolon)?;
 
@@ -569,6 +638,13 @@ where
         }
     }
 
+    /// Parses an expression statement. This isn't strictly needed, but allows for some easier
+    /// recursion in the parser. When we need to recurse and the next AST node could be a statement
+    /// or an expression, we can call stmt(), and if we find an expression we can use this method.
+    /// This allows us to avoid matching on tokens in multiple places to determine whether to call
+    /// stmt() or expr(). All this does is parse an expression.
+    ///
+    /// exprstmt ::= expr ";" ;
     fn expr_stmt(&mut self) -> Result<AstNode, ParseErr> {
         let node = self.expr()?;
         self.expect(TokenTy::Semicolon)?;
@@ -577,10 +653,32 @@ where
         })
     }
 
+    /// Parses an expression. Because the grammar encodes precedence, we must call each
+    /// expression parsing method in the order starting from most general (lowest precedence)
+    /// to most specific (highest precedence). Note that we recurse to higher precedence
+    /// expressions first in each expression parse method, which is why we start with
+    /// the lowest precedence instead of the highest.
+    ///
+    /// Precedence roughly follows this table:
+    /// | = Assignment       | <- Lowest precedence
+    /// | ||                 |
+    /// | &&                 |
+    /// | ==, !=             |
+    /// | >, <, >=, <=       |
+    /// | +, -               |
+    /// | *, /               |
+    /// | %                  |
+    /// | -, ! Unary         |
+    /// | Literals           | <- Highest precedence
+    ///
+    /// expr ::= assignexpr ;
     fn expr(&mut self) -> Result<AstNode, ParseErr> {
         self.assign_expr()
     }
 
+    /// Parses an assign expression.
+    ///
+    /// assignexpr ::= { [ funccall "." ] [ arrayaccess ] assignexpr } | orexpr ;
     fn assign_expr(&mut self) -> Result<AstNode, ParseErr> {
         let ast = self.or_expr()?;
 
@@ -588,8 +686,14 @@ where
             TokenTy::Eq => {
                 let op = self.curr_tkn.clone();
                 self.expect(TokenTy::Eq)?;
+
+                // Get the assignment value
                 let rhs = self.assign_expr()?;
 
+                // Check the lhs of the expression. If it's an ident, we have a variable assignment.
+                // We check the symbol table for that variable, and error if we can't find it.
+                // If the lhs is an array access, we're mutating an array value.
+                // If it's neither of those, we have an invalid assignment.
                 match ast.clone() {
                     AstNode::PrimaryExpr { tkn } => {
                         match tkn.ty {
@@ -599,6 +703,7 @@ where
                                     return Err(self.add_error(ParseErrTy::UndeclSym(name)));
                                 }
 
+                                // Check symbol table for var name.
                                 let var_node = maybe_sym.unwrap();
                                 match var_node {
                                     AstNode::VarDecl {
@@ -646,16 +751,18 @@ where
         Ok(ast)
     }
 
+    /// Parses an or ("||") expression.
+    ///
+    /// orexpr ::= andexpr { [ "||" ] andexpr } ;
     fn or_expr(&mut self) -> Result<AstNode, ParseErr> {
         let mut ast = self.and_expr()?;
 
+        // Continue parsing as long as the rhs contains expressions.
         loop {
             match self.curr_tkn.ty {
                 TokenTy::PipePipe => {
                     let op = self.curr_tkn.clone();
-
                     self.consume();
-
                     let rhs = self.and_expr()?;
 
                     ast = AstNode::BinaryExpr {
@@ -671,6 +778,9 @@ where
         Ok(ast)
     }
 
+    /// Parses an and ("&&") expression.
+    ///
+    /// andexpr ::= eqexpr { [ "&&" ] eqexpr } ;
     fn and_expr(&mut self) -> Result<AstNode, ParseErr> {
         let mut ast = self.equality_expr()?;
 
@@ -678,9 +788,7 @@ where
             match self.curr_tkn.ty {
                 TokenTy::AmpAmp => {
                     let op = self.curr_tkn.clone();
-
                     self.consume();
-
                     let rhs = self.equality_expr()?;
 
                     ast = AstNode::BinaryExpr {
@@ -696,6 +804,9 @@ where
         Ok(ast)
     }
 
+    /// Parses an equality ("!=" and "==") expression.
+    ///
+    /// eqexpr ::= cmpexpr { [ "!=" ] [ "==" ] cmpexpr } ;
     fn equality_expr(&mut self) -> Result<AstNode, ParseErr> {
         let mut ast = self.compr_expr()?;
 
@@ -703,9 +814,7 @@ where
             match self.curr_tkn.ty {
                 TokenTy::BangEq | TokenTy::EqEq => {
                     let op = self.curr_tkn.clone();
-
                     self.consume();
-
                     let rhs = self.compr_expr()?;
 
                     ast = AstNode::BinaryExpr {
@@ -721,6 +830,9 @@ where
         Ok(ast)
     }
 
+    /// Parses a comparison (">", "<", ">=", "<=") expression.
+    ///
+    /// cmpexpr ::= addorsubexpr { [ ">" ] [ ">=" ] [ "<" ] [ "<=" ] addorsubexpr } ;
     fn compr_expr(&mut self) -> Result<AstNode, ParseErr> {
         let mut ast = self.add_or_sub_expr()?;
 
@@ -728,9 +840,7 @@ where
             match self.curr_tkn.ty {
                 TokenTy::Lt | TokenTy::LtEq | TokenTy::Gt | TokenTy::GtEq => {
                     let op = self.curr_tkn.clone();
-
                     self.consume();
-
                     let rhs = self.add_or_sub_expr()?;
 
                     ast = AstNode::BinaryExpr {
@@ -746,6 +856,9 @@ where
         Ok(ast)
     }
 
+    /// Parses addition or subtraction expressions.
+    ///
+    /// addorsubexpr ::= mulordivexpr { [ "+" ] [ "-" ] mulordivexpr } ;
     fn add_or_sub_expr(&mut self) -> Result<AstNode, ParseErr> {
         let mut ast = self.mul_or_div_expr()?;
 
@@ -753,9 +866,7 @@ where
             match self.curr_tkn.ty {
                 TokenTy::Plus | TokenTy::Minus => {
                     let op = self.curr_tkn.clone();
-
                     self.consume();
-
                     let rhs = self.mul_or_div_expr()?;
 
                     ast = AstNode::BinaryExpr {
@@ -771,6 +882,9 @@ where
         Ok(ast)
     }
 
+    /// Parses a multiplaction or division expression.
+    ///
+    /// mulordivexpr ::= modexpr { [ "*" ] [ "/" ] modexpr } ;
     fn mul_or_div_expr(&mut self) -> Result<AstNode, ParseErr> {
         let mut ast = self.mod_expr()?;
 
@@ -778,9 +892,7 @@ where
             match self.curr_tkn.ty {
                 TokenTy::Star | TokenTy::Slash => {
                     let op = self.curr_tkn.clone();
-
                     self.consume();
-
                     let rhs = self.mod_expr()?;
 
                     ast = AstNode::BinaryExpr {
@@ -796,6 +908,9 @@ where
         Ok(ast)
     }
 
+    /// Parses a modulo expression.
+    ///
+    /// modexpr ::= unaryexpr { [ "%" ] unaryexpr } ;
     fn mod_expr(&mut self) -> Result<AstNode, ParseErr> {
         let mut ast = self.unary_expr()?;
 
@@ -803,9 +918,7 @@ where
             match self.curr_tkn.ty {
                 TokenTy::Percent => {
                     let op = self.curr_tkn.clone();
-
                     self.consume();
-
                     let rhs = self.unary_expr()?;
 
                     ast = AstNode::BinaryExpr {
@@ -821,13 +934,14 @@ where
         Ok(ast)
     }
 
+    /// Parses a unary expression. Unary's include number negation and logical negation.
+    ///
+    /// unaryexpr ::= [ "-" ]  [ "!" ] unaryexpr | funccall ;
     fn unary_expr(&mut self) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty {
             TokenTy::Bang | TokenTy::Minus => {
                 let op = self.curr_tkn.clone();
-
                 self.consume();
-
                 let rhs = self.unary_expr()?;
 
                 return Ok(AstNode::UnaryExpr {
@@ -839,6 +953,15 @@ where
         }
     }
 
+    /// Parse a function call expression. Function calls are expression because they return a
+    /// value: whatever the function returns. There is some matching involved here to determine
+    /// whether or not we're calling a stdlib function, because stdlib functions aren't inserted into
+    /// the symbol table (otherwise we can't declare functions of the same name).
+    ///
+    /// funccall ::= [ "@" ] primary "(" [ paramlist ] ")" |
+    ///              tableaccess |
+    ///		     arrayaccess |
+    ///		     primary ;
     fn fn_call_expr(&mut self) -> Result<AstNode, ParseErr> {
         let ast = self.primary_expr()?;
         let mut params = Vec::new();
@@ -850,6 +973,8 @@ where
         match self.curr_tkn.ty {
             TokenTy::LeftParen => {
                 self.expect(TokenTy::LeftParen)?;
+                // This is a function call, so pass true into param_list(), indicating we
+                // need to parse the params as possible expressions.
                 let params_list = self.param_list(true)?;
                 self.expect(TokenTy::RightParen)?;
                 match params_list {
@@ -940,9 +1065,24 @@ where
         Ok(ast)
     }
 
+    /// Parse a primary expression. Primary refers to either primitive types/values. This roughly
+    /// corresponds to:
+    /// 1. Number literals
+    /// 2. String literals
+    /// 3. Boolean literals
+    /// 4. Identifiers
+    /// 5. Parens, indicating a grouped expression.
+    ///
+    /// primary  ::= NUMBER |
+    ///              STRING |
+    ///              TRUE   |
+    ///              FALSE  |
+    ///              IDENT  |
+    ///              groupexpr ;
     fn primary_expr(&mut self) -> Result<AstNode, ParseErr> {
         match self.curr_tkn.ty.clone() {
             TokenTy::Str(_) | TokenTy::Val(_) | TokenTy::True | TokenTy::False => {
+                // Number/string/boolean literal.
                 let ast = Ok(AstNode::PrimaryExpr {
                     tkn: self.curr_tkn.clone(),
                 });
@@ -950,6 +1090,8 @@ where
                 ast
             }
             TokenTy::Ident(ref ident_name) => {
+                // Identifier. If required, check the symbol table to see if this identifier
+                // exists. It may not be necessary if we're declaring a table.
                 let ident_tkn = self.curr_tkn.clone();
 
                 if self.should_check_sym_tab {
@@ -971,6 +1113,7 @@ where
             }
             TokenTy::LeftParen => self.group_expr(),
             TokenTy::At => {
+                // Stdlib function call.
                 self.expect(TokenTy::At)?;
                 return self.fn_call_expr();
             }
@@ -983,6 +1126,9 @@ where
         }
     }
 
+    /// Parses an expression surrounded by parenthesis.
+    ///
+    /// groupexpr ::= "(" expr ")" ;
     fn group_expr(&mut self) -> Result<AstNode, ParseErr> {
         self.expect(TokenTy::LeftParen)?;
         let ast = self.expr()?;
