@@ -63,3 +63,12 @@ OPTIONS:
     -H, --heap-size <heap-size>    Sets initial heap size [default: 100]
     -R, --reg-count <reg-count>    Sets the default virtual register count [default: 1024]
 ```
+
+## Tests
+sif has unit tests and integration tests. Unit tests are contained inline (for example, [dominance calculation tests](https://github.com/cjkenn/sif/blob/master/sifc_analysis/src/dom.rs#L224)), and the `sifc_tests` crate contains integration tests that require passes in many different crates. The `sifc_tests` [readme](https://github.com/cjkenn/sif/blob/master/sifc_tests/README.md) has more informationon what kind of integration tests can be run. To run the tests, cargo can be used:
+
+```sh
+cargo test
+```
+
+This will run all unit and integration tests.
