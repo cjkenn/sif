@@ -12,7 +12,7 @@ Documentation can be found on the [wiki](https://github.com/cjkenn/sif/wiki).
 ```sh
 git clone https://github.com/cjkenn/sif.git
 cd sif
-cargo build
+cargo run <input-file>
 ```
 
 ## Samples
