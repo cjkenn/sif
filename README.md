@@ -9,6 +9,8 @@ sif doesn't really contain any novel features at the moment, and sort of serves 
 Documentation can be found on the [wiki](https://github.com/cjkenn/sif/wiki).
 
 ## Quick Install
+If you have rust installed:
+
 ```sh
 git clone https://github.com/cjkenn/sif.git
 cd sif
