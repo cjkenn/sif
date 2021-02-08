@@ -6,7 +6,7 @@ sif is a scripting language with c-style syntax. It contains a bytecode compiler
 
 sif doesn't really contain any novel features at the moment, and sort of serves as an educational compiler for me to implement what I choose to freely.
 
-Documentation can be found on the [wiki](https://github.com/cjkenn/sif/wiki).
+Some documentation can be found on the [wiki](https://github.com/cjkenn/sif/wiki).
 
 ## Quick Install
 If you don't have rust installed, get it with rustup:
