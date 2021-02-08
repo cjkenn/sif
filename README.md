@@ -4,7 +4,7 @@
 
 sif is a scripting language with c-style syntax. It contains a bytecode compiler, optimizer and a register based vm. It's small and easily embeddable into rust programs using macros. There is also a nano stdlib for basic operations and interacting with arrays and tables.
 
-sif doesn't really contain any novel features at the moment, and sort of serves as an educational compiler for me to implement what I choose to freely. 
+sif doesn't really contain any novel features at the moment, and sort of serves as an educational compiler for me to implement what I choose to freely.
 
 Documentation can be found on the [wiki](https://github.com/cjkenn/sif/wiki).
 
@@ -12,7 +12,7 @@ Documentation can be found on the [wiki](https://github.com/cjkenn/sif/wiki).
 ```sh
 git clone https://github.com/cjkenn/sif.git
 cd sif
-cargo run <input-file>
+cargo run examples/hello.sif
 ```
 
 ## Samples

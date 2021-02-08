@@ -67,7 +67,7 @@ fn dom_calc(nodes: &Vec<SifBlockRef>) {
 }
 
 /// Calculates immediate dominators for each node in a CFG.
-/// We  iterate over the node's dominator set and find the
+/// We iterate over the node's dominator set and find the
 /// item with the ID that is closest to the current block ID
 /// (ie. the max block ID in the dominator set).
 fn idom_calc(nodes: &Vec<SifBlockRef>) {
@@ -106,7 +106,7 @@ fn dom_front_calc(nodes: &Vec<SifBlockRef>) {
 
         let node_idom = mb_node_idom.unwrap();
 
-        if node.borrow().preds.len() >= 1 {
+        if node.borrow().preds.len() > 1 {
             for pred in &node.borrow().preds {
                 let mut runner = Rc::clone(&pred);
 
