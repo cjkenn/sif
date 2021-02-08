@@ -9,8 +9,13 @@ sif doesn't really contain any novel features at the moment, and sort of serves 
 Documentation can be found on the [wiki](https://github.com/cjkenn/sif/wiki).
 
 ## Quick Install
-If you have rust installed:
+If you don't have rust installed, get it with rustup:
+```sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+Or, if you prefer, [here](https://forge.rust-lang.org/infra/other-installation-methods.html) are alternative ways to install rust.
 
+Then, get and run sif:
 ```sh
 git clone https://github.com/cjkenn/sif.git
 cd sif
