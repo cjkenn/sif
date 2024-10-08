@@ -5,7 +5,7 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
-clap = "3.0.0-beta.2"
+clap = "4.5.2"
 sifc_err = { path = "../sifc_err" }
 sifc_parse = { path = "../sifc_parse" }
 sifc_bytecode = { path = "../sifc_bytecode" }

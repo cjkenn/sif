@@ -7,7 +7,7 @@ mod timings;
 
 use crate::timings::Timings;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use sifc_analysis::analyzer::Analyzer;
 use sifc_bytecode::{
     compiler::{CompileResult, Compiler},
@@ -50,9 +50,9 @@ fn from_file(opts: ArgMatches) {
     let exec_start = Instant::now();
 
     let mut timings: Timings = Default::default();
-    let show_duration = opts.is_present(ARG_DUR);
+    let show_duration = opts.get_one::<String>(ARG_DUR).is_some();
     let mut symtab = SymTab::new();
-    let path = opts.value_of(ARG_FILENAME).unwrap();
+    let path = opts.get_one::<String>(ARG_FILENAME).unwrap();
 
     let parse_result = parse(&path, &mut symtab);
     timings.parse_time = exec_start.elapsed();
@@ -65,7 +65,7 @@ fn from_file(opts: ArgMatches) {
     }
     let ast = parse_result.ast.unwrap();
 
-    if opts.is_present(ARG_EMIT_AST) {
+    if opts.get_one::<String>(ARG_EMIT_AST).is_some() {
         println!("{:#?}", ast);
     }
 
@@ -80,18 +80,18 @@ fn from_file(opts: ArgMatches) {
         return;
     }
 
-    if opts.is_present(ARG_EMIT_IR) {
+    if opts.get_one::<String>(ARG_EMIT_IR).is_some() {
         printer::dump_decls(comp_result.decls.clone());
         printer::dump_code(comp_result.code.clone());
     }
 
-    if opts.is_present(ARG_ANALYSIS) {
+    if opts.get_one::<String>(ARG_ANALYSIS).is_some() {
         let analyzer = Analyzer::new(comp_result.program.clone());
         // TODO: should be more fine grained eventually
         analyzer.perform();
     }
 
-    if opts.is_present(ARG_BC_OPT) {
+    if opts.get_one::<String>(ARG_BC_OPT).is_some() {
         let opt_start = Instant::now();
         let opt_result = run_optimizer(&comp_result);
         timings.optimize_time = opt_start.elapsed();
@@ -151,11 +151,11 @@ fn run_vm_optimized(opts: ArgMatches, opt_result: OptimizeResult) {
     let code_start = opt_result.new_code_start;
     let jumptab = opt_result.jumptab;
     let fntab = opt_result.fntab;
-    let heap_size: usize = opts.value_of(ARG_HEAP_SIZE).unwrap().parse().unwrap();
-    let dreg_count: usize = opts.value_of(ARG_REG_COUNT).unwrap().parse().unwrap();
+    let heap_size: usize = *opts.get_one::<usize>(ARG_HEAP_SIZE).unwrap();
+    let dreg_count: usize = *opts.get_one::<usize>(ARG_REG_COUNT).unwrap();
 
     let conf = VMConfig {
-        trace: opts.is_present(ARG_TRACE_EXEC),
+        trace: opts.get_one::<String>(ARG_TRACE_EXEC).is_some(),
         initial_heap_size: heap_size,
         initial_dreg_count: dreg_count,
     };
@@ -178,11 +178,11 @@ fn run_vm_raw(opts: ArgMatches, comp_result: CompileResult) {
     let code_start = comp_result.code_start;
     let jumptab = comp_result.jumptab;
     let fntab = comp_result.fntab;
-    let heap_size: usize = opts.value_of(ARG_HEAP_SIZE).unwrap().parse().unwrap();
-    let dreg_count: usize = opts.value_of(ARG_REG_COUNT).unwrap().parse().unwrap();
+    let heap_size: usize = *opts.get_one::<usize>(ARG_HEAP_SIZE).unwrap();
+    let dreg_count: usize = *opts.get_one::<usize>(ARG_REG_COUNT).unwrap();
 
     let conf = VMConfig {
-        trace: opts.is_present(ARG_TRACE_EXEC),
+        trace: opts.get_one::<String>(ARG_TRACE_EXEC).is_some(),
         initial_heap_size: heap_size,
         initial_dreg_count: dreg_count,
     };
@@ -201,61 +201,61 @@ fn run_vm_raw(opts: ArgMatches, comp_result: CompileResult) {
 }
 
 fn parse_cl() -> ArgMatches {
-    App::new("sif")
+    Command::new("sif")
         .version("0.1")
         .author("cjkenn")
         .about("sif interpreter and vm")
         .arg(
             Arg::new(ARG_FILENAME)
-                .about("sif file to parse and run")
+                .help("sif file to parse and run")
                 .required(true)
                 .index(1),
         )
         .arg(
             Arg::new(ARG_EMIT_AST)
                 .long(ARG_EMIT_AST)
-                .about("Prints the syntax tree to stdout"),
+                .help("Prints the syntax tree to stdout"),
         )
         .arg(
             Arg::new(ARG_EMIT_IR)
                 .long(ARG_EMIT_IR)
-                .about("Prints sif bytecode to stdout"),
+                .help("Prints sif bytecode to stdout"),
         )
         .arg(
             Arg::new(ARG_TRACE_EXEC)
                 .short('t')
                 .long(ARG_TRACE_EXEC)
-                .about("Traces VM execution by printing running instructions to stdout"),
+                .help("Traces VM execution by printing running instructions to stdout"),
         )
         .arg(
             Arg::new(ARG_HEAP_SIZE)
                 .short('H')
                 .long(ARG_HEAP_SIZE)
                 .default_value(DEFAULT_HEAP)
-                .about("Sets initial heap size"),
+                .help("Sets initial heap size"),
         )
         .arg(
             Arg::new(ARG_REG_COUNT)
                 .short('R')
                 .long(ARG_REG_COUNT)
                 .default_value(DEFAULT_DREG)
-                .about("Sets the default virtual register count"),
+                .help("Sets the default virtual register count"),
         )
         .arg(
             Arg::new(ARG_DUR)
                 .long(ARG_DUR)
-                .about("Display basic durations for phases of sif"),
+                .help("Display basic durations for phases of sif"),
         )
         .arg(
             Arg::new(ARG_BC_OPT)
                 .long(ARG_BC_OPT)
-                .about("Runs the bytecode optimizer before executing in vm"),
+                .help("Runs the bytecode optimizer before executing in vm"),
         )
         .arg(
             Arg::new(ARG_ANALYSIS)
                 .short('a')
                 .long(ARG_ANALYSIS)
-                .about("Performs analysis on the CFG and IR before starting the vm"),
+                .help("Performs analysis on the CFG and IR before starting the vm"),
         )
         .get_matches()
 }
